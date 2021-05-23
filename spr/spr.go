@@ -19,6 +19,9 @@ import (
 type Config struct {
 	GitHubRepoOwner string
 	GitHubRepoName  string
+
+	RequireChecks   bool
+	RequireApproval bool
 }
 
 // NewStackedPR constructs and returns a new instance stackediff.
@@ -112,7 +115,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.C
 	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Println(pr)
+		fmt.Println(pr.String(sd.config))
 	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
 }
@@ -139,7 +142,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 	var prIndex int
 	for prIndex = 0; prIndex < len(githubInfo.PullRequests); prIndex++ {
 		pr := githubInfo.PullRequests[prIndex]
-		if !pr.mergable() {
+		if !pr.mergable(sd.config) {
 			break
 		}
 	}
@@ -240,7 +243,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context, client *githubv4.C
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Println(pr)
+		fmt.Println(pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
@@ -431,7 +434,7 @@ func printCommitInstallHelperAndExit() {
 	fmt.Printf("A commit is missing a commit-id.\n")
 	fmt.Printf("This most likely means the commit-msg hook isn't installed.\n")
 	fmt.Printf("To install the hook run the following cmd in the repo root dir:\n")
-	fmt.Printf(" > ln -s ../../s/commit_msg_hook .git/hooks/commit-msg\n")
+	fmt.Printf(" > ln -s spr-commithook .git/hooks/commit-msg\n")
 	fmt.Printf("After installing the hook, you'll need to ammend your commits\n")
 	os.Exit(1)
 }
@@ -546,7 +549,6 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 		LocalBranch:  branchname,
 		PullRequests: requests,
 	}
-
 }
 
 // syncCommitStackToGitHub gets all the local commits in the given branch
@@ -699,52 +701,70 @@ func git(argStr string, output *string) error {
 	return nil
 }
 
-func (pr *pullRequest) mergable() bool {
-	return (pr.MergeStatus.ChecksPass == checkStatusPass &&
-		pr.MergeStatus.NoConflicts &&
-		pr.MergeStatus.Stacked)
-}
-
-func (pr *pullRequest) String() string {
-	return fmt.Sprintf("%s %3d: %s", &pr.MergeStatus, pr.Number, pr.Title)
+func (pr *pullRequest) mergable(config *Config) bool {
+	if !pr.MergeStatus.NoConflicts {
+		return false
+	}
+	if !pr.MergeStatus.Stacked {
+		return false
+	}
+	if config.RequireChecks && pr.MergeStatus.ChecksPass != checkStatusPass {
+		return false
+	}
+	if config.RequireApproval && false {
+		return false
+	}
+	return true
 }
 
 const checkmark = "\xE2\x9C\x94"
 const crossmark = "\xE2\x9C\x97"
 const middledot = "\xC2\xB7"
 
-func (s *pullRequestMergeStatus) String() string {
+func (pr *pullRequest) String(config *Config) string {
 	statusString := "["
-	statusString += s.ChecksPass.String()
 
-	if s.NoConflicts {
+	statusString += pr.MergeStatus.ChecksPass.String(config)
+
+	if config.RequireApproval {
+		statusString += checkmark
+	} else {
+		statusString += "-"
+	}
+
+	if pr.MergeStatus.NoConflicts {
 		statusString += checkmark
 	} else {
 		statusString += crossmark
 	}
 
-	if s.Stacked {
+	if pr.MergeStatus.Stacked {
 		statusString += checkmark
 	} else {
 		statusString += crossmark
 	}
+
 	statusString += "]"
 
-	return statusString
+	return fmt.Sprintf("%s %3d: %s", statusString, pr.Number, pr.Title)
 }
 
-func (cs checkStatus) String() string {
-	switch cs {
-	case checkStatusUnknown:
-		return "?"
-	case checkStatusPending:
-		return middledot
-	case checkStatusFail:
-		return crossmark
-	case checkStatusPass:
-		return checkmark
+func (cs checkStatus) String(config *Config) string {
+	if config.RequireChecks {
+		switch cs {
+		case checkStatusUnknown:
+			return "?"
+		case checkStatusPending:
+			return middledot
+		case checkStatusFail:
+			return crossmark
+		case checkStatusPass:
+			return checkmark
+		default:
+			return "?"
+		}
 	}
-	return "?"
+	return "-"
 }
 
 func check(err error) {

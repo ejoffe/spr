@@ -62,6 +62,8 @@ func main() {
 	config := &spr.Config{
 		GitHubRepoOwner: "ejoffe",
 		GitHubRepoName:  "apomelo",
+		RequireChecks:   true,
+		RequireApproval: false,
 	}
 
 	stackedpr := spr.NewStackedPR(config)
