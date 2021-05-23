@@ -13,6 +13,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var (
+	version = "dev"
+	commit  = "dversion"
+	date    = "unknown"
+)
+
 func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -20,16 +26,22 @@ func init() {
 
 // command line opts
 type opts struct {
-	Debug  bool `short:"d" long:"debug" description:"Show runtime debug info."`
-	Merge  bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
-	Status bool `short:"s" long:"status" description:"Show status of open pull requests."`
-	Update bool `short:"u" long:"update" description:"Update and create pull requests for unmerged commits in the stack."`
+	Debug   bool `short:"d" long:"debug" description:"Show runtime debug info."`
+	Merge   bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
+	Status  bool `short:"s" long:"status" description:"Show status of open pull requests."`
+	Update  bool `short:"u" long:"update" description:"Update and create pull requests for unmerged commits in the stack."`
+	Version bool `short:"v" long:"version" description:"Show version info."`
 }
 
 func main() {
 	var opts opts
 	_, err := flags.Parse(&opts)
 	check(err)
+
+	if opts.Version {
+		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
+		os.Exit(0)
+	}
 
 	ctx := context.Background()
 
@@ -69,7 +81,9 @@ func main() {
 		stackedpr.StatusPullRequests(ctx, client)
 	}
 
-	stackedpr.DebugPrintSummary()
+	if opts.Debug {
+		stackedpr.DebugPrintSummary()
+	}
 }
 
 func check(err error) {
