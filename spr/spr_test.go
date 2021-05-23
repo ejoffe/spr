@@ -1,11 +1,11 @@
-package stackediff
+package spr
 
 import (
 	"testing"
 )
 
 func TestSortPullRequestsSingleBranch(t *testing.T) {
-	prs := []*PullRequest{
+	prs := []*pullRequest{
 		{
 			Number:     3,
 			FromBranch: "third",
@@ -23,7 +23,7 @@ func TestSortPullRequestsSingleBranch(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedDiff(&Config{})
+	sd := NewStackedPR(&Config{})
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -37,7 +37,7 @@ func TestSortPullRequestsSingleBranch(t *testing.T) {
 }
 
 func TestSortPullRequestsTwoBranches(t *testing.T) {
-	prs := []*PullRequest{
+	prs := []*pullRequest{
 		{
 			Number:     6,
 			FromBranch: "b_third",
@@ -70,7 +70,7 @@ func TestSortPullRequestsTwoBranches(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedDiff(&Config{})
+	sd := NewStackedPR(&Config{})
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 4 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -93,7 +93,7 @@ func TestSortPullRequestsTwoBranches(t *testing.T) {
 }
 
 func TestSortPullRequestsTwoBranchesMixed(t *testing.T) {
-	prs := []*PullRequest{
+	prs := []*pullRequest{
 		{
 			Number:     6,
 			FromBranch: "b_third",
@@ -126,7 +126,7 @@ func TestSortPullRequestsTwoBranchesMixed(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedDiff(&Config{})
+	sd := NewStackedPR(&Config{})
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)

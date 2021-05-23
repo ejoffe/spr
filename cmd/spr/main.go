@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ejoffe/spr/stackediff"
+	"github.com/ejoffe/spr/spr"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -20,7 +20,6 @@ func init() {
 
 // command line opts
 type opts struct {
-	Amend  bool `short:"a" long:"amend" description:"Amends a chosen git commit with the current staged changes."`
 	Debug  bool `short:"d" long:"debug" description:"Show runtime debug info."`
 	Merge  bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
 	Status bool `short:"s" long:"status" description:"Show status of open pull requests."`
@@ -48,31 +47,29 @@ func main() {
 
 	client := githubv4.NewClient(tc)
 
-	config := &stackediff.Config{
+	config := &spr.Config{
 		GitHubRepoOwner: "ejoffe",
 		GitHubRepoName:  "apomelo",
 	}
 
-	stackediff := stackediff.NewStackedDiff(config)
+	stackedpr := spr.NewStackedPR(config)
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		stackediff.DebugMode(true)
+		stackedpr.DebugMode(true)
 	}
 
-	if opts.Amend {
-		stackediff.AmendCommit(ctx, client)
-	} else if opts.Update {
-		stackediff.UpdatePullRequests(ctx, client)
+	if opts.Update {
+		stackedpr.UpdatePullRequests(ctx, client)
 	} else if opts.Merge {
-		stackediff.MergePullRequests(ctx, client)
-		stackediff.UpdatePullRequests(ctx, client)
+		stackedpr.MergePullRequests(ctx, client)
+		stackedpr.UpdatePullRequests(ctx, client)
 	} else if opts.Status {
-		stackediff.StatusPullRequests(ctx, client)
+		stackedpr.StatusPullRequests(ctx, client)
 	} else {
-		stackediff.StatusPullRequests(ctx, client)
+		stackedpr.StatusPullRequests(ctx, client)
 	}
 
-	stackediff.DebugPrintSummary()
+	stackedpr.DebugPrintSummary()
 }
 
 func check(err error) {
