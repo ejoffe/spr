@@ -85,8 +85,7 @@ func writeConfigFile(filename string, config *Config) {
 	err = encoder.Encode(config)
 	check(err)
 	configfile.Close()
-	fmt.Printf("- Config file not found.\n")
-	fmt.Printf("- Default config file created %s\n", filename)
+	fmt.Printf("- Config file created %s\n", filename)
 }
 
 func installCommitHook() {

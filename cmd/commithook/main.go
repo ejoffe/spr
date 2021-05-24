@@ -30,7 +30,7 @@ func main() {
 	defer appendfile.Close()
 	commitID := uuid.New()
 	appendfile.WriteString("\n")
-	appendfile.WriteString(fmt.Sprintf("commit-id: %s\n", commitID.String()[:8]))
+	appendfile.WriteString(fmt.Sprintf("commit-id:%s\n", commitID.String()[:8]))
 }
 
 func check(err error) {
