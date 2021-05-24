@@ -17,11 +17,11 @@ Installation
 
 ### Brew
 ```bash
-brew tap ejoffe/homebrew-tap
-brew install spr
+> brew tap ejoffe/homebrew-tap
+> brew install spr
 ```
 
-### DEB RPM APK
+### DEB | RPM | APK
 Download the .deb, .rpm or .apk from the [releases page](https://github.com/ejoffe/spr/releases) and install them with the appropriate tools.
 
 ### Manual
@@ -34,7 +34,7 @@ Create a branch to work in, or if you're brave enough, you can just work in the 
 > git branch -c salmon
 ```
 
-In the stacked diff workflow you don't need to create a branch for every pull request or thing you want to do. You will generally work in one branch, but you can still create multiple branches and separate features into different branches if you want.
+In the stacked diff workflow you don't need to create a branch for every pull request or thing you want to do. You will generally work in one branch, but you can still create multiple branches and separate features into different branches if you want. Each branch will have it's own separate stack of pull requests. 
     
 Commit your changes to the branch. Note that every commit will end up becoming a pull request with a single commit.
 ```shell
@@ -42,8 +42,8 @@ Commit your changes to the branch. Note that every commit will end up becoming a
 > git commit  
 ```
 
-Write a good commit message explaining the change. The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
-If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready, remove the WIP and run the script again.
+The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
+If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
 
 Amending Commits
 ----------------
@@ -140,4 +140,4 @@ If you find this script as useful as I do, add and star and tell your fellow git
 License
 -------
 
--       [MIT License](LICENSE)
+- [MIT License](LICENSE)
