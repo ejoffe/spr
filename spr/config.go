@@ -3,6 +3,7 @@ package spr
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -40,6 +41,7 @@ func readConfigFile(filename string) *Config {
 		if os.IsNotExist(err) {
 			config = defaultConfig()
 			writeConfigFile(filename, config)
+			installCommitHook()
 			return config
 		} else {
 			check(err)
@@ -83,6 +85,20 @@ func writeConfigFile(filename string, config *Config) {
 	err = encoder.Encode(config)
 	check(err)
 	configfile.Close()
-	fmt.Printf("Config file not found.\n")
-	fmt.Printf("Default config file created here:%s\n", filename)
+	fmt.Printf("- Config file not found.\n")
+	fmt.Printf("- Default config file created %s\n", filename)
+}
+
+func installCommitHook() {
+	var rootdir string
+	mustgit("rev-parse --show-toplevel", &rootdir)
+	rootdir = strings.TrimSpace(rootdir)
+	err := os.Chdir(rootdir)
+	check(err)
+	path, err := exec.LookPath("spr_commit_hook")
+	check(err)
+	cmd := exec.Command("ln", "-s", path, ".git/hooks/commit-msg")
+	_, err = cmd.CombinedOutput()
+	check(err)
+	fmt.Printf("- Installed commit hook in .git/hooks/commit-msg\n")
 }
