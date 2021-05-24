@@ -23,7 +23,7 @@ func TestSortPullRequestsSingleBranch(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedPR(&Config{})
+	sd := NewStackedPR(&Config{}, false)
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -70,7 +70,7 @@ func TestSortPullRequestsTwoBranches(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedPR(&Config{})
+	sd := NewStackedPR(&Config{}, false)
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 4 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -126,7 +126,7 @@ func TestSortPullRequestsTwoBranchesMixed(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedPR(&Config{})
+	sd := NewStackedPR(&Config{}, false)
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)

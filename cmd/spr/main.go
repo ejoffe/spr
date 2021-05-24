@@ -59,17 +59,10 @@ func main() {
 
 	client := githubv4.NewClient(tc)
 
-	config := &spr.Config{
-		GitHubRepoOwner: "ejoffe",
-		GitHubRepoName:  "apomelo",
-		RequireChecks:   true,
-		RequireApproval: false,
-	}
-
-	stackedpr := spr.NewStackedPR(config)
+	config := spr.ReadConfig()
+	stackedpr := spr.NewStackedPR(config, opts.Debug)
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		stackedpr.DebugMode(true)
 	}
 
 	if opts.Update {

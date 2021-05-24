@@ -16,18 +16,19 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
-type Config struct {
-	GitHubRepoOwner string
-	GitHubRepoName  string
-
-	RequireChecks   bool
-	RequireApproval bool
-}
-
 // NewStackedPR constructs and returns a new instance stackediff.
-func NewStackedPR(config *Config) *stackediff {
+func NewStackedPR(config *Config, debug bool) *stackediff {
+	if debug {
+		return &stackediff{
+			config:       config,
+			debug:        true,
+			profiletimer: profiletimer.StartProfileTimer(),
+		}
+	}
+
 	return &stackediff{
 		config:       config,
+		debug:        false,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
 }
@@ -128,7 +129,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.C
 //  - have no merge conflicts
 //  - not be on top of another unmergable request
 // In order to merge a stack of pull requests without generating conflicts
-//  and other pr issues. We find the top mergable pull request in the stack,
+//  and other pr issues. We find the top mergeable pull request in the stack,
 //  than we change this pull requests base to be master and than merge the
 //  pull request. This one merge in effect merges all the commits in the stack.
 //  We than close all the pull requests which are below the merged request, as
@@ -138,11 +139,11 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 	githubInfo := sd.getGitHubInfo(ctx, client)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
-	// Figure out top most pr in the stack that is mergable
+	// Figure out top most pr in the stack that is mergeable
 	var prIndex int
 	for prIndex = 0; prIndex < len(githubInfo.PullRequests); prIndex++ {
 		pr := githubInfo.PullRequests[prIndex]
-		if !pr.mergable(sd.config) {
+		if !pr.mergeable(sd.config) {
 			break
 		}
 	}
@@ -228,7 +229,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		fmt.Printf("merged #%d %v\n", pr.Number, pr.Title)
+		fmt.Printf("MERGED #%d %v\n", pr.Number, pr.Title)
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -246,14 +247,6 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context, client *githubv4.C
 		fmt.Println(pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
-}
-
-// DebugMode sets the debug mode.
-func (sd *stackediff) DebugMode(mode bool) {
-	sd.debug = mode
-	if mode {
-		sd.profiletimer = profiletimer.StartProfileTimer()
-	}
 }
 
 // DebugPrintSummary prints debug info if debug mode is enabled.
@@ -292,9 +285,10 @@ const (
 )
 
 type pullRequestMergeStatus struct {
-	ChecksPass  checkStatus
-	NoConflicts bool
-	Stacked     bool
+	ChecksPass     checkStatus
+	ReviewApproved bool
+	NoConflicts    bool
+	Stacked        bool
 }
 
 type gitHubInfo struct {
@@ -347,7 +341,7 @@ func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 
 	// update stacked merge status flag
 	for _, pr := range prs {
-		if pr.MergeStatus.ChecksPass == checkStatusPass && pr.MergeStatus.NoConflicts {
+		if pr.ready(sd.config) {
 			pr.MergeStatus.Stacked = true
 		} else {
 			break
@@ -533,8 +527,9 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 			}
 
 			pullRequest.MergeStatus = pullRequestMergeStatus{
-				ChecksPass:  checkStatus,
-				NoConflicts: node.Mergeable == "MERGEABLE",
+				ChecksPass:     checkStatus,
+				ReviewApproved: node.ReviewDecision == "APPROVED",
+				NoConflicts:    node.Mergeable == "MERGEABLE",
 			}
 
 			requests = append(requests, pullRequest)
@@ -630,9 +625,10 @@ func createGithubPullRequest(ctx context.Context, client *githubv4.Client,
 		Commit:     commit,
 		Title:      commit.Subject,
 		MergeStatus: pullRequestMergeStatus{
-			ChecksPass:  checkStatusUnknown,
-			NoConflicts: false,
-			Stacked:     false,
+			ChecksPass:     checkStatusUnknown,
+			ReviewApproved: false,
+			NoConflicts:    false,
+			Stacked:        false,
 		},
 	}
 }
@@ -701,7 +697,7 @@ func git(argStr string, output *string) error {
 	return nil
 }
 
-func (pr *pullRequest) mergable(config *Config) bool {
+func (pr *pullRequest) mergeable(config *Config) bool {
 	if !pr.MergeStatus.NoConflicts {
 		return false
 	}
@@ -711,7 +707,20 @@ func (pr *pullRequest) mergable(config *Config) bool {
 	if config.RequireChecks && pr.MergeStatus.ChecksPass != checkStatusPass {
 		return false
 	}
-	if config.RequireApproval && false {
+	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
+		return false
+	}
+	return true
+}
+
+func (pr *pullRequest) ready(config *Config) bool {
+	if !pr.MergeStatus.NoConflicts {
+		return false
+	}
+	if config.RequireChecks && pr.MergeStatus.ChecksPass != checkStatusPass {
+		return false
+	}
+	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
 		return false
 	}
 	return true
@@ -727,7 +736,11 @@ func (pr *pullRequest) String(config *Config) string {
 	statusString += pr.MergeStatus.ChecksPass.String(config)
 
 	if config.RequireApproval {
-		statusString += checkmark
+		if pr.MergeStatus.ReviewApproved {
+			statusString += checkmark
+		} else {
+			statusString += crossmark
+		}
 	} else {
 		statusString += "-"
 	}
