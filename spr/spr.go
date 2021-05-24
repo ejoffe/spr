@@ -304,10 +304,10 @@ type stackediff struct {
 	profiletimer profiletimer.Timer
 }
 
-// sortPullRequests sorts the pull requests so that the ones that are on top of
+// sortPullRequests sorts the pull requests so that the one that is on top of
 //  master will come first followed by the ones that are stacked on top.
 // The stack order is maintained so that multiple pull requests can be merged in
-//  the correct order
+//  the correct order.
 func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 
 	swap := func(i int, j int) {
@@ -324,17 +324,6 @@ func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 				targetBranch = prs[j].FromBranch
 				swap(i, j)
 				break
-			}
-		}
-
-		if j == len(prs) {
-			// pr with target branch not found
-			if targetBranch == "master" {
-				log.Error().Msg(fmt.Sprintf("pull request %d target branch '%s' not found", prs[i].Number, targetBranch))
-			} else {
-				// redo last search with master as target
-				i--
-				targetBranch = "master"
 			}
 		}
 	}
