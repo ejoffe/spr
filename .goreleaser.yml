@@ -1,7 +1,8 @@
+env:
+  - GO111MODULE=on
 before:
   hooks:
     - go mod tidy
-    #- go generate ./...
 builds:
   - main: ./cmd/spr
     id: "spr"
@@ -23,7 +24,7 @@ builds:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
   - main: ./cmd/commithook
     id: "commithook"
-    binary: spr-commithook
+    binary: spr_commit_hook
     goos:
       - linux
       - windows
@@ -31,12 +32,16 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
+  - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    replacements:
+      darwin: macos
+      linux: linux
+      windows: windows
       386: i386
       amd64: x86_64
+    format_overrides:
+    - goos: windows
+      format: zip
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -47,3 +52,36 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+  - 
+    name: spr
+    tap:
+      owner: ejoffe
+      name: homebrew-tap
+    homepage: https://github.com/ejoffe/spr
+    description: Stacked Pull Requests on GitHub
+    install: |
+      bin.install "git-spr"
+      bin.install "git-amend"
+      bin.install "spr_commit_hook"
+    license: "MIT"
+nfpms:
+  - file_name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    homepage: https://github.com/ejoffe/spr
+    description: Stacked Pull Requests on GitHub
+    license: MIT
+    formats:
+    - apk
+    - deb
+    - rpm
+    dependencies:
+    - git
+    recommends:
+    - golang
+#snapcrafts:
+#  - name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+#    summary: Stacked Pull Requests on GitHub
+#    description: |
+#      spr is a tool to easily run and automate stacked diff workflows on GitHub.
+#    confinement: classic
+#    publish: true

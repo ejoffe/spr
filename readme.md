@@ -15,35 +15,19 @@ The github flow is not quite compatible with the stacked diff model. At the core
 Installation 
 ------------
 
-Install the git commit hook
+### Brew
 ```bash
-~/apomelo> ln -s ../../s/commit_msg_hook .git/hooks/commit-msg
-```
-
-Add the script directory to your path, make sure to replace HOMEDIR with the actual path to the apomelo directory.
-```bash
-> export PATH="~/HOMEDIR/apomelo/s:${PATH}"
+> brew tap ejoffe/homebrew-spr
+> brew install spr
 ```
 
 Set github token. Make a new token here: https://github.com/settings/tokens. Use the **repo** auth scope.
 ```bash
 > export GITHUB_TOKEN="token value"
 ```
-
-Add the export statements into your `.bash_profile` so they get set each time you open a new terminal. 
-
-<details><summary>Fish instructions</summary>
-
-Add script directory to your path:
-```fish
-set fish_user_paths ~/apomelo/s $fish_user_paths
-```
-
-Set github token
 ```fish
 set -Ux GITHUB_TOKEN "token value"
 ```
-</details>
 
     
 Workflow
