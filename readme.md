@@ -17,19 +17,16 @@ Installation
 
 ### Brew
 ```bash
-> brew tap ejoffe/homebrew-spr
-> brew install spr
+brew tap ejoffe/homebrew-tap
+brew install spr
 ```
 
-Set github token. Make a new token here: https://github.com/settings/tokens. Use the **repo** auth scope.
-```bash
-> export GITHUB_TOKEN="token value"
-```
-```fish
-set -Ux GITHUB_TOKEN "token value"
-```
+### DEB RPM APK
+Download the .deb, .rpm or .apk from the [releases page](https://github.com/ejoffe/spr/releases) and install them with the appropriate tools.
 
-    
+### Manual
+Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to the desired location.
+
 Workflow
 --------
 Create a branch to work in, or if you're brave enough, you can just work in the master branch.
@@ -113,6 +110,14 @@ Your pull requests are stacked. Don't use the UI to merge pull requests, if you 
 > git spr -m
 MERGED #58 Feature A
 MERGED #59 Feature B
+[·✗✔✗] 61: Feature D
+[·✗✔✗] 60: Feature C
+```
+
+Listing Current Pull Requests
+-----------------------------
+```shell
+> git spr
 [·✗✔✗] 61: Feature D
 [·✗✔✗] 60: Feature C
 ```
