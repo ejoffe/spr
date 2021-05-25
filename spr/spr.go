@@ -40,22 +40,22 @@ func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, deb
 
 // AmendCommit enables one to easily ammend a commit in the middle of a stack
 //  of commits. A list of commits is printed and one can be chosen to be ammended.
-func AmendCommit(ctx context.Context) {
-	localCommits := getLocalCommitStack(false)
+func (sd *stackediff) AmendCommit(ctx context.Context) {
+	localCommits := sd.getLocalCommitStack(false)
 	if len(localCommits) == 0 {
-		fmt.Printf("No commits to amend\n")
+		fmt.Fprintf(sd.writer, "No commits to amend\n")
 		return
 	}
 
 	for i := len(localCommits) - 1; i >= 0; i-- {
 		commit := localCommits[i]
-		fmt.Printf(" %d : %s : %s\n", i+1, commit.CommitID[0:8], commit.Subject)
+		fmt.Fprintf(sd.writer, " %d : %s : %s\n", i+1, commit.CommitID[0:8], commit.Subject)
 	}
 
 	if len(localCommits) == 1 {
-		fmt.Printf("Commit to amend [%d]: ", 1)
+		fmt.Fprintf(sd.writer, "Commit to amend [%d]: ", 1)
 	} else {
-		fmt.Printf("Commit to amend [%d-%d]: ", 1, len(localCommits))
+		fmt.Fprintf(sd.writer, "Commit to amend [%d-%d]: ", 1, len(localCommits))
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -63,7 +63,7 @@ func AmendCommit(ctx context.Context) {
 	line = strings.TrimSpace(line)
 	commitIndex, err := strconv.Atoi(line)
 	if err != nil {
-		fmt.Println("Invalid input")
+		fmt.Fprint(sd.writer, "Invalid input\n")
 		return
 	}
 	commitIndex = commitIndex - 1
@@ -348,7 +348,7 @@ func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 }
 
 // getLocalCommitStack returns a list of unmerged commits
-func getLocalCommitStack(skipWIP bool) []commit {
+func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 
 	var commits []commit
 	var commitLog string
@@ -379,7 +379,7 @@ func getLocalCommitStack(skipWIP bool) []commit {
 		matches := commitHashRegex.FindStringSubmatch(line)
 		if matches != nil {
 			if commitScanOn {
-				printCommitInstallHelper()
+				sd.printCommitInstallHelper()
 			}
 			commitScanOn = true
 			scannedCommit = commit{
@@ -414,19 +414,19 @@ func getLocalCommitStack(skipWIP bool) []commit {
 	// if commitScanOn is true here it means there was a commit without
 	//  a commit-id
 	if commitScanOn {
-		printCommitInstallHelper()
+		sd.printCommitInstallHelper()
 		return nil
 	}
 
 	return commits
 }
 
-func printCommitInstallHelper() {
-	fmt.Printf("A commit is missing a commit-id.\n")
-	fmt.Printf("This most likely means the commit-msg hook isn't installed.\n")
-	fmt.Printf("To install the hook run the following cmd in the repo root dir:\n")
-	fmt.Printf(" > ln -s spr-commithook .git/hooks/commit-msg\n")
-	fmt.Printf("After installing the hook, you'll need to ammend your commits\n")
+func (sd *stackediff) printCommitInstallHelper() {
+	fmt.Fprintf(sd.writer, "A commit is missing a commit-id.\n")
+	fmt.Fprintf(sd.writer, "This most likely means the commit-msg hook isn't installed.\n")
+	fmt.Fprintf(sd.writer, "To install the hook run the following cmd in the repo root dir:\n")
+	fmt.Fprintf(sd.writer, " > ln -s spr-commithook .git/hooks/commit-msg\n")
+	fmt.Fprintf(sd.writer, "After installing the hook, you'll need to ammend your commits\n")
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
@@ -488,7 +488,6 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 
 	var branchname string
 	mustgit("branch --show-current", &branchname)
-	branchname = strings.TrimSuffix(branchname, "\n")
 
 	var requests []*pullRequest
 	for _, node := range query.Viewer.PullRequests.Nodes {
@@ -546,7 +545,7 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 //  which are new (on top of origin/master) and creates a corresponding
 //  branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubInfo) []commit {
-	localCommits := getLocalCommitStack(true)
+	localCommits := sd.getLocalCommitStack(true)
 
 	var output string
 	mustgit("status --porcelain --untracked-files=no", &output)
@@ -680,13 +679,11 @@ func git(argStr string, output *string) error {
 		if err != nil {
 			return err
 		}
-		*output = string(out)
+		*output = strings.TrimSpace(string(out))
 	} else {
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Println(string(out))
-		}
-		if err != nil {
+			fmt.Fprintf(os.Stderr, "git error: %s", string(out))
 			return err
 		}
 	}

@@ -31,7 +31,8 @@ func main() {
 	}
 
 	ctx := context.Background()
-	spr.AmendCommit(ctx)
+	sd := spr.NewStackedPR(nil, nil, os.Stdout, false)
+	sd.AmendCommit(ctx)
 }
 
 func check(err error) {
