@@ -23,7 +23,7 @@ func TestSortPullRequests(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedPR(&Config{}, nil, false)
+	sd := NewStackedPR(&Config{}, nil, nil, false)
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -55,7 +55,7 @@ func TestSortPullRequestsMixed(t *testing.T) {
 		},
 	}
 
-	sd := NewStackedPR(&Config{}, nil, false)
+	sd := NewStackedPR(&Config{}, nil, nil, false)
 	prs = sd.sortPullRequests(prs)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)

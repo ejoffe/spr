@@ -60,7 +60,7 @@ func main() {
 	client := githubv4.NewClient(tc)
 
 	config := spr.ReadConfig()
-	stackedpr := spr.NewStackedPR(config, client, opts.Debug)
+	stackedpr := spr.NewStackedPR(config, client, os.Stdout, opts.Debug)
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}

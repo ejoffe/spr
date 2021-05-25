@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -17,11 +18,12 @@ import (
 )
 
 // NewStackedPR constructs and returns a new instance stackediff.
-func NewStackedPR(config *Config, github *githubv4.Client, debug bool) *stackediff {
+func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, debug bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
 			github:       github,
+			writer:       writer,
 			debug:        true,
 			profiletimer: profiletimer.StartProfileTimer(),
 		}
@@ -30,6 +32,7 @@ func NewStackedPR(config *Config, github *githubv4.Client, debug bool) *stackedi
 	return &stackediff{
 		config:       config,
 		github:       github,
+		writer:       writer,
 		debug:        false,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
@@ -118,7 +121,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Println(pr.String(sd.config))
+		fmt.Fprint(sd.writer, pr.String(sd.config))
 	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
 }
@@ -231,7 +234,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		fmt.Printf("MERGED #%d %v\n", pr.Number, pr.Title)
+		fmt.Fprintf(sd.writer, "MERGED #%d %v\n", pr.Number, pr.Title)
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -246,7 +249,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Println(pr.String(sd.config))
+		fmt.Fprint(sd.writer, pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
@@ -303,6 +306,7 @@ type gitHubInfo struct {
 type stackediff struct {
 	config       *Config
 	github       *githubv4.Client
+	writer       io.Writer
 	debug        bool
 	profiletimer profiletimer.Timer
 }
