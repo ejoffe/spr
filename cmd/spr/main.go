@@ -60,20 +60,20 @@ func main() {
 	client := githubv4.NewClient(tc)
 
 	config := spr.ReadConfig()
-	stackedpr := spr.NewStackedPR(config, opts.Debug)
+	stackedpr := spr.NewStackedPR(config, client, opts.Debug)
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
 	if opts.Update {
-		stackedpr.UpdatePullRequests(ctx, client)
+		stackedpr.UpdatePullRequests(ctx)
 	} else if opts.Merge {
-		stackedpr.MergePullRequests(ctx, client)
-		stackedpr.UpdatePullRequests(ctx, client)
+		stackedpr.MergePullRequests(ctx)
+		stackedpr.UpdatePullRequests(ctx)
 	} else if opts.Status {
-		stackedpr.StatusPullRequests(ctx, client)
+		stackedpr.StatusPullRequests(ctx)
 	} else {
-		stackedpr.StatusPullRequests(ctx, client)
+		stackedpr.StatusPullRequests(ctx)
 	}
 
 	if opts.Debug {

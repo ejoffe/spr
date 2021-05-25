@@ -16,6 +16,7 @@ func main() {
 	check(err)
 	defer readfile.Close()
 
+	// scan for commit-id - if found do nothing and exit
 	scanner := bufio.NewScanner(readfile)
 	for scanner.Scan() {
 		if strings.HasPrefix(scanner.Text(), "commit-id:") {
@@ -23,8 +24,9 @@ func main() {
 		}
 	}
 	check(scanner.Err())
-
 	readfile.Close()
+
+	// commit-id not found - append a new commit-id to the end of the file
 	appendfile, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0666)
 	check(err)
 	defer appendfile.Close()

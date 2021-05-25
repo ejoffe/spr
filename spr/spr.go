@@ -17,10 +17,11 @@ import (
 )
 
 // NewStackedPR constructs and returns a new instance stackediff.
-func NewStackedPR(config *Config, debug bool) *stackediff {
+func NewStackedPR(config *Config, github *githubv4.Client, debug bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
+			github:       github,
 			debug:        true,
 			profiletimer: profiletimer.StartProfileTimer(),
 		}
@@ -28,6 +29,7 @@ func NewStackedPR(config *Config, debug bool) *stackediff {
 
 	return &stackediff{
 		config:       config,
+		github:       github,
 		debug:        false,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
@@ -72,9 +74,9 @@ func AmendCommit(ctx context.Context) {
 //   with currently open pull requests in github.
 //  It will create a new pull request for all new commits, and update the
 //   pull request if a commit has been amended.
-func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.Client) {
+func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
-	githubInfo := sd.fetchAndGetGitHubInfo(ctx, client)
+	githubInfo := sd.fetchAndGetGitHubInfo(ctx, sd.github)
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
 	localCommits := sd.syncCommitStackToGitHub(ctx, githubInfo)
 	sd.profiletimer.Step("UpdatePullRequests::SyncCommits")
@@ -93,7 +95,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.C
 						prevCommit = &localCommits[commitIndex-1]
 					}
 					updateGithubPullRequest(
-						ctx, client, githubInfo,
+						ctx, sd.github, githubInfo,
 						pr, c, prevCommit)
 				}
 				break
@@ -107,7 +109,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.C
 				prevCommit = &localCommits[commitIndex-1]
 			}
 			pr := createGithubPullRequest(
-				ctx, client, githubInfo,
+				ctx, sd.github, githubInfo,
 				c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 		}
@@ -134,9 +136,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, client *githubv4.C
 //  pull request. This one merge in effect merges all the commits in the stack.
 //  We than close all the pull requests which are below the merged request, as
 //  their commits have already been merged.
-func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Client) {
+func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::Start")
-	githubInfo := sd.getGitHubInfo(ctx, client)
+	githubInfo := sd.getGitHubInfo(ctx, sd.github)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
 	// Figure out top most pr in the stack that is mergeable
@@ -166,7 +168,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 		PullRequestID: prToMerge.ID,
 		BaseRefName:   &baseRefMaster,
 	}
-	err := client.Mutate(ctx, &updatepr, updatePRInput, nil)
+	err := sd.github.Mutate(ctx, &updatepr, updatePRInput, nil)
 	if err != nil {
 		log.Fatal().
 			Str("id", prToMerge.ID).
@@ -190,7 +192,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 		PullRequestID: prToMerge.ID,
 		MergeMethod:   &mergeMethod,
 	}
-	err = client.Mutate(ctx, &mergepr, mergePRInput, nil)
+	err = sd.github.Mutate(ctx, &mergepr, mergePRInput, nil)
 	if err != nil {
 		log.Fatal().
 			Str("id", prToMerge.ID).
@@ -214,7 +216,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 		closePRInput := githubv4.ClosePullRequestInput{
 			PullRequestID: pr.ID,
 		}
-		err = client.Mutate(ctx, &closepr, closePRInput, nil)
+		err = sd.github.Mutate(ctx, &closepr, closePRInput, nil)
 		log.Debug().Int("number", closepr.ClosePullRequest.PullRequest.Number).Msg("closed pr")
 		if err != nil {
 			log.Fatal().
@@ -238,9 +240,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, client *githubv4.Cl
 // StatusPullRequests fetches all the users pull requests from github and
 //  prints out the status of each. It does not make any updates locally or
 //  remotely on github.
-func (sd *stackediff) StatusPullRequests(ctx context.Context, client *githubv4.Client) {
+func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
-	githubInfo := sd.getGitHubInfo(ctx, client)
+	githubInfo := sd.getGitHubInfo(ctx, sd.github)
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
@@ -300,6 +302,7 @@ type gitHubInfo struct {
 
 type stackediff struct {
 	config       *Config
+	github       *githubv4.Client
 	debug        bool
 	profiletimer profiletimer.Timer
 }
