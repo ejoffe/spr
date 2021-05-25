@@ -44,7 +44,7 @@ func AmendCommit(ctx context.Context) {
 	localCommits := getLocalCommitStack(false)
 	if len(localCommits) == 0 {
 		fmt.Printf("No commits to amend\n")
-		os.Exit(0)
+		return
 	}
 
 	for i := len(localCommits) - 1; i >= 0; i-- {
@@ -64,7 +64,7 @@ func AmendCommit(ctx context.Context) {
 	commitIndex, err := strconv.Atoi(line)
 	if err != nil {
 		fmt.Println("Invalid input")
-		os.Exit(0)
+		return
 	}
 	commitIndex = commitIndex - 1
 	check(err)
@@ -379,7 +379,7 @@ func getLocalCommitStack(skipWIP bool) []commit {
 		matches := commitHashRegex.FindStringSubmatch(line)
 		if matches != nil {
 			if commitScanOn {
-				printCommitInstallHelperAndExit()
+				printCommitInstallHelper()
 			}
 			commitScanOn = true
 			scannedCommit = commit{
@@ -414,19 +414,19 @@ func getLocalCommitStack(skipWIP bool) []commit {
 	// if commitScanOn is true here it means there was a commit without
 	//  a commit-id
 	if commitScanOn {
-		printCommitInstallHelperAndExit()
+		printCommitInstallHelper()
+		return nil
 	}
 
 	return commits
 }
 
-func printCommitInstallHelperAndExit() {
+func printCommitInstallHelper() {
 	fmt.Printf("A commit is missing a commit-id.\n")
 	fmt.Printf("This most likely means the commit-msg hook isn't installed.\n")
 	fmt.Printf("To install the hook run the following cmd in the repo root dir:\n")
 	fmt.Printf(" > ln -s spr-commithook .git/hooks/commit-msg\n")
 	fmt.Printf("After installing the hook, you'll need to ammend your commits\n")
-	os.Exit(1)
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
