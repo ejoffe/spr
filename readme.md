@@ -125,11 +125,12 @@ Listing Current Pull Requests
 Configuration
 -------------
 When the script is run for the first time a config file **.spr.yml** is created in your repository base dir. 
-There are four configurations:
-- githubRepoOwner : name of the github owner - fetched automatically and in most cases need not change.
-- githubRepoName :  name of the github repository - fetched automatically and in most cases need not change.
-- requireChecks : require checks to pass in order to merge (default:true)
-- requireApproval : require pull request approval in order to merge (default:true)
+These are the available configurations:
+- githubRepoOwner : str  : name of the github owner (fetched automatically and in most cases need not change)
+- githubRepoName  : str  : name of the github repository (fetched automatically and in most cases need not change)
+- requireChecks   : bool : require checks to pass in order to merge (default:true)
+- requireApproval : bool : require pull request approval in order to merge (default:true)
+- showPRLink      : bool : show full pull request http link (default:true)
 
 Happy Coding!
 -------------
