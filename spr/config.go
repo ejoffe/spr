@@ -18,6 +18,8 @@ type Config struct {
 
 	RequireChecks   bool `yaml:"requireChecks"`
 	RequireApproval bool `yaml:"requireApproval"`
+
+	ShowPRLink bool `yaml:"showPRLink"`
 }
 
 // ReadConfig looks for a .spr.yml file in the root git directory.
@@ -69,12 +71,14 @@ func defaultConfig() *Config {
 				GitHubRepoName:  matches[2],
 				RequireChecks:   true,
 				RequireApproval: true,
+				ShowPRLink:      true,
 			}
 		}
 	}
 	return &Config{
 		RequireChecks:   true,
 		RequireApproval: true,
+		ShowPRLink:      true,
 	}
 }
 

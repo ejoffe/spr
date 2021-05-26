@@ -121,7 +121,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s %s\n", pr.statusString(sd.config), pr.String(sd.config))
 	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
 }
@@ -234,7 +234,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "MERGED %d: %v\n", pr.Number, pr.Title)
+		fmt.Fprintf(sd.writer, "MERGED %s\n", pr.String(sd.config))
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -249,7 +249,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s %s\n", pr.statusString(sd.config), pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
@@ -723,7 +723,7 @@ const checkmark = "\xE2\x9C\x94"
 const crossmark = "\xE2\x9C\x97"
 const middledot = "\xC2\xB7"
 
-func (pr *pullRequest) String(config *Config) string {
+func (pr *pullRequest) statusString(config *Config) string {
 	statusString := "["
 
 	statusString += pr.MergeStatus.ChecksPass.String(config)
@@ -751,8 +751,17 @@ func (pr *pullRequest) String(config *Config) string {
 	}
 
 	statusString += "]"
+	return statusString
+}
 
-	return fmt.Sprintf("%s %3d: %s", statusString, pr.Number, pr.Title)
+func (pr *pullRequest) String(config *Config) string {
+	prInfo := fmt.Sprintf("%3d", pr.Number)
+	if config.ShowPRLink {
+		prInfo = fmt.Sprintf("github.com/%s/%s/pull/%d",
+			config.GitHubRepoOwner, config.GitHubRepoName, pr.Number)
+	}
+
+	return fmt.Sprintf("%s : %s", prInfo, pr.Title)
 }
 
 func (cs checkStatus) String(config *Config) string {
