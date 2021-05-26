@@ -121,7 +121,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprint(sd.writer, pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
 	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
 }
@@ -234,7 +234,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "MERGED #%d %v\n", pr.Number, pr.Title)
+		fmt.Fprintf(sd.writer, "MERGED %d: %v\n", pr.Number, pr.Title)
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -249,7 +249,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprint(sd.writer, pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
