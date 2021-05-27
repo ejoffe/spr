@@ -672,8 +672,8 @@ func git(argStr string, output *string) error {
 	//  if output is not nil it will be set to the output of the command
 	args := strings.Split(argStr, " ")
 	cmd := exec.Command("git", args...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "EDITOR=/usr/bin/true")
+	//cmd.Env = os.Environ()
+	cmd.Env = []string{"EDITOR=/usr/bin/true"}
 
 	if output != nil {
 		out, err := cmd.CombinedOutput()
