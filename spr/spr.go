@@ -446,6 +446,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv
 	return info
 }
 
+var pullRequestRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
+
 func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
 	var query struct {
 		Viewer struct {
@@ -502,8 +504,7 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 			ToBranch:   node.BaseRefName,
 		}
 
-		commitIDRegex := regexp.MustCompile(`pr/[a-zA-Z0-9_.-]+/([a-zA-Z0-9_.-]+)/([a-f0-9]{8})$`)
-		matches := commitIDRegex.FindStringSubmatch(node.HeadRefName)
+		matches := pullRequestRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil && matches[1] == branchname {
 			pullRequest.Commit = commit{
 				CommitID:   matches[2],
