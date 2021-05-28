@@ -75,6 +75,8 @@ func defaultConfig() *Config {
 			}
 		}
 	}
+
+	fmt.Printf("- Warning: repository name not found. Configure it manually in .spr.yml")
 	return &Config{
 		RequireChecks:   true,
 		RequireApproval: true,
