@@ -672,8 +672,14 @@ func git(argStr string, output *string) error {
 	//  if output is not nil it will be set to the output of the command
 	args := strings.Split(argStr, " ")
 	cmd := exec.Command("git", args...)
-	//cmd.Env = os.Environ()
+	envVarsToDerive := []string{
+		"SSH_AUTH_SOCK",
+		"SSH_AGENT_PID",
+	}
 	cmd.Env = []string{"EDITOR=/usr/bin/true"}
+	for _, env := range envVarsToDerive {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, os.Getenv(env)))
+	}
 
 	if output != nil {
 		out, err := cmd.CombinedOutput()
