@@ -425,7 +425,7 @@ func (sd *stackediff) printCommitInstallHelper() {
 	fmt.Fprintf(sd.writer, "A commit is missing a commit-id.\n")
 	fmt.Fprintf(sd.writer, "This most likely means the commit-msg hook isn't installed.\n")
 	fmt.Fprintf(sd.writer, "To install the hook run the following cmd in the repo root dir:\n")
-	fmt.Fprintf(sd.writer, " > ln -s spr-commithook .git/hooks/commit-msg\n")
+	fmt.Fprintf(sd.writer, " > ln -s $(which spr_commit_hook) .git/hooks/commit-msg\n")
 	fmt.Fprintf(sd.writer, "After installing the hook, you'll need to ammend your commits\n")
 }
 
