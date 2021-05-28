@@ -35,8 +35,12 @@ type opts struct {
 
 func main() {
 	var opts opts
-	_, err := flags.Parse(&opts)
-	check(err)
+	parser := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
+	_, err := parser.Parse()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	if opts.Version {
 		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
@@ -50,7 +54,7 @@ func main() {
 		fmt.Printf("GitHub OAuth Token Required\n")
 		fmt.Printf("Make one at: https://%s/settings/tokens\n", "github.com")
 		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value\n")
-		os.Exit(-1)
+		os.Exit(2)
 	}
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -78,11 +82,5 @@ func main() {
 
 	if opts.Debug {
 		stackedpr.DebugPrintSummary()
-	}
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
 	}
 }
