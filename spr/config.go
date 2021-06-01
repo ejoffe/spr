@@ -61,14 +61,12 @@ func defaultConfig() *Config {
 	mustgit("remote -v", &output)
 	lines := strings.Split(output, "\n")
 
-	regex := regexp.MustCompile(`^origin\s+https://github.com/(\w+)/(\w+).git \(push\)`)
-
 	for _, line := range lines {
-		matches := regex.FindStringSubmatch(line)
-		if matches != nil {
+		repoOwner, repoName, match := getRepoDetailsFromRemote(line)
+		if match {
 			return &Config{
-				GitHubRepoOwner: matches[1],
-				GitHubRepoName:  matches[2],
+				GitHubRepoOwner: repoOwner,
+				GitHubRepoName:  repoName,
 				RequireChecks:   true,
 				RequireApproval: true,
 				ShowPRLink:      true,
@@ -82,6 +80,15 @@ func defaultConfig() *Config {
 		RequireApproval: true,
 		ShowPRLink:      true,
 	}
+}
+
+func getRepoDetailsFromRemote(remote string) (string, string, bool) {
+	regex := regexp.MustCompile(`^origin\s+https://github.com/(\w+)/(\w+).git \(push\)`)
+	matches := regex.FindStringSubmatch(remote)
+	if matches != nil {
+		return matches[1], matches[2], true
+	}
+	return "", "", false
 }
 
 func writeConfigFile(filename string, config *Config) {
