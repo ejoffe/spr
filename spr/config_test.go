@@ -20,12 +20,12 @@ func TestGetRepoDetailsFromRemote(t *testing.T) {
 		{"origin  ssh://git@github.com/r2/d2.git (fetch)", "", "", false},
 		{"origin  ssh://git@github.com/r2/d2 (push)", "r2", "d2", true},
 
-		{"origin  git@github.com/r2/d2.git (push)", "r2", "d2", true},
-		{"origin  git@github.com/r2/d2.git (fetch)", "", "", false},
-		{"origin  git@github.com/r2/d2 (push)", "r2", "d2", true},
+		{"origin  git@github.com:r2/d2.git (push)", "r2", "d2", true},
+		{"origin  git@github.com:r2/d2.git (fetch)", "", "", false},
+		{"origin  git@github.com:r2/d2 (push)", "r2", "d2", true},
 	}
 	for i, testCase := range testCases {
-		t.Logf("Testing %v %v", i, testCase.remote)
+		t.Logf("Testing %v %q", i, testCase.remote)
 		repoOwner, repoName, match := getRepoDetailsFromRemote(testCase.remote)
 		if repoOwner != testCase.repoOwner {
 			t.Fatalf("Wrong \"repoOwner\" returned for test case %v, expected %q, got %q", i, testCase.repoOwner, repoOwner)

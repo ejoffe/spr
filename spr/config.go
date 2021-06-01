@@ -83,11 +83,23 @@ func defaultConfig() *Config {
 }
 
 func getRepoDetailsFromRemote(remote string) (string, string, bool) {
-	regex := regexp.MustCompile(`^origin\s+(?:(https://)|(ssh://))?(git@)?github.com/(\w+)/(\w+)(.git)? \(push\)`)
+	// Allows "https://", "ssh://" or no protocol at all (this means ssh)
+	protocolFormat := `(?:(https://)|(ssh://))?`
+	// This may or may not be present in the address
+	userFormat := `(git@)?`
+	// "/" is expected in "http://" or "ssh://" protocol, when no protocol given
+	// it should be ":"
+	repoFormat := `github.com(/|:)(?P<repoOwner>\w+)/(?P<repoName>\w+)`
+	// This is neither required in https access nor in ssh one
+	suffixFormat := `(.git)?`
+	regexFormat := fmt.Sprintf(`^origin\s+%s%s%s%s \(push\)`,
+		protocolFormat, userFormat, repoFormat, suffixFormat)
+	regex := regexp.MustCompile(regexFormat)
 	matches := regex.FindStringSubmatch(remote)
 	if matches != nil {
-		fmt.Printf("Matches: %q\n", matches)
-		return matches[4], matches[5], true
+		repoOwnerIndex := regex.SubexpIndex("repoOwner")
+		repoNameIndex := regex.SubexpIndex("repoName")
+		return matches[repoOwnerIndex], matches[repoNameIndex], true
 	}
 	return "", "", false
 }
