@@ -1,0 +1,24 @@
+name: golang build
+
+on: push
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Build
+      working-directory: ./
+      run: go build -v ./...
+
+    - name: Test
+      working-directory: ./
+      run: go test -v ./...
