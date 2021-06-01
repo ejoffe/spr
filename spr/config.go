@@ -83,10 +83,11 @@ func defaultConfig() *Config {
 }
 
 func getRepoDetailsFromRemote(remote string) (string, string, bool) {
-	regex := regexp.MustCompile(`^origin\s+https://github.com/(\w+)/(\w+).git \(push\)`)
+	regex := regexp.MustCompile(`^origin\s+(?:(https://)|(ssh://))?(git@)?github.com/(\w+)/(\w+)(.git)? \(push\)`)
 	matches := regex.FindStringSubmatch(remote)
 	if matches != nil {
-		return matches[1], matches[2], true
+		fmt.Printf("Matches: %q\n", matches)
+		return matches[4], matches[5], true
 	}
 	return "", "", false
 }
