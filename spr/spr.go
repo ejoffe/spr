@@ -138,7 +138,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 //  - not be on top of another unmergable request
 // In order to merge a stack of pull requests without generating conflicts
 //  and other pr issues. We find the top mergeable pull request in the stack,
-//  than we change this pull requests base to be master and than merge the
+//  than we change this pull request's base to be master and than merge the
 //  pull request. This one merge in effect merges all the commits in the stack.
 //  We than close all the pull requests which are below the merged request, as
 //  their commits have already been merged.
@@ -210,8 +210,32 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	// Close all the pull requests in the stack below the merged pr
+	//  Before closing add a review comment with the pr that merged the commit.
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
+		var updatepr struct {
+			UpdatePullRequest struct {
+				PullRequest struct {
+					Number int
+				}
+			} `graphql:"addPullRequestReviewComment(input: $input)"`
+		}
+		prid := githubv4.ID(pr.ID)
+		body := githubv4.String(fmt.Sprintf("Merged in pull request #%d", mergepr.MergePullRequest.PullRequest.Number))
+		updatePRInput := githubv4.AddPullRequestReviewCommentInput{
+			PullRequestID: &prid,
+			Body:          body,
+		}
+		err = sd.github.Mutate(ctx, &updatepr, updatePRInput, nil)
+		if err != nil {
+			log.Fatal().
+				Str("id", pr.ID).
+				Int("number", pr.Number).
+				Str("title", pr.Title).
+				Err(err).
+				Msg("pull request update failed")
+		}
+
 		var closepr struct {
 			ClosePullRequest struct {
 				PullRequest struct {
@@ -223,7 +247,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 			PullRequestID: pr.ID,
 		}
 		err = sd.github.Mutate(ctx, &closepr, closePRInput, nil)
-		log.Debug().Int("number", closepr.ClosePullRequest.PullRequest.Number).Msg("closed pr")
 		if err != nil {
 			log.Fatal().
 				Str("id", pr.ID).
