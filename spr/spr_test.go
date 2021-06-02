@@ -193,7 +193,7 @@ Date:   Wed May 21 19:53:12 1980 -0700
 	}
 
 	for _, tc := range tests {
-		actualCommits := sd.parseLocalCommitStack(tc.inputCommitLog, false)
+		actualCommits := sd.parseLocalCommitStack(tc.inputCommitLog)
 		assert.Equal(t, tc.expectedCommits, actualCommits, tc.name)
 
 		if tc.expectedCommitHookMessage {
