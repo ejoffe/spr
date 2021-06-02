@@ -1,0 +1,6 @@
+#!/bin/bash
+
+DIR=$(git rev-parse --show-toplevel)
+cd $DIR/
+
+go run cmd/amend/main.go
