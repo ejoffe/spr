@@ -41,7 +41,7 @@ func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, deb
 // AmendCommit enables one to easily ammend a commit in the middle of a stack
 //  of commits. A list of commits is printed and one can be chosen to be ammended.
 func (sd *stackediff) AmendCommit(ctx context.Context) {
-	localCommits := sd.getLocalCommitStack(false)
+	localCommits := sd.getLocalCommitStack()
 	if len(localCommits) == 0 {
 		fmt.Fprintf(sd.writer, "No commits to amend\n")
 		return
@@ -86,6 +86,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 
 	// iterate through local_commits and update pull_requests
 	for commitIndex, c := range localCommits {
+		if c.WIP {
+			break
+		}
 		prFound := false
 		for _, pr := range githubInfo.PullRequests {
 			if c.CommitID == pr.Commit.CommitID {
@@ -276,6 +279,9 @@ type commit struct {
 
 	// Body is the body of the commit message.
 	Body string
+
+	// WIP is true if the commit is still work in progress.
+	WIP bool
 }
 
 type pullRequest struct {
@@ -357,21 +363,21 @@ func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 }
 
 // getLocalCommitStack returns a list of unmerged commits
-func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
+func (sd *stackediff) getLocalCommitStack() []commit {
 
 	var commitLog string
 	mustgit("log origin/master..HEAD", &commitLog)
-	return sd.parseLocalCommitStack(commitLog, skipWIP)
+	return sd.parseLocalCommitStack(commitLog)
 }
 
-func (sd *stackediff) parseLocalCommitStack(commitLog string, skipWIP bool) []commit {
+func (sd *stackediff) parseLocalCommitStack(commitLog string) []commit {
 	var commits []commit
 
 	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
 	commitIDRegex := regexp.MustCompile(`commit-id\:([a-f0-9]{8})`)
 
 	// The list of commits from the command line actually starts at the
-	//  most recent tio commit. In order to reverse the list we use a
+	//  most recent commit. In order to reverse the list we use a
 	//  custom prepend function instead of append
 	prepend := func(l []commit, c commit) []commit {
 		l = append(l, commit{})
@@ -413,11 +419,11 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string, skipWIP bool) []co
 			scannedCommit.CommitID = matches[1]
 			scannedCommit.Body = strings.TrimSpace(scannedCommit.Body)
 
-			if skipWIP && strings.HasPrefix(scannedCommit.Subject, "WIP") {
-				// if commit subject starts with "WIP", ignore it
-			} else {
-				commits = prepend(commits, scannedCommit)
+			if strings.HasPrefix(scannedCommit.Subject, "WIP") {
+				scannedCommit.WIP = true
 			}
+
+			commits = prepend(commits, scannedCommit)
 			commitScanOn = false
 		}
 
@@ -574,7 +580,7 @@ func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client
 //  which are new (on top of origin/master) and creates a corresponding
 //  branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubInfo) []commit {
-	localCommits := sd.getLocalCommitStack(true)
+	localCommits := sd.getLocalCommitStack()
 
 	var output string
 	mustgit("status --porcelain --untracked-files=no", &output)
@@ -599,6 +605,10 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubI
 	}
 
 	for _, commit := range localCommits {
+		if commit.WIP {
+			break
+		}
+
 		if commitUpdated(commit, info) {
 			headRefName := branchNameFromCommit(info, commit)
 			mustgit("checkout "+commit.CommitHash, nil)
@@ -742,6 +752,9 @@ func (pr *pullRequest) mergeable(config *Config) bool {
 }
 
 func (pr *pullRequest) ready(config *Config) bool {
+	if pr.Commit.WIP {
+		return false
+	}
 	if !pr.MergeStatus.NoConflicts {
 		return false
 	}
