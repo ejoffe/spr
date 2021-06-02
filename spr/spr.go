@@ -263,10 +263,19 @@ func (sd *stackediff) DebugPrintSummary() {
 }
 
 type commit struct {
-	CommitID   string
+	// CommitID is a long lasting id describing the commit.
+	//  The CommitID is generated and added to the end of the commit message on the initial commit.
+	//  The CommitID remains the same when a commit is amended.
+	CommitID string
+
+	// CommitHash is the git commit hash, this gets updated everytime the commit is amended.
 	CommitHash string
-	Subject    string
-	Body       string
+
+	// Subject is the subject of the commit message.
+	Subject string
+
+	// Body is the body of the commit message.
+	Body string
 }
 
 type pullRequest struct {
@@ -350,10 +359,13 @@ func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
 // getLocalCommitStack returns a list of unmerged commits
 func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 
-	var commits []commit
 	var commitLog string
 	mustgit("log origin/master..HEAD", &commitLog)
-	lines := strings.Split(commitLog, "\n")
+	return sd.parseLocalCommitStack(commitLog, skipWIP)
+}
+
+func (sd *stackediff) parseLocalCommitStack(commitLog string, skipWIP bool) []commit {
+	var commits []commit
 
 	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
 	commitIDRegex := regexp.MustCompile(`commit-id\:([a-f0-9]{8})`)
@@ -368,18 +380,25 @@ func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 		return l
 	}
 
-	subjectIndex := 0
+	// commitScanOn is set to true when the commit hash is matched
+	//  and turns false when the commit-id is matched.
+	//  Commit messages always start with a hash and end with a commit-id.
+	//  The commit subject and body are always between the hash the commit-id.
 	commitScanOn := false
-	// commit_scan_on is set to true when the commit_hash is matched
-	//  and turns false when the commit-id is matched
-	//  the commit subject and body is always between the hash and id
+
+	subjectIndex := 0
 	var scannedCommit commit
 
+	lines := strings.Split(commitLog, "\n")
 	for index, line := range lines {
+
+		// match commit hash : start of a new commit
 		matches := commitHashRegex.FindStringSubmatch(line)
 		if matches != nil {
 			if commitScanOn {
+				//  last commit is missing the commit-id
 				sd.printCommitInstallHelper()
+				return nil
 			}
 			commitScanOn = true
 			scannedCommit = commit{
@@ -388,18 +407,21 @@ func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 			subjectIndex = index + 4
 		}
 
+		// match commit id : last thing in the commit
 		matches = commitIDRegex.FindStringSubmatch(line)
 		if matches != nil {
-			commitScanOn = false
 			scannedCommit.CommitID = matches[1]
+			scannedCommit.Body = strings.TrimSpace(scannedCommit.Body)
 
 			if skipWIP && strings.HasPrefix(scannedCommit.Subject, "WIP") {
 				// if commit subject starts with "WIP", ignore it
 			} else {
 				commits = prepend(commits, scannedCommit)
 			}
+			commitScanOn = false
 		}
 
+		// look for subject and body
 		if commitScanOn {
 			if index == subjectIndex {
 				scannedCommit.Subject = strings.TrimSpace(line)
@@ -409,6 +431,7 @@ func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 				scannedCommit.Body += strings.TrimSpace(line) + "\n"
 			}
 		}
+
 	}
 
 	// if commitScanOn is true here it means there was a commit without
@@ -421,12 +444,17 @@ func (sd *stackediff) getLocalCommitStack(skipWIP bool) []commit {
 	return commits
 }
 
+var commitInstallHelper = `
+A commit is missing a commit-id.
+This most likely means the commit-msg hook isn't installed.
+To install the hook run the following cmd in the repo root dir:
+> ln -s $(which spr_commit_hook) .git/hooks/commit-msg
+After installing the hook, you'll need to ammend your commits
+`
+
 func (sd *stackediff) printCommitInstallHelper() {
-	fmt.Fprintf(sd.writer, "A commit is missing a commit-id.\n")
-	fmt.Fprintf(sd.writer, "This most likely means the commit-msg hook isn't installed.\n")
-	fmt.Fprintf(sd.writer, "To install the hook run the following cmd in the repo root dir:\n")
-	fmt.Fprintf(sd.writer, " > ln -s $(which spr_commit_hook) .git/hooks/commit-msg\n")
-	fmt.Fprintf(sd.writer, "After installing the hook, you'll need to ammend your commits\n")
+	message := strings.TrimSpace(commitInstallHelper) + "\n"
+	fmt.Fprint(sd.writer, message)
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
