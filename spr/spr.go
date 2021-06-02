@@ -214,17 +214,18 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		var updatepr struct {
-			UpdatePullRequest struct {
-				PullRequest struct {
-					Number int
-				}
-			} `graphql:"addPullRequestReviewComment(input: $input)"`
+			PullRequest struct {
+				ClientMutationID string
+			} `graphql:"addComment(input: $input)"`
 		}
-		prid := githubv4.ID(pr.ID)
-		body := githubv4.String(fmt.Sprintf("Merged in pull request #%d", mergepr.MergePullRequest.PullRequest.Number))
-		updatePRInput := githubv4.AddPullRequestReviewCommentInput{
-			PullRequestID: &prid,
-			Body:          body,
+		body := githubv4.String(fmt.Sprintf(
+			"commit MERGED in pull request [#%d](https://github.com/%s/%s/pull/%d)",
+			mergepr.MergePullRequest.PullRequest.Number,
+			sd.config.GitHubRepoOwner, sd.config.GitHubRepoName,
+			mergepr.MergePullRequest.PullRequest.Number))
+		updatePRInput := githubv4.AddCommentInput{
+			SubjectID: pr.ID,
+			Body:      body,
 		}
 		err = sd.github.Mutate(ctx, &updatepr, updatePRInput, nil)
 		if err != nil {
