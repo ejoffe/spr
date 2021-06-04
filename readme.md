@@ -126,11 +126,15 @@ Configuration
 -------------
 When the script is run for the first time a config file **.spr.yml** is created in your repository base dir. 
 These are the available configurations:
-- githubRepoOwner : str  : name of the github owner (fetched automatically and in most cases need not change)
-- githubRepoName  : str  : name of the github repository (fetched automatically and in most cases need not change)
-- requireChecks   : bool : require checks to pass in order to merge (default:true)
-- requireApproval : bool : require pull request approval in order to merge (default:true)
-- showPRLink      : bool : show full pull request http link (default:true)
+
+| Name                | Type | Default | Description
+| ------------------- | ---- | ------- | -------------------------------------------------------------- |
+| githubRepoOwner     | str  |         | name of the github owner (fetched from git remote config)      |
+| githubRepoName      | str  |         | name of the github repository (fetched from git remote config) |
+| requireChecks       | bool | true    | require checks to pass in order to merge                       |
+| requireApproval     | bool | true    | require pull request approval in order to merge                |
+| showPRLink          | bool | true    | show full pull request http link                               |
+| cleanupRemoteBranch | bool | true    | show full pull request http link                               |
 
 Happy Coding!
 -------------
