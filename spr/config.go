@@ -14,9 +14,10 @@ type Config struct {
 	GitHubRepoOwner string `yaml:"githubRepoOwner"`
 	GitHubRepoName  string `yaml:"githubRepoName"`
 
-	RequireChecks   bool `default:"true" yaml:"requireChecks"`
-	RequireApproval bool `default:"true" yaml:"requireApproval"`
-	ShowPRLink      bool `default:"true" yaml:"showPRLink"`
+	RequireChecks       bool `default:"true" yaml:"requireChecks"`
+	RequireApproval     bool `default:"true" yaml:"requireApproval"`
+	ShowPRLink          bool `default:"true" yaml:"showPRLink"`
+	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
 }
 
 func ConfigFilePath() string {

@@ -209,6 +209,10 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	}
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
+	if sd.config.CleanupRemoteBranch {
+		mustgit("push -d origin %s", &prToMerge.FromBranch)
+	}
+
 	// Close all the pull requests in the stack below the merged pr
 	//  Before closing add a review comment with the pr that merged the commit.
 	for i := 0; i < prIndex; i++ {
@@ -255,6 +259,10 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 				Str("title", pr.Title).
 				Err(err).
 				Msg("pull request close failed")
+		}
+
+		if sd.config.CleanupRemoteBranch {
+			mustgit("push -d origin %s", &pr.FromBranch)
 		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
