@@ -210,7 +210,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.CleanupRemoteBranch {
-		mustgit("push -d origin %s", &prToMerge.FromBranch)
+		mustgit(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 	}
 
 	// Close all the pull requests in the stack below the merged pr
@@ -262,7 +262,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		}
 
 		if sd.config.CleanupRemoteBranch {
-			mustgit("push -d origin %s", &pr.FromBranch)
+			mustgit(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
