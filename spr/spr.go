@@ -479,7 +479,7 @@ A commit is missing a commit-id.
 This most likely means the commit-msg hook isn't installed.
 To install the hook run the following cmd in the repo root dir:
 > ln -s $(which spr_commit_hook) .git/hooks/commit-msg
-After installing the hook, you'll need to ammend your commits
+After installing the hook, you'll need to ammend your commits.
 `
 
 func (sd *stackediff) printCommitInstallHelper() {

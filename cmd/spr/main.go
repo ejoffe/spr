@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/spr"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
@@ -24,7 +25,7 @@ func init() {
 	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
-// command line opts
+// command line options
 type opts struct {
 	Debug   bool `short:"d" long:"debug" description:"Show runtime debug info."`
 	Merge   bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
@@ -34,6 +35,7 @@ type opts struct {
 }
 
 func main() {
+	//  parse command line options
 	var opts opts
 	parser := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
 	_, err := parser.Parse()
@@ -41,6 +43,18 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// parse configuration
+	cfg := spr.Config{}
+	sources := []rake.Source{
+		rake.DefaultSource(),
+		spr.GitHubRemoteSource(&cfg),
+		rake.YamlFileSource(spr.ConfigFilePath()),
+	}
+	if opts.Debug {
+		sources = append(sources, rake.DebugWriter(os.Stdout))
+	}
+	rake.LoadSources(&cfg, sources...)
 
 	if opts.Version {
 		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
@@ -63,8 +77,7 @@ func main() {
 
 	client := githubv4.NewClient(tc)
 
-	config := spr.ReadConfig()
-	stackedpr := spr.NewStackedPR(config, client, os.Stdout, opts.Debug)
+	stackedpr := spr.NewStackedPR(&cfg, client, os.Stdout, opts.Debug)
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
