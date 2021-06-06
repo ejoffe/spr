@@ -50,6 +50,7 @@ func main() {
 		rake.DefaultSource(),
 		spr.GitHubRemoteSource(&cfg),
 		rake.YamlFileSource(spr.ConfigFilePath()),
+		rake.YamlFileWriter(spr.ConfigFilePath()),
 	}
 	if opts.Debug {
 		sources = append(sources, rake.DebugWriter(os.Stdout))
