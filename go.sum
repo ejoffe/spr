@@ -44,8 +44,8 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ejoffe/profiletimer v0.1.0 h1:Zq1WcdZhCMqXdsAVF1Vv95iTqKz7D54+hik7GDaAmJI=
 github.com/ejoffe/profiletimer v0.1.0/go.mod h1:sv8+0PcNxJ5BLn+yCLMZ+B3+GmeQJDraZ2R3OIiB1uQ=
-github.com/ejoffe/rake v0.2.1 h1:KWGJ+lskeYsRYtkS6UBskt+jNY1pOfrIik4WvLtJHkg=
-github.com/ejoffe/rake v0.2.1/go.mod h1:QIqavt8/ZpycCJKYb9S1vmAb+Cxc/mBv7kLOkPNVsL8=
+github.com/ejoffe/rake v0.2.2 h1:9EmZYt48agBNiFik1buT2BuqhL6om9fuTBS1VK4zgpI=
+github.com/ejoffe/rake v0.2.2/go.mod h1:QIqavt8/ZpycCJKYb9S1vmAb+Cxc/mBv7kLOkPNVsL8=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
