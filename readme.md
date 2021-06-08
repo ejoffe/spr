@@ -134,7 +134,7 @@ These are the available configurations:
 | requireChecks       | bool | true    | require checks to pass in order to merge                       |
 | requireApproval     | bool | true    | require pull request approval in order to merge                |
 | showPRLink          | bool | true    | show full pull request http link                               |
-| cleanupRemoteBranch | bool | true    | show full pull request http link                               |
+| cleanupRemoteBranch | bool | true    | delete remote branch after pull request merges                 |
 
 Happy Coding!
 -------------
