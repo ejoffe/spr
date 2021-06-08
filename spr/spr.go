@@ -267,7 +267,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		}
 
 		if sd.config.CleanupRemoteBranch {
-			err := git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
+			err := git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 			if err != nil {
 				fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 			}
