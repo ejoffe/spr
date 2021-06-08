@@ -3,3 +3,4 @@ githubRepoName: spr
 requireChecks: true
 requireApproval: false
 showPRLink: true
+cleanupRemoteBranch: true
