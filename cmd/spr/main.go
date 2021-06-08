@@ -46,16 +46,15 @@ func main() {
 
 	// parse configuration
 	cfg := spr.Config{}
-	sources := []rake.Source{
+	rake.LoadSources(&cfg,
 		rake.DefaultSource(),
 		spr.GitHubRemoteSource(&cfg),
 		rake.YamlFileSource(spr.ConfigFilePath()),
 		rake.YamlFileWriter(spr.ConfigFilePath()),
-	}
+	)
 	if opts.Debug {
-		sources = append(sources, rake.DebugWriter(os.Stdout))
+		rake.LoadSources(&cfg, rake.DebugWriter(os.Stdout))
 	}
-	rake.LoadSources(&cfg, sources...)
 
 	if opts.Version {
 		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
