@@ -11,8 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/ejoffe/profiletimer"
+	"github.com/ejoffe/spr/terminal"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 )
@@ -88,6 +90,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	for commitIndex, c := range localCommits {
 		if c.WIP {
 			break
+
 		}
 		prFound := false
 		for _, pr := range githubInfo.PullRequests {
@@ -124,7 +127,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s %s\n", pr.statusString(sd.config), pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
 	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
 }
@@ -269,7 +272,8 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "MERGED %s\n", pr.String(sd.config))
+		pr.Merged = true
+		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -284,7 +288,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s %s\n", pr.statusString(sd.config), pr.String(sd.config))
+		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
@@ -325,6 +329,7 @@ type pullRequest struct {
 	Title      string
 
 	MergeStatus pullRequestMergeStatus
+	Merged      bool
 }
 
 type checkStatus int
@@ -835,13 +840,32 @@ func (pr *pullRequest) statusString(config *Config) string {
 }
 
 func (pr *pullRequest) String(config *Config) string {
+	prStatus := pr.statusString(config)
+	if pr.Merged {
+		prStatus = "MERGED"
+	}
+
 	prInfo := fmt.Sprintf("%3d", pr.Number)
 	if config.ShowPRLink {
 		prInfo = fmt.Sprintf("github.com/%s/%s/pull/%d",
 			config.GitHubRepoOwner, config.GitHubRepoName, pr.Number)
 	}
 
-	return fmt.Sprintf("%s : %s", prInfo, pr.Title)
+	line := fmt.Sprintf("%s %s : %s", prStatus, prInfo, pr.Title)
+
+	// trim line to terminal width
+	terminalWidth, err := terminal.Width()
+	if err != nil {
+		terminalWidth = 1000
+	}
+	lineByteLength := len(line)
+	lineLength := utf8.RuneCountInString(line)
+	diff := lineLength - terminalWidth
+	if diff > 0 {
+		line = line[:lineByteLength-diff-3] + "..."
+	}
+
+	return line
 }
 
 func (cs checkStatus) String(config *Config) string {

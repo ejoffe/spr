@@ -11,6 +11,14 @@ import (
 )
 
 func CommitHook(filename string) {
+	found := scanForCommitID(filename)
+
+	if !found {
+		appendCommitID(filename)
+	}
+}
+
+func scanForCommitID(filename string) bool {
 	readfile, err := os.Open(filename)
 	check(err)
 	defer readfile.Close()
@@ -19,16 +27,18 @@ func CommitHook(filename string) {
 	scanner := bufio.NewScanner(readfile)
 	for scanner.Scan() {
 		if strings.HasPrefix(scanner.Text(), "commit-id:") {
-			return
+			return true
 		}
 	}
 	check(scanner.Err())
-	readfile.Close()
+	return false
+}
 
-	// commit-id not found - append a new commit-id to the end of the file
+func appendCommitID(filename string) {
 	appendfile, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0666)
 	check(err)
 	defer appendfile.Close()
+
 	commitID := uuid.New()
 	appendfile.WriteString("\n")
 	appendfile.WriteString(fmt.Sprintf("commit-id:%s\n", commitID.String()[:8]))
