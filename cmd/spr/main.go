@@ -44,6 +44,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	if opts.Version {
+		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
+		os.Exit(0)
+	}
+
+	err = spr.SanityCheck()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+
 	// parse configuration
 	cfg := spr.Config{}
 	rake.LoadSources(&cfg,
@@ -56,11 +67,6 @@ func main() {
 		rake.LoadSources(&cfg, rake.DebugWriter(os.Stdout))
 	}
 
-	if opts.Version {
-		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
-		os.Exit(0)
-	}
-
 	ctx := context.Background()
 
 	token := os.Getenv("GITHUB_TOKEN")
@@ -68,7 +74,7 @@ func main() {
 		fmt.Printf("GitHub OAuth Token Required\n")
 		fmt.Printf("Make one at: https://%s/settings/tokens\n", "github.com")
 		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value\n")
-		os.Exit(2)
+		os.Exit(3)
 	}
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
