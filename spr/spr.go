@@ -3,6 +3,7 @@ package spr
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,6 +39,16 @@ func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, deb
 		debug:        false,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
+}
+
+func SanityCheck() error {
+	// able to run git commands
+	var output string
+	err := git("status --porcelain", &output)
+	if err != nil {
+		return errors.New(output)
+	}
+	return nil
 }
 
 // AmendCommit enables one to easily ammend a commit in the middle of a stack
@@ -768,10 +779,10 @@ func git(argStr string, output *string) error {
 
 	if output != nil {
 		out, err := cmd.CombinedOutput()
+		*output = strings.TrimSpace(string(out))
 		if err != nil {
 			return err
 		}
-		*output = strings.TrimSpace(string(out))
 	} else {
 		out, err := cmd.CombinedOutput()
 		if err != nil {
