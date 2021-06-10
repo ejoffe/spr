@@ -134,12 +134,8 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		}
 	}
 
-	githubInfo.PullRequests = sd.sortPullRequests(githubInfo.PullRequests)
-	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
-		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
-	}
 	sd.profiletimer.Step("UpdatePullRequests::End")
+	sd.StatusPullRequests(ctx)
 }
 
 // MergePullRequests will go through all the current pull requests
