@@ -74,7 +74,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	mustgit("rebase origin/master -i --autosquash --autostash", nil)
 }
 
-// UpdatePullRequests implaments a stacked diff workflow on top of github.
+// UpdatePullRequests implements a stacked diff workflow on top of github.
 //  Each time it's called it compares the local branch unmerged commits
 //   with currently open pull requests in github.
 //  It will create a new pull request for all new commits, and update the
@@ -755,10 +755,15 @@ func git(argStr string, output *string) error {
 	envVarsToDerive := []string{
 		"SSH_AUTH_SOCK",
 		"SSH_AGENT_PID",
+		"HOME",
+		"XDG_CONFIG_HOME",
 	}
 	cmd.Env = []string{"EDITOR=/usr/bin/true"}
 	for _, env := range envVarsToDerive {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, os.Getenv(env)))
+		envval := os.Getenv(env)
+		if envval != "" {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, envval))
+		}
 	}
 
 	if output != nil {
