@@ -7,7 +7,7 @@ import (
 )
 
 type GitHubInterface interface {
-	GetInfo(ctx context.Context) *GitHubInfo
+	GetInfo(ctx context.Context, gitcmd git.Cmd) *GitHubInfo
 	CreatePullRequest(ctx context.Context, info *GitHubInfo, commit git.Commit, prevCommit *git.Commit) *PullRequest
 	UpdatePullRequest(ctx context.Context, info *GitHubInfo, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
 	CommentPullRequest(ctx context.Context, pr *PullRequest, comment string)

@@ -11,7 +11,7 @@ import (
 
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(&config.Config{}, nil, &buffer, false)
+	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer, false)
 	tests := []struct {
 		name                      string
 		inputCommitLog            string
