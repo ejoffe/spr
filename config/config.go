@@ -1,4 +1,4 @@
-package spr
+package config
 
 import (
 	"fmt"
@@ -76,6 +76,53 @@ func getRepoDetailsFromRemote(remote string) (string, string, bool) {
 	return "", "", false
 }
 
+func mustgit(argStr string, output *string) {
+	err := git(argStr, output)
+	check(err)
+}
+
+func git(argStr string, output *string) error {
+	// runs a git command
+	//  if output is not nil it will be set to the output of the command
+	args := strings.Split(argStr, " ")
+	cmd := exec.Command("git", args...)
+	envVarsToDerive := []string{
+		"SSH_AUTH_SOCK",
+		"SSH_AGENT_PID",
+		"HOME",
+		"XDG_CONFIG_HOME",
+	}
+	cmd.Env = []string{"EDITOR=/usr/bin/true"}
+	for _, env := range envVarsToDerive {
+		envval := os.Getenv(env)
+		if envval != "" {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, envval))
+		}
+	}
+
+	if output != nil {
+		out, err := cmd.CombinedOutput()
+		*output = strings.TrimSpace(string(out))
+		if err != nil {
+			return err
+		}
+	} else {
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "git error: %s", string(out))
+			return err
+		}
+	}
+	return nil
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+/*
 func installCommitHook() {
 	var rootdir string
 	mustgit("rev-parse --show-toplevel", &rootdir)
@@ -89,3 +136,4 @@ func installCommitHook() {
 	check(err)
 	fmt.Printf("- Installed commit hook in .git/hooks/commit-msg\n")
 }
+*/

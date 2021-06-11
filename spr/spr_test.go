@@ -4,101 +4,18 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/git"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSortPullRequests(t *testing.T) {
-	prs := []*pullRequest{
-		{
-			Number:     3,
-			FromBranch: "third",
-			ToBranch:   "second",
-		},
-		{
-			Number:     2,
-			FromBranch: "second",
-			ToBranch:   "first",
-		},
-		{
-			Number:     1,
-			FromBranch: "first",
-			ToBranch:   "master",
-		},
-	}
-
-	sd := NewStackedPR(&Config{}, nil, nil, false)
-	prs = sd.sortPullRequests(prs)
-	if prs[0].Number != 1 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-	if prs[1].Number != 2 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-	if prs[2].Number != 3 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-}
-
-func TestSortPullRequestsMixed(t *testing.T) {
-	prs := []*pullRequest{
-		{
-			Number:     3,
-			FromBranch: "third",
-			ToBranch:   "second",
-		},
-		{
-			Number:     1,
-			FromBranch: "first",
-			ToBranch:   "master",
-		},
-		{
-			Number:     2,
-			FromBranch: "second",
-			ToBranch:   "first",
-		},
-	}
-
-	sd := NewStackedPR(&Config{}, nil, nil, false)
-	prs = sd.sortPullRequests(prs)
-	if prs[0].Number != 1 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-	if prs[1].Number != 2 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-	if prs[2].Number != 3 {
-		t.Fatalf("prs not sorted correctly %v\n", prs)
-	}
-}
-
-func TestPullRequestRegex(t *testing.T) {
-	tests := []struct {
-		input  string
-		branch string
-		commit string
-	}{
-		{input: "pr/username/branchname/deadbeef", branch: "branchname", commit: "deadbeef"},
-		{input: "pr/username/branch/name/deadbeef", branch: "branch/name", commit: "deadbeef"},
-	}
-
-	for _, tc := range tests {
-		matches := pullRequestRegex.FindStringSubmatch(tc.input)
-		if tc.branch != matches[1] {
-			t.Fatalf("expected: '%v', actual: '%v'", tc.branch, matches[1])
-		}
-		if tc.commit != matches[2] {
-			t.Fatalf("expected: '%v', actual: '%v'", tc.commit, matches[2])
-		}
-	}
-}
-
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(&Config{}, nil, &buffer, false)
+	sd := NewStackedPR(&config.Config{}, nil, &buffer, false)
 	tests := []struct {
 		name                      string
 		inputCommitLog            string
-		expectedCommits           []commit
+		expectedCommits           []git.Commit
 		expectedCommitHookMessage bool
 	}{
 		{
@@ -112,7 +29,7 @@ Date:   Wed May 21 19:53:12 1980 -0700
 
 	commit-id:053f6d16
 `,
-			expectedCommits: []commit{
+			expectedCommits: []git.Commit{
 				{
 					CommitHash: "d89e0e460ed817c81641f32b1a506b60164b4403",
 					CommitID:   "053f6d16",
@@ -135,7 +52,7 @@ Date:   Wed May 21 19:53:12 1980 -0700
 
 	commit-id:053f6d16
 `,
-			expectedCommits: []commit{
+			expectedCommits: []git.Commit{
 				{
 					CommitHash: "d89e0e460ed817c81641f32b1a506b60164b4403",
 					CommitID:   "053f6d16",
@@ -164,7 +81,7 @@ Date:   Wed May 21 19:52:51 1980 -0700
 
 	commit-id:39c84ea3
 `,
-			expectedCommits: []commit{
+			expectedCommits: []git.Commit{
 				{
 					CommitHash: "d604099d6604949e786e3d781919d43e46e88521",
 					CommitID:   "39c84ea3",
