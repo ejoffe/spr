@@ -55,6 +55,10 @@ func main() {
 		os.Exit(2)
 	}
 
+	if opts.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
 	// parse configuration
 	cfg := spr.Config{}
 	rake.LoadSources(&cfg,
