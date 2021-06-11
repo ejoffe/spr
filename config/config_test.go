@@ -1,4 +1,4 @@
-package spr
+package config
 
 import (
 	"testing"

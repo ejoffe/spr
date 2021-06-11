@@ -12,16 +12,15 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/ejoffe/profiletimer"
-	"github.com/ejoffe/spr/terminal"
-	"github.com/rs/zerolog/log"
-	"github.com/shurcooL/githubv4"
+	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/git"
+	"github.com/ejoffe/spr/github"
 )
 
-// NewStackedPR constructs and returns a new instance stackediff.
-func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, debug bool) *stackediff {
+// NewStackedPR constructs and returns a new stackediff instance.
+func NewStackedPR(config *config.Config, github github.GitHubInterface, writer io.Writer, debug bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
@@ -41,10 +40,18 @@ func NewStackedPR(config *Config, github *githubv4.Client, writer io.Writer, deb
 	}
 }
 
+type stackediff struct {
+	config       *config.Config
+	github       github.GitHubInterface
+	writer       io.Writer
+	debug        bool
+	profiletimer profiletimer.Timer
+}
+
 func SanityCheck() error {
 	// able to run git commands
 	var output string
-	err := git("status --porcelain", &output)
+	err := gitcmd("status --porcelain", &output)
 	if err != nil {
 		return errors.New(output)
 	}
@@ -92,7 +99,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 //   pull request if a commit has been amended.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
-	githubInfo := sd.fetchAndGetGitHubInfo(ctx, sd.github)
+	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
 	localCommits := sd.syncCommitStackToGitHub(ctx, githubInfo)
 	sd.profiletimer.Step("UpdatePullRequests::syncCommitStackToGithub")
@@ -109,13 +116,12 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 				if c.CommitHash != pr.Commit.CommitHash {
 					// if commit id is same but commit hash changed it means the commit
 					//  has been amended and we need to update the pull request
-					var prevCommit *commit
+
+					var prevCommit *git.Commit
 					if commitIndex > 0 {
 						prevCommit = &localCommits[commitIndex-1]
 					}
-					updateGithubPullRequest(
-						ctx, sd.github, githubInfo,
-						pr, c, prevCommit)
+					sd.github.UpdatePullRequest(ctx, githubInfo, pr, c, prevCommit)
 				}
 				break
 			}
@@ -123,13 +129,11 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		if !prFound {
 			// if pull request is not found for this commit_id it means the commit
 			//  is new and we need to create a new pull request
-			var prevCommit *commit
+			var prevCommit *git.Commit
 			if commitIndex > 0 {
 				prevCommit = &localCommits[commitIndex-1]
 			}
-			pr := createGithubPullRequest(
-				ctx, sd.github, githubInfo,
-				c, prevCommit)
+			pr := sd.github.CreatePullRequest(ctx, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 		}
 	}
@@ -147,20 +151,20 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 //  - not be on top of another unmergable request
 // In order to merge a stack of pull requests without generating conflicts
 //  and other pr issues. We find the top mergeable pull request in the stack,
-//  than we change this pull request's base to be master and than merge the
+//  than we change this pull request's base to be master and then merge the
 //  pull request. This one merge in effect merges all the commits in the stack.
 //  We than close all the pull requests which are below the merged request, as
 //  their commits have already been merged.
 func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::Start")
-	githubInfo := sd.getGitHubInfo(ctx, sd.github)
+	githubInfo := sd.github.GetInfo(ctx)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
 	// Figure out top most pr in the stack that is mergeable
 	var prIndex int
 	for prIndex = 0; prIndex < len(githubInfo.PullRequests); prIndex++ {
 		pr := githubInfo.PullRequests[prIndex]
-		if !pr.mergeable(sd.config) {
+		if !pr.Mergeable(sd.config) {
 			break
 		}
 	}
@@ -171,55 +175,15 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	prToMerge := githubInfo.PullRequests[prIndex]
 
 	// Update the base of the merging pr to master
-	var updatepr struct {
-		UpdatePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"updatePullRequest(input: $input)"`
-	}
-	baseRefMaster := githubv4.String("master")
-	updatePRInput := githubv4.UpdatePullRequestInput{
-		PullRequestID: prToMerge.ID,
-		BaseRefName:   &baseRefMaster,
-	}
-	err := sd.github.Mutate(ctx, &updatepr, updatePRInput, nil)
-	if err != nil {
-		log.Fatal().
-			Str("id", prToMerge.ID).
-			Int("number", prToMerge.Number).
-			Str("title", prToMerge.Title).
-			Err(err).
-			Msg("pull request update failed")
-	}
+	sd.github.UpdatePullRequest(ctx, githubInfo, prToMerge, prToMerge.Commit, nil)
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
-	var mergepr struct {
-		MergePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"mergePullRequest(input: $input)"`
-	}
-	mergeMethod := githubv4.PullRequestMergeMethodRebase
-	mergePRInput := githubv4.MergePullRequestInput{
-		PullRequestID: prToMerge.ID,
-		MergeMethod:   &mergeMethod,
-	}
-	err = sd.github.Mutate(ctx, &mergepr, mergePRInput, nil)
-	if err != nil {
-		log.Fatal().
-			Str("id", prToMerge.ID).
-			Int("number", prToMerge.Number).
-			Str("title", prToMerge.Title).
-			Err(err).
-			Msg("pull request merge failed")
-	}
+	sd.github.MergePullRequest(ctx, prToMerge)
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.CleanupRemoteBranch {
-		err := git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
+		err := gitcmd(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 		if err != nil {
 			fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 		}
@@ -229,52 +193,15 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	//  Before closing add a review comment with the pr that merged the commit.
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
-		var updatepr struct {
-			PullRequest struct {
-				ClientMutationID string
-			} `graphql:"addComment(input: $input)"`
-		}
-		body := githubv4.String(fmt.Sprintf(
+		comment := fmt.Sprintf(
 			"commit MERGED in pull request [#%d](https://github.com/%s/%s/pull/%d)",
-			mergepr.MergePullRequest.PullRequest.Number,
-			sd.config.GitHubRepoOwner, sd.config.GitHubRepoName,
-			mergepr.MergePullRequest.PullRequest.Number))
-		updatePRInput := githubv4.AddCommentInput{
-			SubjectID: pr.ID,
-			Body:      body,
-		}
-		err = sd.github.Mutate(ctx, &updatepr, updatePRInput, nil)
-		if err != nil {
-			log.Fatal().
-				Str("id", pr.ID).
-				Int("number", pr.Number).
-				Str("title", pr.Title).
-				Err(err).
-				Msg("pull request update failed")
-		}
+			prToMerge.Number, sd.config.GitHubRepoOwner, sd.config.GitHubRepoName, prToMerge.Number)
+		sd.github.CommentPullRequest(ctx, pr, comment)
 
-		var closepr struct {
-			ClosePullRequest struct {
-				PullRequest struct {
-					Number int
-				}
-			} `graphql:"closePullRequest(input: $input)"`
-		}
-		closePRInput := githubv4.ClosePullRequestInput{
-			PullRequestID: pr.ID,
-		}
-		err = sd.github.Mutate(ctx, &closepr, closePRInput, nil)
-		if err != nil {
-			log.Fatal().
-				Str("id", pr.ID).
-				Int("number", pr.Number).
-				Str("title", pr.Title).
-				Err(err).
-				Msg("pull request close failed")
-		}
+		sd.github.ClosePullRequest(ctx, pr)
 
 		if sd.config.CleanupRemoteBranch {
-			err := git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
+			err := gitcmd(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 			if err != nil {
 				fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 			}
@@ -296,7 +223,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 //  remotely on github.
 func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
-	githubInfo := sd.getGitHubInfo(ctx, sd.github)
+	githubInfo := sd.github.GetInfo(ctx)
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
@@ -313,114 +240,15 @@ func (sd *stackediff) DebugPrintSummary() {
 	}
 }
 
-type commit struct {
-	// CommitID is a long lasting id describing the commit.
-	//  The CommitID is generated and added to the end of the commit message on the initial commit.
-	//  The CommitID remains the same when a commit is amended.
-	CommitID string
-
-	// CommitHash is the git commit hash, this gets updated everytime the commit is amended.
-	CommitHash string
-
-	// Subject is the subject of the commit message.
-	Subject string
-
-	// Body is the body of the commit message.
-	Body string
-
-	// WIP is true if the commit is still work in progress.
-	WIP bool
-}
-
-type pullRequest struct {
-	ID         string
-	Number     int
-	FromBranch string
-	ToBranch   string
-	Commit     commit
-	Title      string
-
-	MergeStatus pullRequestMergeStatus
-	Merged      bool
-}
-
-type checkStatus int
-
-const (
-	checkStatusUnknown checkStatus = iota
-	checkStatusPending
-	checkStatusPass
-	checkStatusFail
-)
-
-type pullRequestMergeStatus struct {
-	ChecksPass     checkStatus
-	ReviewApproved bool
-	NoConflicts    bool
-	Stacked        bool
-}
-
-type gitHubInfo struct {
-	UserName     string
-	RepositoryID string
-	LocalBranch  string
-	PullRequests []*pullRequest
-}
-
-type stackediff struct {
-	config       *Config
-	github       *githubv4.Client
-	writer       io.Writer
-	debug        bool
-	profiletimer profiletimer.Timer
-}
-
-// sortPullRequests sorts the pull requests so that the one that is on top of
-//  master will come first followed by the ones that are stacked on top.
-// The stack order is maintained so that multiple pull requests can be merged in
-//  the correct order.
-func (sd *stackediff) sortPullRequests(prs []*pullRequest) []*pullRequest {
-
-	swap := func(i int, j int) {
-		buf := prs[i]
-		prs[i] = prs[j]
-		prs[j] = buf
-	}
-
-	targetBranch := "master"
-	j := 0
-	for i := 0; i < len(prs); i++ {
-		for j = i; j < len(prs); j++ {
-			if prs[j].ToBranch == targetBranch {
-				targetBranch = prs[j].FromBranch
-				swap(i, j)
-				break
-			}
-		}
-	}
-
-	// update stacked merge status flag
-	for _, pr := range prs {
-		if pr.ready(sd.config) {
-			pr.MergeStatus.Stacked = true
-		} else {
-			break
-		}
-	}
-
-	return prs
-}
-
 // getLocalCommitStack returns a list of unmerged commits
-func (sd *stackediff) getLocalCommitStack() []commit {
-
+func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
 	mustgit("log origin/master..HEAD", &commitLog)
 	return sd.parseLocalCommitStack(commitLog)
 }
 
-func (sd *stackediff) parseLocalCommitStack(commitLog string) []commit {
-	var commits []commit
+func (sd *stackediff) parseLocalCommitStack(commitLog string) []git.Commit {
+	var commits []git.Commit
 
 	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
 	commitIDRegex := regexp.MustCompile(`commit-id\:([a-f0-9]{8})`)
@@ -428,8 +256,8 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []commit {
 	// The list of commits from the command line actually starts at the
 	//  most recent commit. In order to reverse the list we use a
 	//  custom prepend function instead of append
-	prepend := func(l []commit, c commit) []commit {
-		l = append(l, commit{})
+	prepend := func(l []git.Commit, c git.Commit) []git.Commit {
+		l = append(l, git.Commit{})
 		copy(l[1:], l)
 		l[0] = c
 		return l
@@ -442,7 +270,7 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []commit {
 	commitScanOn := false
 
 	subjectIndex := 0
-	var scannedCommit commit
+	var scannedCommit git.Commit
 
 	lines := strings.Split(commitLog, "\n")
 	for index, line := range lines {
@@ -456,7 +284,7 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []commit {
 				return nil
 			}
 			commitScanOn = true
-			scannedCommit = commit{
+			scannedCommit = git.Commit{
 				CommitHash: matches[1],
 			}
 			subjectIndex = index + 4
@@ -512,7 +340,7 @@ func (sd *stackediff) printCommitInstallHelper() {
 	fmt.Fprint(sd.writer, message)
 }
 
-func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
+func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)
 
@@ -523,112 +351,16 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context, client *githubv
 	}
 
 	go fetch()
-	info := sd.getGitHubInfo(ctx, client)
+	info := sd.github.GetInfo(ctx)
 	waitgroup.Wait()
 
 	return info
 }
 
-var pullRequestRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
-
-func (sd *stackediff) getGitHubInfo(ctx context.Context, client *githubv4.Client) *gitHubInfo {
-	var query struct {
-		Viewer struct {
-			Login        string
-			PullRequests struct {
-				Nodes []struct {
-					ID             string
-					Number         int
-					Title          string
-					BaseRefName    string
-					HeadRefName    string
-					Mergeable      string
-					ReviewDecision string
-					Repository     struct {
-						ID string
-					}
-					Commits struct {
-						Nodes []struct {
-							Commit struct {
-								Oid               string
-								StatusCheckRollup struct {
-									State string
-								}
-							}
-						}
-					} `graphql:"commits(first:100)"`
-				}
-			} `graphql:"pullRequests(first:100, states:[OPEN])"`
-		}
-		Repository struct {
-			ID string
-		} `graphql:"repository(owner:$repo_owner, name:$repo_name)"`
-	}
-	variables := map[string]interface{}{
-		"repo_owner": githubv4.String(sd.config.GitHubRepoOwner),
-		"repo_name":  githubv4.String(sd.config.GitHubRepoName),
-	}
-	err := client.Query(ctx, &query, variables)
-	check(err)
-
-	var branchname string
-	mustgit("branch --show-current", &branchname)
-
-	var requests []*pullRequest
-	for _, node := range query.Viewer.PullRequests.Nodes {
-		if query.Repository.ID != node.Repository.ID {
-			continue
-		}
-		pullRequest := &pullRequest{
-			ID:         node.ID,
-			Number:     node.Number,
-			Title:      node.Title,
-			FromBranch: node.HeadRefName,
-			ToBranch:   node.BaseRefName,
-		}
-
-		matches := pullRequestRegex.FindStringSubmatch(node.HeadRefName)
-		if matches != nil && matches[1] == branchname {
-			pullRequest.Commit = commit{
-				CommitID:   matches[2],
-				CommitHash: node.Commits.Nodes[0].Commit.Oid,
-			}
-
-			checkStatus := checkStatusUnknown
-			switch node.Commits.Nodes[0].Commit.StatusCheckRollup.State {
-
-			case "SUCCESS":
-				checkStatus = checkStatusPass
-			case "PENDING":
-				checkStatus = checkStatusPending
-			default:
-				checkStatus = checkStatusFail
-			}
-
-			pullRequest.MergeStatus = pullRequestMergeStatus{
-				ChecksPass:     checkStatus,
-				ReviewApproved: node.ReviewDecision == "APPROVED",
-				NoConflicts:    node.Mergeable == "MERGEABLE",
-			}
-
-			requests = append(requests, pullRequest)
-		}
-	}
-
-	requests = sd.sortPullRequests(requests)
-
-	return &gitHubInfo{
-		UserName:     query.Viewer.Login,
-		RepositoryID: query.Repository.ID,
-		LocalBranch:  branchname,
-		PullRequests: requests,
-	}
-}
-
 // syncCommitStackToGitHub gets all the local commits in the given branch
 //  which are new (on top of origin/master) and creates a corresponding
 //  branch on github for each commit.
-func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubInfo) []commit {
+func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.GitHubInfo) []git.Commit {
 	localCommits := sd.getLocalCommitStack()
 
 	var output string
@@ -640,7 +372,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubI
 	defer mustgit("switch "+info.LocalBranch, nil)
 	sd.profiletimer.Step("SyncCommitStack::GetLocalCommitStack")
 
-	commitUpdated := func(c commit, info *gitHubInfo) bool {
+	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
 		for _, pr := range info.PullRequests {
 			if pr.Commit.CommitID == c.CommitID {
 				if pr.Commit.CommitHash == c.CommitHash {
@@ -667,7 +399,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubI
 	return localCommits
 }
 
-func pushCommitToRemote(commit commit, info *gitHubInfo) {
+func pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
 	headRefName := branchNameFromCommit(info, commit)
 	mustgit("checkout "+commit.CommitHash, nil)
 	mustgit("switch -C "+headRefName, nil)
@@ -676,92 +408,16 @@ func pushCommitToRemote(commit commit, info *gitHubInfo) {
 	mustgit("branch -D "+headRefName, nil)
 }
 
-func createGithubPullRequest(ctx context.Context, client *githubv4.Client,
-	info *gitHubInfo, commit commit, prevCommit *commit) *pullRequest {
-	log.Debug().Interface("commit", commit).Interface("prev", prevCommit).
-		Msg("createGithubPullRequest")
-
-	baseRefName := "master"
-	if prevCommit != nil {
-		baseRefName = branchNameFromCommit(info, *prevCommit)
-	}
-	headRefName := branchNameFromCommit(info, commit)
-
-	var mutation struct {
-		CreatePullRequest struct {
-			PullRequest struct {
-				ID     string
-				Number int
-			}
-		} `graphql:"createPullRequest(input: $input)"`
-	}
-	commitBody := githubv4.String(commit.Body)
-	input := githubv4.CreatePullRequestInput{
-		RepositoryID: info.RepositoryID,
-		BaseRefName:  githubv4.String(baseRefName),
-		HeadRefName:  githubv4.String(headRefName),
-		Title:        githubv4.String(commit.Subject),
-		Body:         &commitBody,
-	}
-	err := client.Mutate(ctx, &mutation, input, nil)
-	check(err)
-
-	return &pullRequest{
-		ID:         mutation.CreatePullRequest.PullRequest.ID,
-		Number:     mutation.CreatePullRequest.PullRequest.Number,
-		FromBranch: baseRefName,
-		ToBranch:   headRefName,
-		Commit:     commit,
-		Title:      commit.Subject,
-		MergeStatus: pullRequestMergeStatus{
-			ChecksPass:     checkStatusUnknown,
-			ReviewApproved: false,
-			NoConflicts:    false,
-			Stacked:        false,
-		},
-	}
-}
-
-func updateGithubPullRequest(ctx context.Context, client *githubv4.Client,
-	info *gitHubInfo, pullRequest *pullRequest,
-	commit commit, prevCommit *commit) {
-	log.Debug().Interface("commit", commit).Interface("prev", prevCommit).
-		Interface("pr", pullRequest).Msg("updateGithubPullRequest")
-	baseRefName := "master"
-	if prevCommit != nil {
-		baseRefName = branchNameFromCommit(info, *prevCommit)
-	}
-
-	var mutation struct {
-		UpdatePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"updatePullRequest(input: $input)"`
-	}
-	baseRefNameStr := githubv4.String(baseRefName)
-	subject := githubv4.String(commit.Subject)
-	body := githubv4.String(commit.Body)
-	input := githubv4.UpdatePullRequestInput{
-		PullRequestID: pullRequest.ID,
-		BaseRefName:   &baseRefNameStr,
-		Title:         &subject,
-		Body:          &body,
-	}
-	err := client.Mutate(ctx, &mutation, input, nil)
-	check(err)
-}
-
-func branchNameFromCommit(info *gitHubInfo, commit commit) string {
+func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 	return "pr/" + info.UserName + "/" + info.LocalBranch + "/" + commit.CommitID
 }
 
 func mustgit(argStr string, output *string) {
-	err := git(argStr, output)
+	err := gitcmd(argStr, output)
 	check(err)
 }
 
-func git(argStr string, output *string) error {
+func gitcmd(argStr string, output *string) error {
 	// runs a git command
 	//  if output is not nil it will be set to the output of the command
 	args := strings.Split(argStr, " ")
@@ -794,120 +450,6 @@ func git(argStr string, output *string) error {
 		}
 	}
 	return nil
-}
-
-func (pr *pullRequest) mergeable(config *Config) bool {
-	if !pr.MergeStatus.NoConflicts {
-		return false
-	}
-	if !pr.MergeStatus.Stacked {
-		return false
-	}
-	if config.RequireChecks && pr.MergeStatus.ChecksPass != checkStatusPass {
-		return false
-	}
-	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
-		return false
-	}
-	return true
-}
-
-func (pr *pullRequest) ready(config *Config) bool {
-	if pr.Commit.WIP {
-		return false
-	}
-	if !pr.MergeStatus.NoConflicts {
-		return false
-	}
-	if config.RequireChecks && pr.MergeStatus.ChecksPass != checkStatusPass {
-		return false
-	}
-	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
-		return false
-	}
-	return true
-}
-
-const checkmark = "\xE2\x9C\x94"
-const crossmark = "\xE2\x9C\x97"
-const middledot = "\xC2\xB7"
-
-func (pr *pullRequest) statusString(config *Config) string {
-	statusString := "["
-
-	statusString += pr.MergeStatus.ChecksPass.String(config)
-
-	if config.RequireApproval {
-		if pr.MergeStatus.ReviewApproved {
-			statusString += checkmark
-		} else {
-			statusString += crossmark
-		}
-	} else {
-		statusString += "-"
-	}
-
-	if pr.MergeStatus.NoConflicts {
-		statusString += checkmark
-	} else {
-		statusString += crossmark
-	}
-
-	if pr.MergeStatus.Stacked {
-		statusString += checkmark
-	} else {
-		statusString += crossmark
-	}
-
-	statusString += "]"
-	return statusString
-}
-
-func (pr *pullRequest) String(config *Config) string {
-	prStatus := pr.statusString(config)
-	if pr.Merged {
-		prStatus = "MERGED"
-	}
-
-	prInfo := fmt.Sprintf("%3d", pr.Number)
-	if config.ShowPRLink {
-		prInfo = fmt.Sprintf("github.com/%s/%s/pull/%d",
-			config.GitHubRepoOwner, config.GitHubRepoName, pr.Number)
-	}
-
-	line := fmt.Sprintf("%s %s : %s", prStatus, prInfo, pr.Title)
-
-	// trim line to terminal width
-	terminalWidth, err := terminal.Width()
-	if err != nil {
-		terminalWidth = 1000
-	}
-	lineByteLength := len(line)
-	lineLength := utf8.RuneCountInString(line)
-	diff := lineLength - terminalWidth
-	if diff > 0 {
-		line = line[:lineByteLength-diff-3] + "..."
-	}
-
-	return line
-}
-
-func (cs checkStatus) String(config *Config) string {
-	if config.RequireChecks {
-		switch cs {
-		case checkStatusUnknown:
-			return "?"
-		case checkStatusPending:
-			return middledot
-		case checkStatusFail:
-			return crossmark
-		case checkStatusPass:
-			return checkmark
-		default:
-			return "?"
-		}
-	}
-	return "-"
 }
 
 func check(err error) {
