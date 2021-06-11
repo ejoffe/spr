@@ -95,7 +95,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx, sd.github)
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
 	localCommits := sd.syncCommitStackToGitHub(ctx, githubInfo)
-	sd.profiletimer.Step("UpdatePullRequests::SyncCommits")
+	sd.profiletimer.Step("UpdatePullRequests::syncCommitStackToGithub")
 
 	// iterate through local_commits and update pull_requests
 	for commitIndex, c := range localCommits {
@@ -133,8 +133,8 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 		}
 	}
+	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
 
-	sd.profiletimer.Step("UpdatePullRequests::End")
 	sd.StatusPullRequests(ctx)
 }
 
@@ -659,12 +659,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubI
 		}
 
 		if commitUpdated(commit, info) {
-			headRefName := branchNameFromCommit(info, commit)
-			mustgit("checkout "+commit.CommitHash, nil)
-			mustgit("switch -C "+headRefName, nil)
-			mustgit("push --force --set-upstream origin "+headRefName, nil)
-			mustgit("switch "+info.LocalBranch, nil)
-			mustgit("branch -D "+headRefName, nil)
+			pushCommitToRemote(commit, info)
 			sd.profiletimer.Step("SyncCommitStack::" + commit.CommitID)
 		}
 	}
@@ -672,8 +667,19 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *gitHubI
 	return localCommits
 }
 
+func pushCommitToRemote(commit commit, info *gitHubInfo) {
+	headRefName := branchNameFromCommit(info, commit)
+	mustgit("checkout "+commit.CommitHash, nil)
+	mustgit("switch -C "+headRefName, nil)
+	mustgit("push --force --set-upstream origin "+headRefName, nil)
+	mustgit("switch "+info.LocalBranch, nil)
+	mustgit("branch -D "+headRefName, nil)
+}
+
 func createGithubPullRequest(ctx context.Context, client *githubv4.Client,
 	info *gitHubInfo, commit commit, prevCommit *commit) *pullRequest {
+	log.Debug().Interface("commit", commit).Interface("prev", prevCommit).
+		Msg("createGithubPullRequest")
 
 	baseRefName := "master"
 	if prevCommit != nil {
@@ -719,7 +725,8 @@ func createGithubPullRequest(ctx context.Context, client *githubv4.Client,
 func updateGithubPullRequest(ctx context.Context, client *githubv4.Client,
 	info *gitHubInfo, pullRequest *pullRequest,
 	commit commit, prevCommit *commit) {
-
+	log.Debug().Interface("commit", commit).Interface("prev", prevCommit).
+		Interface("pr", pullRequest).Msg("updateGithubPullRequest")
 	baseRefName := "master"
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
