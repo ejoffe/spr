@@ -128,24 +128,30 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo
 
 	requests = github.SortPullRequests(requests, c.config)
 
-	return &github.GitHubInfo{
+	info := &github.GitHubInfo{
 		UserName:     query.Viewer.Login,
 		RepositoryID: query.Repository.ID,
 		LocalBranch:  branchname,
 		PullRequests: requests,
 	}
+
+	log.Debug().Interface("Info", info).Msg("GetInfo")
+
+	return info
 }
 
 func (c *client) CreatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
-	log.Debug().Interface("commit", commit).Interface("prev", prevCommit).
-		Msg("createGithubPullRequest")
 
 	baseRefName := "master"
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
 	headRefName := branchNameFromCommit(info, commit)
+
+	log.Debug().Interface("Commit", commit).
+		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
+		Msg("CreatePullRequest")
 
 	var mutation struct {
 		CreatePullRequest struct {
@@ -184,13 +190,15 @@ func (c *client) CreatePullRequest(ctx context.Context,
 
 func (c *client) UpdatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
-	log.Debug().Interface("commit", commit).Interface("prevCommit", prevCommit).
-		Interface("pr", pr).Msg("updateGithubPullRequest")
 
 	baseRefName := "master"
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
+
+	log.Debug().Interface("Commit", commit).
+		Str("FromBranch", pr.FromBranch).Str("ToBranch", baseRefName).
+		Interface("PR", pr).Msg("UpdatePullRequest")
 
 	var mutation struct {
 		UpdatePullRequest struct {
@@ -241,6 +249,8 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 }
 
 func (c *client) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
+	log.Debug().Interface("PR", pr).Msg("MergePullRequest")
+
 	var mergepr struct {
 		MergePullRequest struct {
 			PullRequest struct {
@@ -266,6 +276,7 @@ func (c *client) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
 }
 
 func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
+	log.Debug().Interface("PR", pr).Msg("ClosePullRequest")
 	var closepr struct {
 		ClosePullRequest struct {
 			PullRequest struct {
