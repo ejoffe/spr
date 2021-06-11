@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ejoffe/spr/git"
 )
 
 // Config object to hold spr configuration
@@ -20,28 +20,31 @@ type Config struct {
 	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
 }
 
-func ConfigFilePath() string {
+func ConfigFilePath(gitcmd git.Cmd) string {
 	var rootdir string
-	err := git("rev-parse --show-toplevel", &rootdir)
+	err := gitcmd("rev-parse --show-toplevel", &rootdir)
 	check(err)
 	rootdir = strings.TrimSpace(rootdir)
 	filepath := filepath.Clean(rootdir + "/.spr.yml")
 	return filepath
 }
 
-func GitHubRemoteSource(config *Config) *remoteSource {
+func GitHubRemoteSource(config *Config, gitcmd git.Cmd) *remoteSource {
 	return &remoteSource{
+		gitcmd: gitcmd,
 		config: config,
 	}
 }
 
 type remoteSource struct {
+	gitcmd git.Cmd
 	config *Config
 }
 
 func (s *remoteSource) Load(_ interface{}) {
 	var output string
-	mustgit("remote -v", &output)
+	err := s.gitcmd("remote -v", &output)
+	check(err)
 	lines := strings.Split(output, "\n")
 
 	for _, line := range lines {
@@ -74,46 +77,6 @@ func getRepoDetailsFromRemote(remote string) (string, string, bool) {
 		return matches[repoOwnerIndex], matches[repoNameIndex], true
 	}
 	return "", "", false
-}
-
-func mustgit(argStr string, output *string) {
-	err := git(argStr, output)
-	check(err)
-}
-
-func git(argStr string, output *string) error {
-	// runs a git command
-	//  if output is not nil it will be set to the output of the command
-	args := strings.Split(argStr, " ")
-	cmd := exec.Command("git", args...)
-	envVarsToDerive := []string{
-		"SSH_AUTH_SOCK",
-		"SSH_AGENT_PID",
-		"HOME",
-		"XDG_CONFIG_HOME",
-	}
-	cmd.Env = []string{"EDITOR=/usr/bin/true"}
-	for _, env := range envVarsToDerive {
-		envval := os.Getenv(env)
-		if envval != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, envval))
-		}
-	}
-
-	if output != nil {
-		out, err := cmd.CombinedOutput()
-		*output = strings.TrimSpace(string(out))
-		if err != nil {
-			return err
-		}
-	} else {
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "git error: %s", string(out))
-			return err
-		}
-	}
-	return nil
 }
 
 func check(err error) {

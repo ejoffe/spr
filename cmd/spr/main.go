@@ -7,6 +7,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
 	flags "github.com/jessevdk/go-flags"
@@ -50,8 +51,10 @@ func main() {
 	}
 
 	//  check that we are inside a git dir
-	err = spr.SanityCheck()
+	var output string
+	err = realgit.Cmd("status --porcelain", &output)
 	if err != nil {
+		fmt.Println(output)
 		fmt.Println(err)
 		os.Exit(2)
 	}
@@ -60,9 +63,9 @@ func main() {
 	cfg := config.Config{}
 	rake.LoadSources(&cfg,
 		rake.DefaultSource(),
-		config.GitHubRemoteSource(&cfg),
-		rake.YamlFileSource(config.ConfigFilePath()),
-		rake.YamlFileWriter(config.ConfigFilePath()),
+		config.GitHubRemoteSource(&cfg, realgit.Cmd),
+		rake.YamlFileSource(realgit.RootDir()+"/.spr.yml"),
+		rake.YamlFileWriter(realgit.RootDir()+"/.spr.yml"),
 	)
 
 	if opts.Debug {
@@ -72,7 +75,7 @@ func main() {
 
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, &cfg)
-	stackedpr := spr.NewStackedPR(&cfg, client, os.Stdout, opts.Debug)
+	stackedpr := spr.NewStackedPR(&cfg, client, realgit.Cmd, os.Stdout, opts.Debug)
 
 	if opts.Update {
 		stackedpr.UpdatePullRequests(ctx)

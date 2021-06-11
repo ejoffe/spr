@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/spr"
 	"github.com/jessevdk/go-flags"
 )
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	sd := spr.NewStackedPR(nil, nil, os.Stdout, false)
+	sd := spr.NewStackedPR(nil, nil, realgit.Cmd, os.Stdout, false)
 	sd.AmendCommit(ctx)
 }
 

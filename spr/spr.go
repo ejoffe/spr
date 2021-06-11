@@ -3,11 +3,9 @@ package spr
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,11 +18,12 @@ import (
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, writer io.Writer, debug bool) *stackediff {
+func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.Cmd, writer io.Writer, debug bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
 			github:       github,
+			gitcmd:       gitcmd,
 			writer:       writer,
 			debug:        true,
 			profiletimer: profiletimer.StartProfileTimer(),
@@ -34,6 +33,7 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, writer i
 	return &stackediff{
 		config:       config,
 		github:       github,
+		gitcmd:       gitcmd,
 		writer:       writer,
 		debug:        false,
 		profiletimer: profiletimer.StartNoopTimer(),
@@ -43,19 +43,10 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, writer i
 type stackediff struct {
 	config       *config.Config
 	github       github.GitHubInterface
+	gitcmd       git.Cmd
 	writer       io.Writer
 	debug        bool
 	profiletimer profiletimer.Timer
-}
-
-func SanityCheck() error {
-	// able to run git commands
-	var output string
-	err := gitcmd("status --porcelain", &output)
-	if err != nil {
-		return errors.New(output)
-	}
-	return nil
 }
 
 // AmendCommit enables one to easily ammend a commit in the middle of a stack
@@ -88,8 +79,8 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	}
 	commitIndex = commitIndex - 1
 	check(err)
-	mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
-	mustgit("rebase origin/master -i --autosquash --autostash", nil)
+	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
+	sd.mustgit("rebase origin/master -i --autosquash --autostash", nil)
 }
 
 // UpdatePullRequests implements a stacked diff workflow on top of github.
@@ -157,7 +148,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 //  their commits have already been merged.
 func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
 	// Figure out top most pr in the stack that is mergeable
@@ -183,7 +174,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.CleanupRemoteBranch {
-		err := gitcmd(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
+		err := sd.gitcmd(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 		if err != nil {
 			fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 		}
@@ -201,7 +192,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		sd.github.ClosePullRequest(ctx, pr)
 
 		if sd.config.CleanupRemoteBranch {
-			err := gitcmd(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
+			err := sd.gitcmd(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 			if err != nil {
 				fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 			}
@@ -223,7 +214,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 //  remotely on github.
 func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
@@ -243,7 +234,7 @@ func (sd *stackediff) DebugPrintSummary() {
 // getLocalCommitStack returns a list of unmerged commits
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
-	mustgit("log origin/master..HEAD", &commitLog)
+	sd.mustgit("log origin/master..HEAD", &commitLog)
 	return sd.parseLocalCommitStack(commitLog)
 }
 
@@ -345,13 +336,13 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 	waitgroup.Add(1)
 
 	fetch := func() {
-		mustgit("fetch", nil)
-		mustgit("rebase origin/master --autostash", nil)
+		sd.mustgit("fetch", nil)
+		sd.mustgit("rebase origin/master --autostash", nil)
 		waitgroup.Done()
 	}
 
 	go fetch()
-	info := sd.github.GetInfo(ctx)
+	info := sd.github.GetInfo(ctx, sd.gitcmd)
 	waitgroup.Wait()
 
 	return info
@@ -364,12 +355,12 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.
 	localCommits := sd.getLocalCommitStack()
 
 	var output string
-	mustgit("status --porcelain --untracked-files=no", &output)
+	sd.mustgit("status --porcelain --untracked-files=no", &output)
 	if output != "" {
-		mustgit("stash", nil)
-		defer mustgit("stash pop", nil)
+		sd.mustgit("stash", nil)
+		defer sd.mustgit("stash pop", nil)
 	}
-	defer mustgit("switch "+info.LocalBranch, nil)
+	defer sd.mustgit("switch "+info.LocalBranch, nil)
 	sd.profiletimer.Step("SyncCommitStack::GetLocalCommitStack")
 
 	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
@@ -391,7 +382,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.
 		}
 
 		if commitUpdated(commit, info) {
-			pushCommitToRemote(commit, info)
+			sd.pushCommitToRemote(commit, info)
 			sd.profiletimer.Step("SyncCommitStack::" + commit.CommitID)
 		}
 	}
@@ -399,57 +390,22 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.
 	return localCommits
 }
 
-func pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
-	headRefName := branchNameFromCommit(info, commit)
-	mustgit("checkout "+commit.CommitHash, nil)
-	mustgit("switch -C "+headRefName, nil)
-	mustgit("push --force --set-upstream origin "+headRefName, nil)
-	mustgit("switch "+info.LocalBranch, nil)
-	mustgit("branch -D "+headRefName, nil)
+func (sd *stackediff) pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
+	headRefName := sd.branchNameFromCommit(info, commit)
+	sd.mustgit("checkout "+commit.CommitHash, nil)
+	sd.mustgit("switch -C "+headRefName, nil)
+	sd.mustgit("push --force --set-upstream origin "+headRefName, nil)
+	sd.mustgit("switch "+info.LocalBranch, nil)
+	sd.mustgit("branch -D "+headRefName, nil)
 }
 
-func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
+func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 	return "pr/" + info.UserName + "/" + info.LocalBranch + "/" + commit.CommitID
 }
 
-func mustgit(argStr string, output *string) {
-	err := gitcmd(argStr, output)
+func (sd *stackediff) mustgit(argStr string, output *string) {
+	err := sd.gitcmd(argStr, output)
 	check(err)
-}
-
-func gitcmd(argStr string, output *string) error {
-	// runs a git command
-	//  if output is not nil it will be set to the output of the command
-	args := strings.Split(argStr, " ")
-	cmd := exec.Command("git", args...)
-	envVarsToDerive := []string{
-		"SSH_AUTH_SOCK",
-		"SSH_AGENT_PID",
-		"HOME",
-		"XDG_CONFIG_HOME",
-	}
-	cmd.Env = []string{"EDITOR=/usr/bin/true"}
-	for _, env := range envVarsToDerive {
-		envval := os.Getenv(env)
-		if envval != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, envval))
-		}
-	}
-
-	if output != nil {
-		out, err := cmd.CombinedOutput()
-		*output = strings.TrimSpace(string(out))
-		if err != nil {
-			return err
-		}
-	} else {
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "git error: %s", string(out))
-			return err
-		}
-	}
-	return nil
 }
 
 func check(err error) {
