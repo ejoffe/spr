@@ -113,6 +113,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 						prevCommit = &localCommits[commitIndex-1]
 					}
 					sd.github.UpdatePullRequest(ctx, githubInfo, pr, c, prevCommit)
+					pr.Commit = c
 				}
 				break
 			}
