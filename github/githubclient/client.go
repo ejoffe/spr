@@ -61,6 +61,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo
 						Nodes []struct {
 							Commit struct {
 								Oid               string
+								MessageHeadline   string
+								MessageBody       string
 								StatusCheckRollup struct {
 									State string
 								}
@@ -103,6 +105,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo
 			pullRequest.Commit = git.Commit{
 				CommitID:   matches[2],
 				CommitHash: node.Commits.Nodes[0].Commit.Oid,
+				Subject:    node.Commits.Nodes[0].Commit.MessageHeadline,
+				Body:       node.Commits.Nodes[0].Commit.MessageBody,
 			}
 
 			checkStatus := github.CheckStatusUnknown
@@ -175,8 +179,8 @@ func (c *client) CreatePullRequest(ctx context.Context,
 	return &github.PullRequest{
 		ID:         mutation.CreatePullRequest.PullRequest.ID,
 		Number:     mutation.CreatePullRequest.PullRequest.Number,
-		FromBranch: baseRefName,
-		ToBranch:   headRefName,
+		FromBranch: headRefName,
+		ToBranch:   baseRefName,
 		Commit:     commit,
 		Title:      commit.Subject,
 		MergeStatus: github.PullRequestMergeStatus{
