@@ -88,11 +88,27 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 //   with currently open pull requests in github.
 //  It will create a new pull request for all new commits, and update the
 //   pull request if a commit has been amended.
+//  In the case where commits are reordered, the corresponding pull requests
+//   will also be reordered to match the commit stack order.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
-	localCommits := sd.syncCommitStackToGitHub(ctx, githubInfo)
+	localCommits := sd.getLocalCommitStack()
+	sd.profiletimer.Step("UpdatePullRequests::getLocalCommitStack")
+
+	reorder := false
+	if commitsReordered(localCommits, githubInfo.PullRequests) {
+		reorder = true
+		// if commits have been reordered :
+		//   first - rebase all pull requests to master
+		//   then - update all pull requests
+		for _, pr := range githubInfo.PullRequests {
+			sd.github.UpdatePullRequest(ctx, githubInfo, pr, pr.Commit, nil)
+		}
+	}
+
+	sd.syncCommitStackToGitHub(ctx, localCommits, githubInfo)
 	sd.profiletimer.Step("UpdatePullRequests::syncCommitStackToGithub")
 
 	// iterate through local_commits and update pull_requests
@@ -104,9 +120,10 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		for _, pr := range githubInfo.PullRequests {
 			if c.CommitID == pr.Commit.CommitID {
 				prFound = true
-				if c.CommitHash != pr.Commit.CommitHash {
+				if c.CommitHash != pr.Commit.CommitHash || reorder {
 					// if commit id is same but commit hash changed it means the commit
 					//  has been amended and we need to update the pull request
+					// in the reorder case we also want to update the pull request
 
 					var prevCommit *git.Commit
 					if commitIndex > 0 {
@@ -319,6 +336,15 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []git.Commit {
 	return commits
 }
 
+func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequest) bool {
+	for i := 0; i < len(pullRequests); i++ {
+		if localCommits[i].CommitID != pullRequests[i].Commit.CommitID {
+			return true
+		}
+	}
+	return false
+}
+
 var commitInstallHelper = `
 A commit is missing a commit-id.
 This most likely means the commit-msg hook isn't installed.
@@ -352,8 +378,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 // syncCommitStackToGitHub gets all the local commits in the given branch
 //  which are new (on top of origin/master) and creates a corresponding
 //  branch on github for each commit.
-func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.GitHubInfo) []git.Commit {
-	localCommits := sd.getLocalCommitStack()
+func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
+	commits []git.Commit, info *github.GitHubInfo) {
 
 	var output string
 	sd.mustgit("status --porcelain --untracked-files=no", &output)
@@ -377,7 +403,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.
 		return true
 	}
 
-	for _, commit := range localCommits {
+	for _, commit := range commits {
 		if commit.WIP {
 			break
 		}
@@ -387,8 +413,6 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context, info *github.
 			sd.profiletimer.Step("SyncCommitStack::" + commit.CommitID)
 		}
 	}
-
-	return localCommits
 }
 
 func (sd *stackediff) pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
