@@ -18,6 +18,8 @@ func NewMockGit(t *testing.T) *mock {
 func (m *mock) Cmd(args string, output *string) error {
 	fmt.Printf("CMD: git %s\n", args)
 
+	m.assert.NotEmpty(m.expectedCmd)
+
 	expected := m.expectedCmd[0]
 	actual := "git " + args
 	m.assert.Equal(expected, actual)
@@ -58,14 +60,17 @@ func (m *mock) ExpectLogAndRespond(commits []*git.Commit) {
 func (m *mock) ExpectPushCommits(commits []*git.Commit) {
 	m.expect("git status --porcelain --untracked-files=no").respond(nil)
 
+	var branchNames []string
 	for _, c := range commits {
 		m.expect("git checkout %s", c.CommitHash)
 		m.expect("git switch -C pr/TestSPR/master/%s", c.CommitID)
-		m.expect("git push --force --set-upstream origin pr/TestSPR/master/%s", c.CommitID)
 		m.expect("git switch master")
+		branchNames = append(branchNames, "pr/TestSPR/master/"+c.CommitID)
+	}
+	m.expect("git push --force --atomic origin " + strings.Join(branchNames, " "))
+	for _, c := range commits {
 		m.expect("git branch -D pr/TestSPR/master/%s", c.CommitID)
 	}
-	m.expect("git switch master")
 }
 
 func (m *mock) expect(cmd string, args ...interface{}) *mock {

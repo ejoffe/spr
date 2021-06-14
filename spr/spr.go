@@ -95,7 +95,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
 	localCommits := sd.getLocalCommitStack()
-	sd.profiletimer.Step("UpdatePullRequests::getLocalCommitStack")
+	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
 
 	reorder := false
 	if commitsReordered(localCommits, githubInfo.PullRequests) {
@@ -106,10 +106,11 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		for _, pr := range githubInfo.PullRequests {
 			sd.github.UpdatePullRequest(ctx, githubInfo, pr, pr.Commit, nil)
 		}
+		sd.profiletimer.Step("UpdatePullRequests::ReparentPullRequestsToMaster")
 	}
 
 	sd.syncCommitStackToGitHub(ctx, localCommits, githubInfo)
-	sd.profiletimer.Step("UpdatePullRequests::syncCommitStackToGithub")
+	sd.profiletimer.Step("UpdatePullRequests::SyncCommitStackToGithub")
 
 	// iterate through local_commits and update pull_requests
 	for commitIndex, c := range localCommits {
@@ -387,8 +388,6 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		sd.mustgit("stash", nil)
 		defer sd.mustgit("stash pop", nil)
 	}
-	defer sd.mustgit("switch "+info.LocalBranch, nil)
-	sd.profiletimer.Step("SyncCommitStack::GetLocalCommitStack")
 
 	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
 		for _, pr := range info.PullRequests {
@@ -403,16 +402,33 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		return true
 	}
 
+	var updatedCommits []git.Commit
 	for _, commit := range commits {
 		if commit.WIP {
 			break
 		}
-
 		if commitUpdated(commit, info) {
-			sd.pushCommitToRemote(commit, info)
-			sd.profiletimer.Step("SyncCommitStack::" + commit.CommitID)
+			updatedCommits = append(updatedCommits, commit)
 		}
 	}
+
+	var branchNames []string
+	for _, commit := range updatedCommits {
+		branch := sd.branchNameFromCommit(info, commit)
+		branchNames = append(branchNames, branch)
+		sd.mustgit("checkout "+commit.CommitHash, nil)
+		sd.mustgit("switch -C "+branch, nil)
+		sd.mustgit("switch "+info.LocalBranch, nil)
+		sd.profiletimer.Step("SyncCommitStack::CreateBranch::" + branch)
+	}
+	if len(updatedCommits) > 0 {
+		sd.mustgit("push --force --atomic origin "+strings.Join(branchNames, " "), nil)
+	}
+	for _, commit := range updatedCommits {
+		branch := sd.branchNameFromCommit(info, commit)
+		sd.mustgit("branch -D "+branch, nil)
+	}
+	sd.profiletimer.Step("SyncCommitStack::PushBranches")
 }
 
 func (sd *stackediff) pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
