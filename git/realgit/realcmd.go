@@ -5,11 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 func Cmd(argStr string, output *string) error {
 	// runs a git command
 	//  if output is not nil it will be set to the output of the command
+	log.Debug().Msg("git " + argStr)
 	args := strings.Split(argStr, " ")
 	cmd := exec.Command("git", args...)
 	envVarsToDerive := []string{
