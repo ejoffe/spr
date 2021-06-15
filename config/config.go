@@ -19,6 +19,8 @@ type Config struct {
 	RequireApproval     bool `default:"true" yaml:"requireApproval"`
 	ShowPRLink          bool `default:"true" yaml:"showPRLink"`
 	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
+	LogGitCommands      bool `default:"false" yaml:"logGitCommands"`
+	LogGitHubCalls      bool `default:"false" yaml:"logGitHubCalls"`
 }
 
 func ConfigFilePath(gitcmd git.GitInterface) string {

@@ -144,12 +144,14 @@ These are the available configurations:
 | requireApproval     | bool | true    | require pull request approval in order to merge                |
 | showPRLink          | bool | true    | show full pull request http link                               |
 | cleanupRemoteBranch | bool | true    | delete remote branch after pull request merges                 |
+| logGitCommands      | bool | false   | logs all git commands to stdout                                |
+| logGitHubCalls      | bool | false   | logs all github api calls to stdout                            |
 
 Happy Coding!
 -------------
 If you find a bug, feel free to open an issue. Pull requests are welcome.
 
-If you find this script as useful as I do, add and star and tell your fellow githubers.
+If you find this script as useful as I do, add a star and tell your fellow githubers.
 
 License
 -------

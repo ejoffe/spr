@@ -6,11 +6,14 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/rs/zerolog/log"
 )
 
-func NewGitCmd() *gitcmd {
-	initcmd := &gitcmd{}
+func NewGitCmd(cfg *config.Config) *gitcmd {
+	initcmd := &gitcmd{
+		config: cfg,
+	}
 	var rootdir string
 	err := initcmd.Git("rev-parse --show-toplevel", &rootdir)
 	if err != nil {
@@ -19,11 +22,13 @@ func NewGitCmd() *gitcmd {
 	rootdir = strings.TrimSpace(rootdir)
 
 	return &gitcmd{
+		config:  cfg,
 		rootdir: rootdir,
 	}
 }
 
 type gitcmd struct {
+	config  *config.Config
 	rootdir string
 }
 
@@ -32,6 +37,9 @@ func (c *gitcmd) Git(argStr string, output *string) error {
 	//  if output is not nil it will be set to the output of the command
 
 	log.Debug().Msg("git " + argStr)
+	if c.config.LogGitCommands {
+		fmt.Printf("> git %s\n", argStr)
+	}
 	args := strings.Split(argStr, " ")
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.rootdir
