@@ -50,9 +50,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	gitcmd := realgit.NewGitCmd()
+
 	//  check that we are inside a git dir
 	var output string
-	err = realgit.Cmd("status --porcelain", &output)
+	err = gitcmd.Git("status --porcelain", &output)
 	if err != nil {
 		fmt.Println(output)
 		fmt.Println(err)
@@ -61,11 +63,12 @@ func main() {
 
 	// parse configuration
 	cfg := config.Config{}
+	configfilepath := config.ConfigFilePath(gitcmd)
 	rake.LoadSources(&cfg,
 		rake.DefaultSource(),
-		config.GitHubRemoteSource(&cfg, realgit.Cmd),
-		rake.YamlFileSource(realgit.RootDir()+"/.spr.yml"),
-		rake.YamlFileWriter(realgit.RootDir()+"/.spr.yml"),
+		config.GitHubRemoteSource(&cfg, gitcmd),
+		rake.YamlFileSource(configfilepath),
+		rake.YamlFileWriter(configfilepath),
 	)
 
 	if opts.Debug {
@@ -75,7 +78,7 @@ func main() {
 
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, &cfg)
-	stackedpr := spr.NewStackedPR(&cfg, client, realgit.Cmd, os.Stdout, opts.Debug)
+	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout, opts.Debug)
 
 	if opts.Update {
 		stackedpr.UpdatePullRequests(ctx)

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -20,16 +21,13 @@ type Config struct {
 	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
 }
 
-func ConfigFilePath(gitcmd git.Cmd) string {
-	var rootdir string
-	err := gitcmd("rev-parse --show-toplevel", &rootdir)
-	check(err)
-	rootdir = strings.TrimSpace(rootdir)
-	filepath := filepath.Clean(rootdir + "/.spr.yml")
+func ConfigFilePath(gitcmd git.GitInterface) string {
+	rootdir := gitcmd.RootDir()
+	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
 	return filepath
 }
 
-func GitHubRemoteSource(config *Config, gitcmd git.Cmd) *remoteSource {
+func GitHubRemoteSource(config *Config, gitcmd git.GitInterface) *remoteSource {
 	return &remoteSource{
 		gitcmd: gitcmd,
 		config: config,
@@ -37,13 +35,13 @@ func GitHubRemoteSource(config *Config, gitcmd git.Cmd) *remoteSource {
 }
 
 type remoteSource struct {
-	gitcmd git.Cmd
+	gitcmd git.GitInterface
 	config *Config
 }
 
 func (s *remoteSource) Load(_ interface{}) {
 	var output string
-	err := s.gitcmd("remote -v", &output)
+	err := s.gitcmd.Git("remote -v", &output)
 	check(err)
 	lines := strings.Split(output, "\n")
 

@@ -18,7 +18,7 @@ import (
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.Cmd, writer io.Writer, debug bool) *stackediff {
+func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer, debug bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
@@ -43,7 +43,7 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd g
 type stackediff struct {
 	config       *config.Config
 	github       github.GitHubInterface
-	gitcmd       git.Cmd
+	gitcmd       git.GitInterface
 	writer       io.Writer
 	debug        bool
 	profiletimer profiletimer.Timer
@@ -193,7 +193,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.CleanupRemoteBranch {
-		err := sd.gitcmd(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
+		err := sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 		if err != nil {
 			fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 		}
@@ -211,7 +211,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		sd.github.ClosePullRequest(ctx, pr)
 
 		if sd.config.CleanupRemoteBranch {
-			err := sd.gitcmd(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
+			err := sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 			if err != nil {
 				fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
 			}
@@ -445,7 +445,7 @@ func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.C
 }
 
 func (sd *stackediff) mustgit(argStr string, output *string) {
-	err := sd.gitcmd(argStr, output)
+	err := sd.gitcmd.Git(argStr, output)
 	check(err)
 }
 

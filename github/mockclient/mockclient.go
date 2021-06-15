@@ -22,7 +22,7 @@ type mockclient struct {
 	expect []expectation
 }
 
-func (c *mockclient) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo {
+func (c *mockclient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	fmt.Printf("HUB: GetInfo\n")
 	c.verifyExpectation(expectation{
 		op: getInfoOP,
