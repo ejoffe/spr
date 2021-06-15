@@ -50,8 +50,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	gitcmd := realgit.NewGitCmd()
-
+	gitcmd := realgit.NewGitCmd(&config.Config{})
 	//  check that we are inside a git dir
 	var output string
 	err = gitcmd.Git("status --porcelain", &output)
@@ -70,6 +69,8 @@ func main() {
 		rake.YamlFileSource(configfilepath),
 		rake.YamlFileWriter(configfilepath),
 	)
+
+	gitcmd = realgit.NewGitCmd(&cfg)
 
 	if opts.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)

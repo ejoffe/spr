@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/spr"
 	"github.com/jessevdk/go-flags"
@@ -31,7 +32,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	gitcmd := realgit.NewGitCmd()
+	gitcmd := realgit.NewGitCmd(&config.Config{})
 
 	//  check that we are inside a git dir
 	var output string
