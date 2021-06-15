@@ -41,7 +41,7 @@ type client struct {
 
 var pullRequestRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
 
-func (c *client) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo {
+func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	var query struct {
 		Viewer struct {
 			Login        string
@@ -84,7 +84,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.Cmd) *github.GitHubInfo
 	check(err)
 
 	var branchname string
-	err = gitcmd("branch --show-current", &branchname)
+	err = gitcmd.Git("branch --show-current", &branchname)
 	check(err)
 
 	var requests []*github.PullRequest

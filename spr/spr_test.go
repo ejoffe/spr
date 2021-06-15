@@ -30,7 +30,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock.Cmd, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
 
 	ctx := context.Background()
 
@@ -137,7 +137,7 @@ func TestSPRAmendCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock.Cmd, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
 
 	ctx := context.Background()
 
@@ -237,7 +237,7 @@ func TestSPRReorderCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock.Cmd, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
 
 	ctx := context.Background()
 

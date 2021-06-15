@@ -15,7 +15,7 @@ func NewMockGit(t *testing.T) *mock {
 	}
 }
 
-func (m *mock) Cmd(args string, output *string) error {
+func (m *mock) Git(args string, output *string) error {
 	fmt.Printf("CMD: git %s\n", args)
 
 	m.assert.NotEmpty(m.expectedCmd)
@@ -35,6 +35,10 @@ func (m *mock) Cmd(args string, output *string) error {
 	m.response = m.response[1:]
 
 	return nil
+}
+
+func (m *mock) RootDir() string {
+	return ""
 }
 
 type mock struct {

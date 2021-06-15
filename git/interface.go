@@ -1,4 +1,6 @@
 package git
 
-type Cmd func(args string, output *string) error
-type RootDir func() string
+type GitInterface interface {
+	Git(args string, output *string) error
+	RootDir() string
+}
