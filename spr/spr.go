@@ -193,10 +193,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.CleanupRemoteBranch {
-		err := sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
-		if err != nil {
-			fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
-		}
+		sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 	}
 
 	// Close all the pull requests in the stack below the merged pr
@@ -211,10 +208,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		sd.github.ClosePullRequest(ctx, pr)
 
 		if sd.config.CleanupRemoteBranch {
-			err := sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
-			if err != nil {
-				fmt.Fprintf(sd.writer, "error deleting branch: %v\n", err)
-			}
+			sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
