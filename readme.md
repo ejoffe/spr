@@ -146,6 +146,7 @@ These are the available configurations:
 | cleanupRemoteBranch | bool | true    | delete remote branch after pull request merges                 |
 | logGitCommands      | bool | false   | logs all git commands to stdout                                |
 | logGitHubCalls      | bool | false   | logs all github api calls to stdout                            |
+| statusBitsHeader    | bool | true    | show status bits type headers                                  |
 
 Happy Coding!
 -------------

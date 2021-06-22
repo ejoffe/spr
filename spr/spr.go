@@ -18,39 +18,24 @@ import (
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer,
-	debug bool, detail bool) *stackediff {
-	if debug {
-		return &stackediff{
-			config:       config,
-			github:       github,
-			gitcmd:       gitcmd,
-			writer:       writer,
-			debug:        true,
-			detail:       false,
-			profiletimer: profiletimer.StartProfileTimer(),
-		}
-	}
+func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer) *stackediff {
 
 	return &stackediff{
 		config:       config,
 		github:       github,
 		gitcmd:       gitcmd,
 		writer:       writer,
-		debug:        false,
-		detail:       detail,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
 }
 
 type stackediff struct {
-	config       *config.Config
-	github       github.GitHubInterface
-	gitcmd       git.GitInterface
-	writer       io.Writer
-	debug        bool
-	detail       bool
-	profiletimer profiletimer.Timer
+	config        *config.Config
+	github        github.GitHubInterface
+	gitcmd        git.GitInterface
+	writer        io.Writer
+	profiletimer  profiletimer.Timer
+	DetailEnabled bool
 }
 
 // AmendCommit enables one to easily ammend a commit in the middle of a stack
@@ -233,22 +218,29 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 
-	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
-		pr := githubInfo.PullRequests[i]
-		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
-	}
-	if sd.detail {
-		fmt.Fprint(sd.writer, detailMessage)
+	if len(githubInfo.PullRequests) == 0 {
+		fmt.Fprintf(sd.writer, "pull request stack is empty\n")
+	} else {
+		if sd.DetailEnabled {
+			fmt.Fprint(sd.writer, detailMessage)
+		}
+		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
+			pr := githubInfo.PullRequests[i]
+			fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+		}
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
 
-// DebugPrintSummary prints debug info if debug mode is enabled.
-func (sd *stackediff) DebugPrintSummary() {
-	if sd.debug {
-		err := sd.profiletimer.ShowResults()
-		check(err)
-	}
+// ProfilingEnable enables stopwatch profiling
+func (sd *stackediff) ProfilingEnable() {
+	sd.profiletimer = profiletimer.StartProfileTimer()
+}
+
+// ProfilingSummary prints profiling info to stdout
+func (sd *stackediff) ProfilingSummary() {
+	err := sd.profiletimer.ShowResults()
+	check(err)
 }
 
 // getLocalCommitStack returns a list of unmerged commits
@@ -456,9 +448,10 @@ func check(err error) {
 	}
 }
 
-var detailMessage = ` ││││
- │││└─ stack check
- ││└── no merge conflicts
- │└─── pull request approved
- └──── github checks pass
+var detailMessage = `
+ ┌─ github checks pass
+ │┌── pull request approved
+ ││┌─── no merge conflicts
+ │││┌──── stack check
+ ││││
 `

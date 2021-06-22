@@ -10,9 +10,10 @@ import (
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
-	flags "github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -26,35 +27,11 @@ func init() {
 	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
-// command line options
-type opts struct {
-	Debug   bool `long:"debug" description:"Show runtime debug info."`
-	Detail  bool `short:"d" long:"detail" description:"Show detailed output."`
-	Merge   bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
-	Status  bool `short:"s" long:"status" description:"Show status of open pull requests."`
-	Update  bool `short:"u" long:"update" description:"Update and create pull requests for unmerged commits in the stack."`
-	Version bool `short:"v" long:"version" description:"Show version info."`
-}
-
 func main() {
-	//  parse command line options
-	var opts opts
-	parser := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
-	_, err := parser.Parse()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if opts.Version {
-		fmt.Printf("spr version : %s : %s : %s\n", version, date, commit[:8])
-		os.Exit(0)
-	}
-
 	gitcmd := realgit.NewGitCmd(&config.Config{})
 	//  check that we are inside a git dir
 	var output string
-	err = gitcmd.Git("status --porcelain", &output)
+	err := gitcmd.Git("status --porcelain", &output)
 	if err != nil {
 		fmt.Println(output)
 		fmt.Println(err)
@@ -73,27 +50,136 @@ func main() {
 
 	gitcmd = realgit.NewGitCmd(&cfg)
 
-	if opts.Debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		rake.LoadSources(&cfg, rake.DebugWriter(os.Stdout))
-	}
-
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, &cfg)
-	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout, opts.Debug, opts.Detail)
+	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout)
 
-	if opts.Update {
-		stackedpr.UpdatePullRequests(ctx)
-	} else if opts.Merge {
-		stackedpr.MergePullRequests(ctx)
-		stackedpr.UpdatePullRequests(ctx)
-	} else if opts.Status {
-		stackedpr.StatusPullRequests(ctx)
-	} else {
-		stackedpr.StatusPullRequests(ctx)
+	detailFlag := &cli.BoolFlag{
+		Name:  "detail",
+		Value: false,
+		Usage: "Show detailed status bits output",
 	}
 
-	if opts.Debug {
-		stackedpr.DebugPrintSummary()
+	cli.AppHelpTemplate = `NAME:
+   {{.Name}} - {{.Usage}}
+
+USAGE:
+   {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}{{if .Commands}} command [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+
+GLOBAL OPTIONS:
+{{range .VisibleFlags}}{{"\t"}}{{.}}
+{{end}}
+COMMANDS:
+{{range .Commands}}{{if not .HideHelp}}   {{join .Names ","}}{{ "\t"}}{{.Usage}}{{ "\n" }}{{end}}{{end}}
+AUTHOR: {{range .Authors}}{{ . }}{{end}}
+VERSION: {{.Version}}
+`
+
+	app := &cli.App{
+		Name:                 "spr",
+		Usage:                "Stacked Pull Requests on GitHub",
+		HideVersion:          true,
+		Version:              fmt.Sprintf("%s : %s : %s\n", version, date, commit[:8]),
+		EnableBashCompletion: true,
+		Authors: []*cli.Author{
+			{
+				Name:  "Eitan Joffe",
+				Email: "eitan@apomelo.com",
+			},
+		},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "detail",
+				Value: false,
+				Usage: "Show detailed status bits output",
+			},
+			&cli.BoolFlag{
+				Name:  "profile",
+				Value: false,
+				Usage: "Show runtime profiling info",
+			},
+			&cli.BoolFlag{
+				Name:  "verbose",
+				Value: false,
+				Usage: "Show verbose logging",
+			},
+			&cli.BoolFlag{
+				Name:  "debug",
+				Value: false,
+				Usage: "Show runtime debug info",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			if c.IsSet("debug") {
+				zerolog.SetGlobalLevel(zerolog.DebugLevel)
+				rake.LoadSources(&cfg, rake.DebugWriter(os.Stdout))
+			}
+			if c.IsSet("profile") {
+				stackedpr.ProfilingEnable()
+			}
+			if c.IsSet("detail") || cfg.StatusBitsHeader {
+				stackedpr.DetailEnabled = true
+			}
+			if c.IsSet("verbose") {
+				cfg.LogGitCommands = true
+				cfg.LogGitHubCalls = true
+			}
+			return nil
+		},
+		Action: func(c *cli.Context) error {
+			stackedpr.StatusPullRequests(ctx)
+			return nil
+		},
+		Commands: []*cli.Command{
+			{
+				Name:  "status",
+				Usage: "Show status of open pull requests",
+				Action: func(c *cli.Context) error {
+					stackedpr.StatusPullRequests(ctx)
+					return nil
+				},
+				Flags: []cli.Flag{
+					detailFlag,
+				},
+			},
+			{
+				Name:  "update",
+				Usage: "Update and create pull requests for updated commits in the stack",
+				Action: func(c *cli.Context) error {
+					stackedpr.UpdatePullRequests(ctx)
+					return nil
+				},
+				Flags: []cli.Flag{
+					detailFlag,
+				},
+			},
+			{
+				Name:  "merge",
+				Usage: "Merge all mergeable pull requests",
+				Action: func(c *cli.Context) error {
+					stackedpr.MergePullRequests(ctx)
+					stackedpr.UpdatePullRequests(ctx)
+					return nil
+				},
+				Flags: []cli.Flag{
+					detailFlag,
+				},
+			},
+			{
+				Name:  "version",
+				Usage: "Show version info",
+				Action: func(c *cli.Context) error {
+					return cli.Exit(c.App.Version, 0)
+				},
+			},
+		},
+		After: func(c *cli.Context) error {
+			if c.IsSet("profile") {
+				stackedpr.ProfilingSummary()
+			}
+			return nil
+		},
 	}
+
+	app.Run(os.Args)
 }
