@@ -28,7 +28,8 @@ func init() {
 
 // command line options
 type opts struct {
-	Debug   bool `short:"d" long:"debug" description:"Show runtime debug info."`
+	Debug   bool `long:"debug" description:"Show runtime debug info."`
+	Detail  bool `short:"d" long:"detail" description:"Show detailed output."`
 	Merge   bool `short:"m" long:"merge" description:"Merge all mergeable pull requests."`
 	Status  bool `short:"s" long:"status" description:"Show status of open pull requests."`
 	Update  bool `short:"u" long:"update" description:"Update and create pull requests for unmerged commits in the stack."`
@@ -79,7 +80,7 @@ func main() {
 
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, &cfg)
-	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout, opts.Debug)
+	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout, opts.Debug, opts.Detail)
 
 	if opts.Update {
 		stackedpr.UpdatePullRequests(ctx)

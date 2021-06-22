@@ -18,7 +18,8 @@ import (
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer, debug bool) *stackediff {
+func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer,
+	debug bool, detail bool) *stackediff {
 	if debug {
 		return &stackediff{
 			config:       config,
@@ -26,6 +27,7 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd g
 			gitcmd:       gitcmd,
 			writer:       writer,
 			debug:        true,
+			detail:       false,
 			profiletimer: profiletimer.StartProfileTimer(),
 		}
 	}
@@ -36,6 +38,7 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd g
 		gitcmd:       gitcmd,
 		writer:       writer,
 		debug:        false,
+		detail:       detail,
 		profiletimer: profiletimer.StartNoopTimer(),
 	}
 }
@@ -46,6 +49,7 @@ type stackediff struct {
 	gitcmd       git.GitInterface
 	writer       io.Writer
 	debug        bool
+	detail       bool
 	profiletimer profiletimer.Timer
 }
 
@@ -232,6 +236,9 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 		pr := githubInfo.PullRequests[i]
 		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+	}
+	if sd.detail {
+		fmt.Fprint(sd.writer, detailMessage)
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
@@ -448,3 +455,10 @@ func check(err error) {
 		panic(err)
 	}
 }
+
+var detailMessage = ` ││││
+ │││└─ stack check
+ ││└── no merge conflicts
+ │└─── pull request approved
+ └──── github checks pass
+`

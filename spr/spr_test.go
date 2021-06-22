@@ -30,7 +30,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
 
 	ctx := context.Background()
 
@@ -137,7 +137,7 @@ func TestSPRAmendCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
 
 	ctx := context.Background()
 
@@ -237,7 +237,7 @@ func TestSPRReorderCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
 
 	ctx := context.Background()
 
@@ -321,7 +321,7 @@ func TestSPRReorderCommit(t *testing.T) {
 
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer, false)
+	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer, false, false)
 	tests := []struct {
 		name                      string
 		inputCommitLog            string
