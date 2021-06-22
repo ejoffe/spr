@@ -21,6 +21,7 @@ type Config struct {
 	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
 	LogGitCommands      bool `default:"false" yaml:"logGitCommands"`
 	LogGitHubCalls      bool `default:"false" yaml:"logGitHubCalls"`
+	StatusBitsHeader    bool `default:"true" yaml:"statusBitsHeader"`
 }
 
 func ConfigFilePath(gitcmd git.GitInterface) string {

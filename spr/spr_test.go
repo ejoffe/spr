@@ -30,7 +30,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 
@@ -58,7 +58,8 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	// 'git spr -s' :: StatusPullRequest
 	githubmock.ExpectGetInfo()
 	s.StatusPullRequests(ctx)
-	assert.Equal("", output.String())
+	assert.Equal("pull request stack is empty\n", output.String())
+	output.Reset()
 
 	// 'git spr -u' :: UpdatePullRequest :: commits=[c1]
 	githubmock.ExpectGetInfo()
@@ -137,7 +138,7 @@ func TestSPRAmendCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 
@@ -155,7 +156,7 @@ func TestSPRAmendCommit(t *testing.T) {
 	// 'git spr -s' :: StatusPullRequest
 	githubmock.ExpectGetInfo()
 	s.StatusPullRequests(ctx)
-	assert.Equal("", output.String())
+	assert.Equal("pull request stack is empty\n", output.String())
 	output.Reset()
 
 	// 'git spr -u' :: UpdatePullRequest :: commits=[c1, c2]
@@ -237,7 +238,7 @@ func TestSPRReorderCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output, false, false)
+	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 
@@ -265,7 +266,7 @@ func TestSPRReorderCommit(t *testing.T) {
 	// 'git spr -s' :: StatusPullRequest
 	githubmock.ExpectGetInfo()
 	s.StatusPullRequests(ctx)
-	assert.Equal("", output.String())
+	assert.Equal("pull request stack is empty\n", output.String())
 	output.Reset()
 
 	// 'git spr -u' :: UpdatePullRequest :: commits=[c1, c2, c3, c4]
@@ -321,7 +322,7 @@ func TestSPRReorderCommit(t *testing.T) {
 
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer, false, false)
+	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer)
 	tests := []struct {
 		name                      string
 		inputCommitLog            string

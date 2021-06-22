@@ -44,7 +44,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	sd := spr.NewStackedPR(nil, nil, gitcmd, os.Stdout, false, false)
+	sd := spr.NewStackedPR(nil, nil, gitcmd, os.Stdout)
 	sd.AmendCommit(ctx)
 }
 

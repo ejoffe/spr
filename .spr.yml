@@ -4,5 +4,6 @@ requireChecks: true
 requireApproval: false
 showPRLink: true
 cleanupRemoteBranch: true
-logGitCommands: true
-logGitHubCalls: true
+logGitCommands: false
+logGitHubCalls: false
+statusBitsHeader: true
