@@ -48,6 +48,16 @@ func main() {
 		rake.YamlFileWriter(configfilepath),
 	)
 
+	if cfg.GitHubRepoOwner == "" {
+		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
+		os.Exit(3)
+	}
+
+	if cfg.GitHubRepoName == "" {
+		fmt.Println("unable to auto configure repository name - must be set manually in .spr.yml")
+		os.Exit(4)
+	}
+
 	gitcmd = realgit.NewGitCmd(&cfg)
 
 	ctx := context.Background()
