@@ -1,37 +1,40 @@
-## Welcome to GitHub Pages
+## Git SPR : Stacked Pull Requests on GitHub
 
-You can use the [editor on GitHub](https://github.com/ejoffe/spr/edit/master/docs/index.md) to maintain and preview the content for your website in Markdown files.
+I am a total practitioner of writing code in small consumable chunks, getting them reviewed and merged quickly. This approach leads to very fast paced code iterations, merge a lot and merge often. There is no question in my mind that writing software in this way is more productive than long lived branches with pull requests taking days or weeks to merge.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+I found managing branches and stacks of pull requests on GitHub to be somewhere between annoying and unbearable. As the stacks of pull requests get bigger, you end up spending more and more time switching things around with a high risk of messing things up. If you want to merge something in the middle of the stack, you are in for a fun ride. Many teams avoid stacked pull requests altogether because of the added complexities and have forgotten the joy of being able to work in composed units.
 
-### Markdown
+I created SPR to solve this, a simple tool which does all the branch and pull request management for you, so you can just focus on your code and not have to spend time rebranching, updating and managing stacks of pull requests.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+With SPR each git commit is an atomic unit of work that needs to pass all the checks and go through a pull request approval process. This ensures that the repository mainline never breaks in a sense that all tests run and pass on every commit This unlocks simplified deployment debugging with tools such as git bisect to pinpoint a failure to a particular commit. It also enforces a clean commit lineage in the repository mainline with no merge commits.
 
-```markdown
-Syntax highlighted code block
+SPR is a client side script integrated into git, there is no special configuration on GitHub or any special server side software that needs to run. It can be used in any GitHub repository and doesn't interfere with other workflows as it uses the same pull request model.
 
-# Header 1
-## Header 2
-### Header 3
+To create a pull request. Just commit your changes and call spr update. The branch is pushed to GitHub, and a pull request is created. 
+```shell
+> git commit -m "Feature A"
+> git spr update
+[--✔✔] github.com/ejoffe/spr-demo/pull/1 : Feature A
+```
+You can add and amend commits and a call to spr update will synchronize your pull requests to your current commit stack. You can even reorder commits and your pull request's branches will be correctly updated. 
+```shell
+> git commit -m "feature B"
+> ...
+> git commit -m "Feature C"
+> git spr update
+[✗✗✔✔] github.com/ejoffe/spr-demo/pull/2 : Feature C
+[✗✗✔✔] github.com/ejoffe/spr-demo/pull/2 : Feature B
+[✔✔✔✔] github.com/ejoffe/spr-demo/pull/1 : Feature A
+```
+Once a pull request has four checkmarks it means it has passed checks, got an approval, and has no conflicts. Your pull request is ready to merge. Use spr merge to merge all ready pull requests. 
+```shell
+> git spr merge
+MERGED github.com/ejoffe/spr-demo/pull/1 : Feature A
 
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+[✗✗✔✔] github.com/ejoffe/spr-demo/pull/2 : Feature C
+[✗✗✔✔] github.com/ejoffe/spr-demo/pull/2 : Feature B
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+Find out more here : [https://github.com/ejoffe/spr](https://github.com/ejoffe/spr)
 
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/ejoffe/spr/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+**Happy Coding!**
