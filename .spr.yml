@@ -6,4 +6,4 @@ showPRLink: true
 cleanupRemoteBranch: true
 logGitCommands: false
 logGitHubCalls: false
-statusBitsHeader: true
+statusBitsHeader: false

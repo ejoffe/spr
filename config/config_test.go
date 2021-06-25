@@ -23,6 +23,9 @@ func TestGetRepoDetailsFromRemote(t *testing.T) {
 		{"origin  git@github.com:r2/d2.git (push)", "r2", "d2", true},
 		{"origin  git@github.com:r2/d2.git (fetch)", "", "", false},
 		{"origin  git@github.com:r2/d2 (push)", "r2", "d2", true},
+
+		{"origin	https://github.com/r2/d2-a.git (push)", "r2", "d2-a", true},
+		{"origin	https://github.com/r2/d2_a.git (push)", "r2", "d2_a", true},
 	}
 	for i, testCase := range testCases {
 		t.Logf("Testing %v %q", i, testCase.remote)
