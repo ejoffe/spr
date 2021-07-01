@@ -83,10 +83,10 @@ Now use the editor to get the commit to the right place. **git rebase -i** is yo
 
 Managing Pull Requests
 ----------------------
-Run **git spr --update** to sync your whole commit stack to github and create pull requests for each commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. **git spr -u** pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
+Run **git spr update** to sync your whole commit stack to github and create pull requests for each commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. **git spr update** pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
 
 ```shell
-> git spr -u
+> git spr update
 [·✗✔✗] 61: Feature D
 [·✗✔✗] 60: Feature C
 [✔✔✔✔] 59: Feature B
@@ -113,10 +113,10 @@ Each pull request has four merge status bits signifying the request's ability to
 
 Merging Pull Requests
 ---------------------
-Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr --merge** and you can merge all the pull requests that are mergeable in one shot.
+Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot.
 
 ```shell
-> git spr -m
+> git spr merge
 MERGED #58 Feature A
 MERGED #59 Feature B
 [·✗✔✗] 61: Feature D
