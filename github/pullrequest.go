@@ -9,6 +9,7 @@ import (
 	"github.com/ejoffe/spr/terminal"
 )
 
+// PullRequest has GitHub pull request data
 type PullRequest struct {
 	ID         string
 	Number     int
@@ -24,17 +25,32 @@ type PullRequest struct {
 type checkStatus int
 
 const (
+	// CheckStatusUnknown
 	CheckStatusUnknown checkStatus = iota
+
+	// CheckStatusPending when checks are still running
 	CheckStatusPending
+
+	// CheckStatusPass when all checks pass
 	CheckStatusPass
+
+	// CheckStatusFail when some chechs have failed
 	CheckStatusFail
 )
 
+// PullRequestMergeStatus is the merge status of a pull request
 type PullRequestMergeStatus struct {
-	ChecksPass     checkStatus
+	// ChecksPass is the status of GitHub checks
+	ChecksPass checkStatus
+
+	// ReviewApproved is true when a pull request is approved by a fellow reviewer
 	ReviewApproved bool
-	NoConflicts    bool
-	Stacked        bool
+
+	// NoConflicts is true when there are no merge conflicts
+	NoConflicts bool
+
+	// Stacked is true when all requests in the stack up to this one are ready to merge
+	Stacked bool
 }
 
 // SortPullRequests sorts the pull requests so that the one that is on top of
@@ -73,6 +89,7 @@ func SortPullRequests(prs []*PullRequest, config *config.Config) []*PullRequest 
 	return prs
 }
 
+// Mergeable returns true if the pull request is mergable
 func (pr *PullRequest) Mergeable(config *config.Config) bool {
 	if !pr.MergeStatus.NoConflicts {
 		return false
@@ -89,6 +106,7 @@ func (pr *PullRequest) Mergeable(config *config.Config) bool {
 	return true
 }
 
+// Ready returns true if pull request is ready to merge
 func (pr *PullRequest) Ready(config *config.Config) bool {
 	if pr.Commit.WIP {
 		return false
@@ -109,6 +127,7 @@ const checkmark = "\xE2\x9C\x94"
 const crossmark = "\xE2\x9C\x97"
 const middledot = "\xC2\xB7"
 
+// StatusString returs a string representation of the merge status bits
 func (pr *PullRequest) StatusString(config *config.Config) string {
 	statusString := "["
 

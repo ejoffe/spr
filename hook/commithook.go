@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// CommitHook runs the commit hook to add commit-id to file named filename
 func CommitHook(filename string) {
 	if shouldAppendCommitID(filename) {
 		appendCommitID(filename)

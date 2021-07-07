@@ -1,5 +1,6 @@
 package git
 
+// Commit has all the git commit info
 type Commit struct {
 	// CommitID is a long lasting id describing the commit.
 	//  The CommitID is generated and added to the end of the commit message on the initial commit.

@@ -112,15 +112,12 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 				Body:       node.Commits.Nodes[0].Commit.MessageBody,
 			}
 
-			checkStatus := github.CheckStatusUnknown
+			checkStatus := github.CheckStatusFail
 			switch node.Commits.Nodes[0].Commit.StatusCheckRollup.State {
-
 			case "SUCCESS":
 				checkStatus = github.CheckStatusPass
 			case "PENDING":
 				checkStatus = github.CheckStatusPending
-			default:
-				checkStatus = github.CheckStatusFail
 			}
 
 			pullRequest.MergeStatus = github.PullRequestMergeStatus{

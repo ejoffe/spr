@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// NewMockClient creates a new mock client
 func NewMockClient(t *testing.T) *mockclient {
 	return &mockclient{
 		assert: require.New(t),
