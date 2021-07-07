@@ -1,7 +1,12 @@
-# spr : Stacked Pull Requests Workflow on GitHub
+# git spr : Stacked Pull Requests on GitHub
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build](https://github.com/ejoffe/spr/actions/workflows/go_build.yml/badge.svg)](https://github.com/ejoffe/spr/actions/workflows/go_build.yml)
+[![ReportCard](https://goreportcard.com/badge/github.com/ejoffe/spr)](https://goreportcard.com/report/github.com/ejoffe/spr)
+[![Doc](https://godoc.org/github.com/ejoffe/spr?status.svg)](https://godoc.org/github.com/ejoffe/spr)
+[![Release](https://img.shields.io/github/release/ejoffe/spr.svg)](https://GitHub.com/ejoffe/spr/releases/)
 
-What are Stacked Diffs / Pull Requests?
----------------------------------------
+What are Stacked Pull Requests?
+-------------------------------
 Long explanation: https://jg.gg/2018/09/29/stacked-diffs-versus-pull-requests/
 
 Short explanation: A git flow where the atomic unit of change is a commit. Each commit runs all the tests of ci and gets reviewed. When working with stacked diffs or commits, to add more stuff to a particular commit, you amend that commit. This allows for multiple commits to be stacked on top of each other in a single branch, avoiding the overhead of starting a new branch for every new change or feature. Small changes and pull requests are easy and fast to achieve. One doesn't have to worry about stacked branches on top of each other and managing complicated pull request stacks. The end result is a more streamlined faster software development cycle.
