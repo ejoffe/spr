@@ -2,8 +2,3 @@ githubRepoOwner: ejoffe
 githubRepoName: spr
 requireChecks: true
 requireApproval: false
-showPRLink: true
-cleanupRemoteBranch: true
-logGitCommands: false
-logGitHubCalls: false
-statusBitsHeader: false

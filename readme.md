@@ -139,15 +139,19 @@ Show Current Pull Requests
 
 Configuration
 -------------
-When the script is run for the first time a config file **.spr.yml** is created in your repository base dir. 
-These are the available configurations:
+When the script is run for the first time two config files are created.
+Repository configuration is saved to .spr.yml in the repository base directory. 
+User specific configuration is saved to .spr.yml in the user home directory.
 
-| Name                | Type | Default | Description
+| Repository Config   | Type | Default | Description                                                    |
 | ------------------- | ---- | ------- | -------------------------------------------------------------- |
 | githubRepoOwner     | str  |         | name of the github owner (fetched from git remote config)      |
 | githubRepoName      | str  |         | name of the github repository (fetched from git remote config) |
 | requireChecks       | bool | true    | require checks to pass in order to merge                       |
 | requireApproval     | bool | true    | require pull request approval in order to merge                |
+
+| User Config         | Type | Default | Description                                                    |
+| ------------------- | ---- | ------- | -------------------------------------------------------------- |
 | showPRLink          | bool | true    | show full pull request http link                               |
 | cleanupRemoteBranch | bool | true    | delete remote branch after pull request merges                 |
 | logGitCommands      | bool | false   | logs all git commands to stdout                                |

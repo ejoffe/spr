@@ -28,7 +28,7 @@ func init() {
 }
 
 func main() {
-	gitcmd := realgit.NewGitCmd(&config.Config{})
+	gitcmd := realgit.NewGitCmd(config.DefaultConfig())
 	//  check that we are inside a git dir
 	var output string
 	err := gitcmd.Git("status --porcelain", &output)
@@ -38,31 +38,12 @@ func main() {
 		os.Exit(2)
 	}
 
-	// parse configuration
-	cfg := config.Config{}
-	configfilepath := config.ConfigFilePath(gitcmd)
-	rake.LoadSources(&cfg,
-		rake.DefaultSource(),
-		config.GitHubRemoteSource(&cfg, gitcmd),
-		rake.YamlFileSource(configfilepath),
-		rake.YamlFileWriter(configfilepath),
-	)
-
-	if cfg.GitHubRepoOwner == "" {
-		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
-		os.Exit(3)
-	}
-
-	if cfg.GitHubRepoName == "" {
-		fmt.Println("unable to auto configure repository name - must be set manually in .spr.yml")
-		os.Exit(4)
-	}
-
-	gitcmd = realgit.NewGitCmd(&cfg)
+	cfg := config.ParseConfig(gitcmd)
+	gitcmd = realgit.NewGitCmd(cfg)
 
 	ctx := context.Background()
-	client := githubclient.NewGitHubClient(ctx, &cfg)
-	stackedpr := spr.NewStackedPR(&cfg, client, gitcmd, os.Stdout)
+	client := githubclient.NewGitHubClient(ctx, cfg)
+	stackedpr := spr.NewStackedPR(cfg, client, gitcmd, os.Stdout)
 
 	detailFlag := &cli.BoolFlag{
 		Name:  "detail",
@@ -127,12 +108,12 @@ VERSION: {{.Version}}
 			if c.IsSet("profile") {
 				stackedpr.ProfilingEnable()
 			}
-			if c.IsSet("detail") || cfg.StatusBitsHeader {
+			if c.IsSet("detail") || cfg.User.StatusBitsHeader {
 				stackedpr.DetailEnabled = true
 			}
 			if c.IsSet("verbose") {
-				cfg.LogGitCommands = true
-				cfg.LogGitHubCalls = true
+				cfg.User.LogGitCommands = true
+				cfg.User.LogGitHubCalls = true
 			}
 			return nil
 		},
