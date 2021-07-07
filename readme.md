@@ -5,8 +5,8 @@
 [![Doc](https://godoc.org/github.com/ejoffe/spr?status.svg)](https://godoc.org/github.com/ejoffe/spr)
 [![Release](https://img.shields.io/github/release/ejoffe/spr.svg)](https://GitHub.com/ejoffe/spr/releases/)
 
-What are Stacked Pull Requests?
--------------------------------
+What is Stacked Diff Workflow?
+------------------------------
 Long explanation: https://jg.gg/2018/09/29/stacked-diffs-versus-pull-requests/
 
 Short explanation: A git flow where the atomic unit of change is a commit. Each commit runs all the tests of ci and gets reviewed. When working with stacked diffs or commits, to add more stuff to a particular commit, you amend that commit. This allows for multiple commits to be stacked on top of each other in a single branch, avoiding the overhead of starting a new branch for every new change or feature. Small changes and pull requests are easy and fast to achieve. One doesn't have to worry about stacked branches on top of each other and managing complicated pull request stacks. The end result is a more streamlined faster software development cycle.
@@ -15,7 +15,7 @@ Stacked Pull Requests on GitHub
 -------------------------------
     
 The github flow is not quite compatible with the stacked diff model. At the core the atomic unit of change is a pull request which is based on a branch and can have many commits. Stacking pull requests on top of each other in github introduces extra overhead of managing all the commits in each branch of the pull request stack.
-**git spr** is a script to achieve a simple streamlined stacked diff workflow using github pull requests and branches. **git spr** manages your pull request stack for you, so you don't have to. 
+**git spr** is a client side tool that achieves a simple streamlined stacked diff workflow using github pull requests and branches. **git spr** manages your pull request stack for you, so you don't have to. 
 
 Installation 
 ------------
@@ -50,7 +50,7 @@ Create a branch to work in, or if you're brave enough, you can just work in the 
 
 In the stacked diff workflow you don't need to create a branch for every pull request or thing you want to do. You will generally work in one branch, but you can still create multiple branches and separate features into different branches if you want. Each branch will have it's own separate stack of pull requests. 
     
-Commit your changes to the branch. Note that every commit will end up becoming a pull request with a single commit.
+Commit your changes to the branch. Note that every commit will end up becoming a pull request.
 ```shell
 > git add ..... 
 > git commit  
@@ -59,10 +59,22 @@ Commit your changes to the branch. Note that every commit will end up becoming a
 The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
 If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
 
+Managing Pull Requests
+----------------------
+Run **git spr update** to sync your whole commit stack to github and create pull requests for each new commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. **git spr update** pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
+
+```shell
+> git spr update
+[·✗✔✗] 61: Feature D
+[·✗✔✗] 60: Feature C
+[✔✔✔✔] 59: Feature B
+[✔✔✔✔] 58: Feature A
+```
+
 Amending Commits
 ----------------
 When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
-Use the amend script to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling **git commit**, use the amend script and choose the commit you want to amend when prompted.  
+Use **git amend** to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use the amend script and choose the commit you want to amend when prompted.  
 ```shell
 > git add .....
 > git amend
@@ -86,19 +98,8 @@ Another approach is to create a new fixup commit on top of the stack and then us
 ```
 Now use the editor to get the commit to the right place. **git rebase -i** is your friend, if you want to learn more about it: https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history
 
-Managing Pull Requests
-----------------------
-Run **git spr update** to sync your whole commit stack to github and create pull requests for each commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. **git spr update** pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
-
-```shell
-> git spr update
-[·✗✔✗] 61: Feature D
-[·✗✔✗] 60: Feature C
-[✔✔✔✔] 59: Feature B
-[✔✔✔✔] 58: Feature A
-```
-
-### Merge Status
+Merge Status Bits
+-----------------
 Each pull request has four merge status bits signifying the request's ability to be merged. For a request to be merged, all required status bits need to show **✔**. Each status bit has the following meaning:
 1. github checks run and pass 
   - · : pending 
@@ -118,7 +119,7 @@ Each pull request has four merge status bits signifying the request's ability to
 
 Merging Pull Requests
 ---------------------
-Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot.
+Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
 
 ```shell
 > git spr merge
@@ -129,7 +130,7 @@ MERGED #59 Feature B
 ```
 
 Show Current Pull Requests
------------------------------
+--------------------------
 ```shell
 > git spr
 [·✗✔✗] 61: Feature D
@@ -157,7 +158,7 @@ Happy Coding!
 -------------
 If you find a bug, feel free to open an issue. Pull requests are welcome.
 
-If you find this script as useful as I do, add a star and tell your fellow githubers.
+If you find this script as useful as I do, add a **star** and tell your fellow githubers.
 
 License
 -------
