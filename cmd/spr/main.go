@@ -43,6 +43,7 @@ func main() {
 
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, cfg)
+	client.MaybeStar(ctx, cfg)
 	stackedpr := spr.NewStackedPR(cfg, client, gitcmd, os.Stdout)
 
 	detailFlag := &cli.BoolFlag{
