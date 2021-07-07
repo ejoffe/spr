@@ -9,6 +9,8 @@ import (
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/spr"
 	"github.com/jessevdk/go-flags"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -20,6 +22,11 @@ var (
 // command line opts
 type opts struct {
 	Version bool `short:"v" long:"version" description:"Show version info."`
+}
+
+func init() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
 func main() {
