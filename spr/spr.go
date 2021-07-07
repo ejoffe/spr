@@ -38,8 +38,8 @@ type stackediff struct {
 	DetailEnabled bool
 }
 
-// AmendCommit enables one to easily ammend a commit in the middle of a stack
-//  of commits. A list of commits is printed and one can be chosen to be ammended.
+// AmendCommit enables one to easily amend a commit in the middle of a stack
+//  of commits. A list of commits is printed and one can be chosen to be amended.
 func (sd *stackediff) AmendCommit(ctx context.Context) {
 	localCommits := sd.getLocalCommitStack()
 	if len(localCommits) == 0 {
@@ -344,7 +344,7 @@ A commit is missing a commit-id.
 This most likely means the commit-msg hook isn't installed.
 To install the hook run the following cmd in the repo root dir:
 > ln -s $(which spr_commit_hook) .git/hooks/commit-msg
-After installing the hook, you'll need to ammend your commits.
+After installing the hook, you'll need to amend your commits.
 `
 
 func (sd *stackediff) printCommitInstallHelper() {
@@ -385,11 +385,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
 		for _, pr := range info.PullRequests {
 			if pr.Commit.CommitID == c.CommitID {
-				if pr.Commit.CommitHash == c.CommitHash {
-					return false
-				} else {
-					return true
-				}
+				return pr.Commit.CommitHash != c.CommitHash
 			}
 		}
 		return true

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// NewMockGit creates and new mock git instance
 func NewMockGit(t *testing.T) *mock {
 	return &mock{
 		assert: require.New(t),

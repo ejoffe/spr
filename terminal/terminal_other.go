@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Width returns the current character width of the terminal
 func Width() (int, error) {
 	terminalMaxSize, err := unix.IoctlGetWinsize(int(os.Stdin.Fd()), unix.TIOCGWINSZ)
 	if err != nil {

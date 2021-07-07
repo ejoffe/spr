@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// NewGitCmd returns a new git cmd instance
 func NewGitCmd(cfg *config.Config) *gitcmd {
 	initcmd := &gitcmd{
 		config: cfg,
