@@ -181,7 +181,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.github.MergePullRequest(ctx, prToMerge)
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
-	if sd.config.CleanupRemoteBranch {
+	if sd.config.User.CleanupRemoteBranch {
 		sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
 	}
 
@@ -191,12 +191,12 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
 			"commit MERGED in pull request [#%d](https://github.com/%s/%s/pull/%d)",
-			prToMerge.Number, sd.config.GitHubRepoOwner, sd.config.GitHubRepoName, prToMerge.Number)
+			prToMerge.Number, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 
 		sd.github.ClosePullRequest(ctx, pr)
 
-		if sd.config.CleanupRemoteBranch {
+		if sd.config.User.CleanupRemoteBranch {
 			sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
 		}
 	}

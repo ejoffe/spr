@@ -97,10 +97,10 @@ func (pr *PullRequest) Mergeable(config *config.Config) bool {
 	if !pr.MergeStatus.Stacked {
 		return false
 	}
-	if config.RequireChecks && pr.MergeStatus.ChecksPass != CheckStatusPass {
+	if config.Repo.RequireChecks && pr.MergeStatus.ChecksPass != CheckStatusPass {
 		return false
 	}
-	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
+	if config.Repo.RequireApproval && !pr.MergeStatus.ReviewApproved {
 		return false
 	}
 	return true
@@ -114,10 +114,10 @@ func (pr *PullRequest) Ready(config *config.Config) bool {
 	if !pr.MergeStatus.NoConflicts {
 		return false
 	}
-	if config.RequireChecks && pr.MergeStatus.ChecksPass != CheckStatusPass {
+	if config.Repo.RequireChecks && pr.MergeStatus.ChecksPass != CheckStatusPass {
 		return false
 	}
-	if config.RequireApproval && !pr.MergeStatus.ReviewApproved {
+	if config.Repo.RequireApproval && !pr.MergeStatus.ReviewApproved {
 		return false
 	}
 	return true
@@ -133,7 +133,7 @@ func (pr *PullRequest) StatusString(config *config.Config) string {
 
 	statusString += pr.MergeStatus.ChecksPass.String(config)
 
-	if config.RequireApproval {
+	if config.Repo.RequireApproval {
 		if pr.MergeStatus.ReviewApproved {
 			statusString += checkmark
 		} else {
@@ -166,9 +166,9 @@ func (pr *PullRequest) String(config *config.Config) string {
 	}
 
 	prInfo := fmt.Sprintf("%3d", pr.Number)
-	if config.ShowPRLink {
+	if config.User.ShowPRLink {
 		prInfo = fmt.Sprintf("github.com/%s/%s/pull/%d",
-			config.GitHubRepoOwner, config.GitHubRepoName, pr.Number)
+			config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
 	}
 
 	line := fmt.Sprintf("%s %s : %s", prStatus, prInfo, pr.Title)
@@ -189,7 +189,7 @@ func (pr *PullRequest) String(config *config.Config) string {
 }
 
 func (cs checkStatus) String(config *config.Config) string {
-	if config.RequireChecks {
+	if config.Repo.RequireChecks {
 		switch cs {
 		case CheckStatusUnknown:
 			return "?"

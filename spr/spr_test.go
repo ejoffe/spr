@@ -18,10 +18,9 @@ import (
 
 func TestSPRBasicFlowFourCommits(t *testing.T) {
 	assert := require.New(t)
-	cfg := config.Config{
-		RequireChecks:   true,
-		RequireApproval: true,
-	}
+	cfg := config.EmptyConfig()
+	cfg.Repo.RequireChecks = true
+	cfg.Repo.RequireApproval = true
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -30,7 +29,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
+	s := NewStackedPR(cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 
@@ -126,10 +125,9 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 
 func TestSPRAmendCommit(t *testing.T) {
 	assert := require.New(t)
-	cfg := config.Config{
-		RequireChecks:   true,
-		RequireApproval: true,
-	}
+	cfg := config.EmptyConfig()
+	cfg.Repo.RequireChecks = true
+	cfg.Repo.RequireApproval = true
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -138,7 +136,7 @@ func TestSPRAmendCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
+	s := NewStackedPR(cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 
@@ -226,10 +224,9 @@ func TestSPRAmendCommit(t *testing.T) {
 
 func TestSPRReorderCommit(t *testing.T) {
 	assert := require.New(t)
-	cfg := config.Config{
-		RequireChecks:   true,
-		RequireApproval: true,
-	}
+	cfg := config.EmptyConfig()
+	cfg.Repo.RequireChecks = true
+	cfg.Repo.RequireApproval = true
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -238,7 +235,7 @@ func TestSPRReorderCommit(t *testing.T) {
 		LocalBranch:  "master",
 	}
 	var output bytes.Buffer
-	s := NewStackedPR(&cfg, githubmock, gitmock, &output)
+	s := NewStackedPR(cfg, githubmock, gitmock, &output)
 
 	ctx := context.Background()
 

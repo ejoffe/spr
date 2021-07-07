@@ -38,7 +38,7 @@ func (c *gitcmd) Git(argStr string, output *string) error {
 	//  if output is not nil it will be set to the output of the command
 
 	log.Debug().Msg("git " + argStr)
-	if c.config.LogGitCommands {
+	if c.config.User.LogGitCommands {
 		fmt.Printf("> git %s\n", argStr)
 	}
 	args := strings.Split(argStr, " ")

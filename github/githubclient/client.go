@@ -42,7 +42,7 @@ type client struct {
 var pullRequestRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
 
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
 	}
 	var query struct {
@@ -80,8 +80,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		} `graphql:"repository(owner:$repo_owner, name:$repo_name)"`
 	}
 	variables := map[string]interface{}{
-		"repo_owner": githubv4.String(c.config.GitHubRepoOwner),
-		"repo_name":  githubv4.String(c.config.GitHubRepoName),
+		"repo_owner": githubv4.String(c.config.Repo.GitHubRepoOwner),
+		"repo_name":  githubv4.String(c.config.Repo.GitHubRepoName),
 	}
 	err := c.api.Query(ctx, &query, variables)
 	check(err)
@@ -191,7 +191,7 @@ func (c *client) CreatePullRequest(ctx context.Context,
 		},
 	}
 
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github create %d: %s\n", pr.Number, pr.Title)
 	}
 
@@ -201,7 +201,7 @@ func (c *client) CreatePullRequest(ctx context.Context,
 func (c *client) UpdatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github update %d - %s\n", pr.Number, pr.Title)
 	}
 
@@ -261,7 +261,7 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 			Msg("pull request update failed")
 	}
 
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github add comment %d: %s\n", pr.Number, pr.Title)
 	}
 }
@@ -292,7 +292,7 @@ func (c *client) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
 	}
 	check(err)
 
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github merge %d: %s\n", pr.Number, pr.Title)
 	}
 }
@@ -319,7 +319,7 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 			Msg("pull request close failed")
 	}
 
-	if c.config.LogGitHubCalls {
+	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github close %d: %s\n", pr.Number, pr.Title)
 	}
 }

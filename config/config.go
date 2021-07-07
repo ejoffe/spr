@@ -2,30 +2,100 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/git"
 )
 
-// Config object to hold spr configuration
 type Config struct {
+	Repo *RepoConfig
+	User *UserConfig
+}
+
+// Config object to hold spr configuration
+type RepoConfig struct {
 	GitHubRepoOwner string `yaml:"githubRepoOwner"`
 	GitHubRepoName  string `yaml:"githubRepoName"`
 
-	RequireChecks       bool `default:"true" yaml:"requireChecks"`
-	RequireApproval     bool `default:"true" yaml:"requireApproval"`
+	RequireChecks   bool `default:"true" yaml:"requireChecks"`
+	RequireApproval bool `default:"true" yaml:"requireApproval"`
+}
+
+type UserConfig struct {
 	ShowPRLink          bool `default:"true" yaml:"showPRLink"`
 	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
 	LogGitCommands      bool `default:"false" yaml:"logGitCommands"`
 	LogGitHubCalls      bool `default:"false" yaml:"logGitHubCalls"`
 	StatusBitsHeader    bool `default:"true" yaml:"statusBitsHeader"`
+
+	Stargazer bool `default:"false" yaml:"stargazer"`
+	RunCount  int  `default:"0" yaml:"runcount"`
 }
 
-func ConfigFilePath(gitcmd git.GitInterface) string {
+func EmptyConfig() *Config {
+	return &Config{
+		Repo: &RepoConfig{},
+		User: &UserConfig{},
+	}
+}
+
+func DefaultConfig() *Config {
+	cfg := EmptyConfig()
+	rake.LoadSources(cfg.Repo,
+		rake.DefaultSource(),
+	)
+	rake.LoadSources(cfg.User,
+		rake.DefaultSource(),
+	)
+	return cfg
+}
+
+func ParseConfig(gitcmd git.GitInterface) *Config {
+	cfg := EmptyConfig()
+
+	rake.LoadSources(cfg.Repo,
+		rake.DefaultSource(),
+		GitHubRemoteSource(cfg, gitcmd),
+		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
+		rake.YamlFileWriter(RepoConfigFilePath(gitcmd)),
+	)
+
+	if cfg.Repo.GitHubRepoOwner == "" {
+		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
+		os.Exit(3)
+	}
+
+	if cfg.Repo.GitHubRepoName == "" {
+		fmt.Println("unable to auto configure repository name - must be set manually in .spr.yml")
+		os.Exit(4)
+	}
+
+	rake.LoadSources(cfg.User,
+		rake.DefaultSource(),
+		rake.YamlFileSource(UserConfigFilePath()),
+	)
+
+	cfg.User.RunCount = cfg.User.RunCount + 1
+	rake.LoadSources(cfg.User,
+		rake.YamlFileWriter(UserConfigFilePath()))
+
+	return cfg
+}
+
+func RepoConfigFilePath(gitcmd git.GitInterface) string {
 	rootdir := gitcmd.RootDir()
+	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
+	return filepath
+}
+
+func UserConfigFilePath() string {
+	rootdir, err := os.UserHomeDir()
+	check(err)
 	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
 	return filepath
 }
@@ -51,8 +121,8 @@ func (s *remoteSource) Load(_ interface{}) {
 	for _, line := range lines {
 		repoOwner, repoName, match := getRepoDetailsFromRemote(line)
 		if match {
-			s.config.GitHubRepoOwner = repoOwner
-			s.config.GitHubRepoName = repoName
+			s.config.Repo.GitHubRepoOwner = repoOwner
+			s.config.Repo.GitHubRepoName = repoName
 			break
 		}
 	}
