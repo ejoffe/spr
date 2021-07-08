@@ -39,7 +39,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	gitcmd := realgit.NewGitCmd(&config.Config{})
+	gitcmd := realgit.NewGitCmd(config.EmptyConfig())
 
 	//  check that we are inside a git dir
 	var output string

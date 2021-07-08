@@ -319,7 +319,7 @@ func TestSPRReorderCommit(t *testing.T) {
 
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(&config.Config{}, nil, nil, &buffer)
+	sd := NewStackedPR(config.EmptyConfig(), nil, nil, &buffer)
 	tests := []struct {
 		name                      string
 		inputCommitLog            string
