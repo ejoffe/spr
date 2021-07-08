@@ -35,6 +35,7 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 				cfg.User.Stargazer = true
 				rake.LoadSources(cfg.User,
 					rake.YamlFileWriter(config.UserConfigFilePath()))
+				fmt.Println("Thank you! Happy Coding!")
 			}
 		}
 	}
@@ -80,7 +81,8 @@ func (c *client) isStar(ctx context.Context) bool {
 
 		iteration++
 		if iteration > 10 {
-			panic("too many gazing calls")
+			// too many stars in the sky
+			return false
 		}
 	}
 }
