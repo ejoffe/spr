@@ -1,4 +1,5 @@
-## Git SPR : Stacked Pull Requests on GitHub
+![logo](../assets/git_spr_logo.png)
+## Stacked Pull Requests on GitHub
 
 I am a total practitioner of writing code in small consumable chunks, getting them reviewed and merged quickly. This approach leads to very fast paced code iterations, merge a lot and merge often. There is no question in my mind that writing software in this way is more productive than long lived branches with pull requests taking days or weeks to merge.
 
@@ -9,6 +10,9 @@ I created SPR to solve this, a simple tool which does all the branch and pull re
 With SPR each git commit is an atomic unit of work that needs to pass all the checks and go through a pull request approval process. This ensures that the repository mainline never breaks in a sense that all tests run and pass on every commit This unlocks simplified deployment debugging with tools such as git bisect to pinpoint a failure to a particular commit. It also enforces a clean commit lineage in the repository mainline with no merge commits.
 
 SPR is a client side script integrated into git, there is no special configuration on GitHub or any special server side software that needs to run. It can be used in any GitHub repository and doesn't interfere with other workflows as it uses the same pull request model.
+
+![asciicasst](../assets/git_spr_cast.gif)
+--------------------------------------
 
 To create a pull request. Just commit your changes and call spr update. The branch is pushed to GitHub, and a pull request is created. 
 ```shell
