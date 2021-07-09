@@ -78,7 +78,7 @@ Run **git spr update** to sync your whole commit stack to github and create pull
 Amending Commits
 ----------------
 When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
-Use **git amend** to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use the amend script and choose the commit you want to amend when prompted.  
+Use **git amend** to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use **git amend** and choose the commit you want to amend when prompted.  
 ```shell
 > git add .....
 > git amend
@@ -87,20 +87,6 @@ Use **git amend** to easily amend your changes anywhere in the stack. Stage the 
  1 : 9d1b8193 : Feature A
 Commit to amend [1-3]: 2
 ```
-
-If the commit is on top of the stack you can also simply:
-```shell
-> git add .....
-> git commit --amend
-```
-
-Another approach is to create a new fixup commit on top of the stack and then use rebase to squash it into the right commit in the middle of the stack. 
-```shell
-> git add .....
-> git commit -m "fixup to commit XXX"
-> git rebase -i
-```
-Now use the editor to get the commit to the right place. **git rebase -i** is your friend, if you want to learn more about it: https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history
 
 Merge Status Bits
 -----------------
