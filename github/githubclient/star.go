@@ -16,7 +16,7 @@ const (
 	sprRepoOwner = "ejoffe"
 	sprRepoName  = "spr"
 	sprRepo      = "ejoffe/spr"
-	promptCycle  = 50
+	promptCycle  = 25
 )
 
 func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
