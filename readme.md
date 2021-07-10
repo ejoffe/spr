@@ -59,7 +59,6 @@ Commit your changes to a branch. Note that every commit will end up becoming a p
 > git add feature_3
 > git commit feature_3 -m "Feature 3"
 ```
-```
 
 The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
 If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
