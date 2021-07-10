@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/release/ejoffe/spr.svg)](https://GitHub.com/ejoffe/spr/releases/) 
 [![Join the chat at https://gitter.im/ejoffe-spr/community](https://badges.gitter.im/ejoffe-spr/community.svg)](https://gitter.im/ejoffe-spr/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-![asciicasst](docs/git_spr_cast.gif)
+![terminal cast](docs/git_spr_cast.gif)
 
 What is Stacked Diff Workflow?
 ------------------------------
@@ -47,21 +47,23 @@ A commit hook is used to add a commit-id tag to each commit. To install the comm
 
 Workflow
 --------
-Create a branch to work in, or if you're brave enough, you can just work in the master branch.
+Commit your changes to a branch. Note that every commit will end up becoming a pull request.
 ```shell
-> git branch -c salmon
+> touch feature_1
+> git add feature_1
+> git commit feature_1 -m "Feature 1"
+> touch feature_2
+> git add feature_2
+> git commit feature_2 -m "Feature 2"
+> touch feature_3
+> git add feature_3
+> git commit feature_3 -m "Feature 3"
 ```
-
-In the stacked diff workflow you don't need to create a branch for every pull request or thing you want to do. You will generally work in one branch, but you can still create multiple branches and separate features into different branches if you want. Each branch will have it's own separate stack of pull requests. 
-    
-Commit your changes to the branch. Note that every commit will end up becoming a pull request.
-```shell
-> git add ..... 
-> git commit  
 ```
 
 The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
 If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
+There is no need to create new branches for every change, and you don't have to call git push to get your code to github. Instead just call **git spr update**.
 
 Managing Pull Requests
 ----------------------
@@ -69,10 +71,9 @@ Run **git spr update** to sync your whole commit stack to github and create pull
 
 ```shell
 > git spr update
-[·✗✔✗] 61: Feature D
-[·✗✔✗] 60: Feature C
-[✔✔✔✔] 59: Feature B
-[✔✔✔✔] 58: Feature A
+[·✗✔✗] 60: Feature 3
+[✔✔✔✔] 59: Feature 2
+[✔✔✔✔] 58: Feature 1
 ```
 
 Amending Commits
@@ -80,11 +81,12 @@ Amending Commits
 When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
 Use **git amend** to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use **git amend** and choose the commit you want to amend when prompted.  
 ```shell
-> git add .....
+> touch feature_2
+> git add feature_2
 > git amend
- 3 : 5cba235d : Feature C
- 2 : 4dc2c5b2 : Feature B
- 1 : 9d1b8193 : Feature A
+ 3 : 5cba235d : Feature 3
+ 2 : 4dc2c5b2 : Feature 2
+ 1 : 9d1b8193 : Feature 1
 Commit to amend [1-3]: 2
 ```
 
@@ -113,18 +115,16 @@ Your pull requests are stacked. Don't use the UI to merge pull requests, if you 
 
 ```shell
 > git spr merge
-MERGED #58 Feature A
-MERGED #59 Feature B
-[·✗✔✗] 61: Feature D
-[·✗✔✗] 60: Feature C
+MERGED #58 Feature 1
+MERGED #59 Feature 2
+[·✗✔✗] 60: Feature 3
 ```
 
 Show Current Pull Requests
 --------------------------
 ```shell
 > git spr
-[·✗✔✗] 61: Feature D
-[·✗✔✗] 60: Feature C
+[·✗✔✗] 60: Feature 3
 ```
 
 Configuration
