@@ -39,7 +39,7 @@ Download the pre-compiled binaries from the [releases page](https://github.com/e
 Install Commit Hook
 -------------------
 
-A commit hook is used to add a commit-id tag to each commit. To install the commit hook, simply run the following in your root git directory.
+A commit hook is used to add a commit-id tag to each commit. To install the commit hook, simply run the following in the root directory of the git repository you are working on.
 
 ```base
 > ln -s $(which spr_commit_hook) .git/hooks/commit-msg
