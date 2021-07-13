@@ -15,6 +15,7 @@ import (
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/hook"
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
@@ -247,10 +248,21 @@ func (sd *stackediff) ProfilingSummary() {
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
 	sd.mustgit("log origin/master..HEAD", &commitLog)
-	return sd.parseLocalCommitStack(commitLog)
+	commits, valid := sd.parseLocalCommitStack(commitLog)
+	if !valid {
+		// if not valid - it means commit hook was not installed
+		//  install commit-hook and try again
+		hook.InstallCommitHook(sd.gitcmd)
+		sd.mustgit("log origin/master..HEAD", &commitLog)
+		commits, valid = sd.parseLocalCommitStack(commitLog)
+		if !valid {
+			panic("unable to fetch local commits")
+		}
+	}
+	return commits
 }
 
-func (sd *stackediff) parseLocalCommitStack(commitLog string) []git.Commit {
+func (sd *stackediff) parseLocalCommitStack(commitLog string) ([]git.Commit, bool) {
 	var commits []git.Commit
 
 	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
@@ -282,9 +294,8 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []git.Commit {
 		matches := commitHashRegex.FindStringSubmatch(line)
 		if matches != nil {
 			if commitScanOn {
-				//  last commit is missing the commit-id
-				sd.printCommitInstallHelper()
-				return nil
+				// missing the commit-id
+				return nil, false
 			}
 			commitScanOn = true
 			scannedCommit = git.Commit{
@@ -323,11 +334,11 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) []git.Commit {
 	// if commitScanOn is true here it means there was a commit without
 	//  a commit-id
 	if commitScanOn {
-		sd.printCommitInstallHelper()
-		return nil
+		// missing the commit-id
+		return nil, false
 	}
 
-	return commits
+	return commits, true
 }
 
 func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequest) bool {
@@ -337,19 +348,6 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 		}
 	}
 	return false
-}
-
-var commitInstallHelper = `
-A commit is missing a commit-id.
-This most likely means the commit-msg hook isn't installed.
-To install the hook run the following cmd in the repo root dir:
-> ln -s $(which spr_commit_hook) .git/hooks/commit-msg
-After installing the hook, you'll need to amend your commits.
-`
-
-func (sd *stackediff) printCommitInstallHelper() {
-	message := strings.TrimSpace(commitInstallHelper) + "\n"
-	fmt.Fprint(sd.writer, message)
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {

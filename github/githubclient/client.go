@@ -18,8 +18,9 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
 		fmt.Printf("GitHub OAuth Token Required\n")
-		fmt.Printf("Make one at: https://%s/settings/tokens\n", "github.com")
-		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value\n")
+		fmt.Printf("Make one at: https://github.com/settings/tokens\n")
+		fmt.Printf("With repo scope selected.\n")
+		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value.\n")
 		os.Exit(3)
 	}
 	ts := oauth2.StaticTokenSource(
