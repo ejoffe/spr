@@ -36,28 +36,19 @@ Download the .deb, .rpm or .apk from the [releases page](https://github.com/ejof
 ### Manual
 Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to the desired location.
 
-Install Commit Hook
--------------------
-
-A commit hook is used to add a commit-id tag to each commit. To install the commit hook, simply run the following in the root directory of the git repository you are working on.
-
-```base
-> ln -s $(which spr_commit_hook) .git/hooks/commit-msg
-```
-
 Workflow
 --------
-Commit your changes to a branch. Note that every commit will end up becoming a pull request.
+Commit your changes to a branch as you normally do. Note that every commit will end up becoming a pull request.
 ```shell
 > touch feature_1
 > git add feature_1
-> git commit feature_1 -m "Feature 1"
+> git commit -m "Feature 1"
 > touch feature_2
 > git add feature_2
-> git commit feature_2 -m "Feature 2"
+> git commit -m "Feature 2"
 > touch feature_3
 > git add feature_3
-> git commit feature_3 -m "Feature 3"
+> git commit -m "Feature 3"
 ```
 
 The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.

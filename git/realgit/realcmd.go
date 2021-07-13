@@ -34,6 +34,10 @@ type gitcmd struct {
 }
 
 func (c *gitcmd) Git(argStr string, output *string) error {
+	return c.GitWithEditor(argStr, output, "/usr/bin/true")
+}
+
+func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) error {
 	// runs a git command
 	//  if output is not nil it will be set to the output of the command
 
@@ -50,7 +54,8 @@ func (c *gitcmd) Git(argStr string, output *string) error {
 		"HOME",
 		"XDG_CONFIG_HOME",
 	}
-	cmd.Env = []string{"EDITOR=/usr/bin/true"}
+
+	cmd.Env = []string{fmt.Sprintf("EDITOR=%s", editorCmd)}
 	for _, env := range envVarsToDerive {
 		envval := os.Getenv(env)
 		if envval != "" {

@@ -321,10 +321,10 @@ func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
 	sd := NewStackedPR(config.EmptyConfig(), nil, nil, &buffer)
 	tests := []struct {
-		name                      string
-		inputCommitLog            string
-		expectedCommits           []git.Commit
-		expectedCommitHookMessage bool
+		name            string
+		inputCommitLog  string
+		expectedCommits []git.Commit
+		expectedValid   bool
 	}{
 		{
 			name: "SingleValidCommitNoBody",
@@ -345,7 +345,7 @@ Date:   Wed May 21 19:53:12 1980 -0700
 					Body:       "",
 				},
 			},
-			expectedCommitHookMessage: false,
+			expectedValid: true,
 		},
 		{
 			name: "SingleValidCommitWithBody",
@@ -368,7 +368,7 @@ Date:   Wed May 21 19:53:12 1980 -0700
 					Body:       "Super universe body.",
 				},
 			},
-			expectedCommitHookMessage: false,
+			expectedValid: true,
 		},
 		{
 			name: "TwoValidCommitsNoBody",
@@ -401,7 +401,7 @@ Date:   Wed May 21 19:52:51 1980 -0700
 					Subject:    "Supergalactic speed",
 				},
 			},
-			expectedCommitHookMessage: false,
+			expectedValid: true,
 		},
 		{
 			name: "SingleCommitMissingCommitID",
@@ -412,19 +412,17 @@ Date:   Wed May 21 19:53:12 1980 -0700
 
 	Supergalactic speed
 `,
-			expectedCommits:           nil,
-			expectedCommitHookMessage: true,
+			expectedCommits: nil,
+			expectedValid:   false,
 		},
 	}
 
 	for _, tc := range tests {
-		actualCommits := sd.parseLocalCommitStack(tc.inputCommitLog)
+		actualCommits, valid := sd.parseLocalCommitStack(tc.inputCommitLog)
 		assert.Equal(t, tc.expectedCommits, actualCommits, tc.name)
-
-		if tc.expectedCommitHookMessage {
-			assert.Equal(t, buffer.String(), commitInstallHelper[1:])
-		} else {
-			assert.Equal(t, buffer.Len(), 0)
+		assert.Equal(t, tc.expectedValid, valid, tc.name)
+		if tc.expectedValid {
+			assert.Equal(t, buffer.Len(), 0, tc.name)
 		}
 	}
 }

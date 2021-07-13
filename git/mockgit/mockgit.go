@@ -16,6 +16,10 @@ func NewMockGit(t *testing.T) *mock {
 	}
 }
 
+func (m *mock) GitWithEditor(args string, output *string, editorCmd string) error {
+	return m.Git(args, output)
+}
+
 func (m *mock) Git(args string, output *string) error {
 	fmt.Printf("CMD: git %s\n", args)
 
