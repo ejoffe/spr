@@ -73,6 +73,7 @@ brews:
       bin.install "git-spr"
       bin.install "git-amend"
       bin.install "spr_commit_hook"
+      bin.install "spr_reword_helper"
     license: "MIT"
 nfpms:
   - file_name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
