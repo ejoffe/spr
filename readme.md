@@ -113,7 +113,7 @@ MERGED #59 Feature 2
 Show Current Pull Requests
 --------------------------
 ```shell
-> git spr
+> git spr status
 [·✗✔✗] 60: Feature 3
 ```
 
