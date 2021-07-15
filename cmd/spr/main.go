@@ -118,14 +118,11 @@ VERSION: {{.Version}}
 			}
 			return nil
 		},
-		Action: func(c *cli.Context) error {
-			stackedpr.StatusPullRequests(ctx)
-			return nil
-		},
 		Commands: []*cli.Command{
 			{
-				Name:  "status",
-				Usage: "Show status of open pull requests",
+				Name:    "status",
+				Aliases: []string{"s", "st"},
+				Usage:   "Show status of open pull requests",
 				Action: func(c *cli.Context) error {
 					stackedpr.StatusPullRequests(ctx)
 					return nil
@@ -135,8 +132,9 @@ VERSION: {{.Version}}
 				},
 			},
 			{
-				Name:  "update",
-				Usage: "Update and create pull requests for updated commits in the stack",
+				Name:    "update",
+				Aliases: []string{"u", "up"},
+				Usage:   "Update and create pull requests for updated commits in the stack",
 				Action: func(c *cli.Context) error {
 					stackedpr.UpdatePullRequests(ctx)
 					return nil
