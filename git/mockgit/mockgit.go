@@ -69,17 +69,12 @@ func (m *mock) ExpectLogAndRespond(commits []*git.Commit) {
 func (m *mock) ExpectPushCommits(commits []*git.Commit) {
 	m.expect("git status --porcelain --untracked-files=no").respond(nil)
 
-	var branchNames []string
+	var refNames []string
 	for _, c := range commits {
-		m.expect("git checkout %s", c.CommitHash)
-		m.expect("git switch -C pr/TestSPR/master/%s", c.CommitID)
-		m.expect("git switch master")
-		branchNames = append(branchNames, "pr/TestSPR/master/"+c.CommitID)
+		branchName := "pr/TestSPR/master/" + c.CommitID
+		refNames = append(refNames, c.CommitHash+":refs/heads/"+branchName)
 	}
-	m.expect("git push --force --atomic origin " + strings.Join(branchNames, " "))
-	for _, c := range commits {
-		m.expect("git branch -D pr/TestSPR/master/%s", c.CommitID)
-	}
+	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))
 }
 
 func (m *mock) expect(cmd string, args ...interface{}) *mock {

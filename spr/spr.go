@@ -399,32 +399,16 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		}
 	}
 
-	var branchNames []string
+	var refNames []string
 	for _, commit := range updatedCommits {
-		branch := sd.branchNameFromCommit(info, commit)
-		branchNames = append(branchNames, branch)
-		sd.mustgit("checkout "+commit.CommitHash, nil)
-		sd.mustgit("switch -C "+branch, nil)
-		sd.mustgit("switch "+info.LocalBranch, nil)
-		sd.profiletimer.Step("SyncCommitStack::CreateBranch::" + branch)
+		branchName := sd.branchNameFromCommit(info, commit)
+		refNames = append(refNames,
+			commit.CommitHash+":refs/heads/"+branchName)
 	}
 	if len(updatedCommits) > 0 {
-		sd.mustgit("push --force --atomic origin "+strings.Join(branchNames, " "), nil)
-	}
-	for _, commit := range updatedCommits {
-		branch := sd.branchNameFromCommit(info, commit)
-		sd.mustgit("branch -D "+branch, nil)
+		sd.mustgit("push --force --atomic origin "+strings.Join(refNames, " "), nil)
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
-}
-
-func (sd *stackediff) pushCommitToRemote(commit git.Commit, info *github.GitHubInfo) {
-	headRefName := sd.branchNameFromCommit(info, commit)
-	sd.mustgit("checkout "+commit.CommitHash, nil)
-	sd.mustgit("switch -C "+headRefName, nil)
-	sd.mustgit("push --force --set-upstream origin "+headRefName, nil)
-	sd.mustgit("switch "+info.LocalBranch, nil)
-	sd.mustgit("branch -D "+headRefName, nil)
 }
 
 func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
