@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -87,9 +88,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	err := c.api.Query(ctx, &query, variables)
 	check(err)
 
-	var branchname string
-	err = gitcmd.Git("branch --show-current", &branchname)
-	check(err)
+	branchname := getLocalBranchName(gitcmd)
 
 	var requests []*github.PullRequest
 	for _, node := range query.Viewer.PullRequests.Nodes {
@@ -323,6 +322,19 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github close %d: %s\n", pr.Number, pr.Title)
 	}
+}
+
+func getLocalBranchName(gitcmd git.GitInterface) string {
+	var output string
+	err := gitcmd.Git("branch", &output)
+	check(err)
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "* ") {
+			return line[2:]
+		}
+	}
+	panic("cannot determine local git branch name")
 }
 
 func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
