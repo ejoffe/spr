@@ -92,6 +92,8 @@ Each pull request has four merge status bits signifying the request's ability to
   - ✗ : commit has other pull requests below it that can't merge
   - ✔ : all commits below this one are clear to merge
 
+Pull request approval and checks requirement can be disabled in the config file, see configuration section below for more details.
+
 Merging Pull Requests
 ---------------------
 Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
