@@ -3,7 +3,7 @@
 
 I am a total practitioner of writing code in small consumable chunks, getting them reviewed and merged quickly. This approach leads to very fast paced code iterations, merge a lot and merge often. There is no question in my mind that writing software in this way is more productive than long lived branches with pull requests taking days or weeks to merge.
 
-I found managing branches and stacks of pull requests on GitHub to be somewhere between annoying and unbearable. As the stacks of pull requests get bigger, you end up spending more and more time switching things around with a high risk of messing things up. If you want to merge something in the middle of the stack, you are in for a fun ride. Many teams avoid stacked pull requests altogether because of the added complexities and have forgotten the joy of being able to work in composed units.
+GitHub is an amazing platform, it has revolutionized software development and created a vibrant open source community. And yet, I found managing branches and stacks of pull requests on GitHub to be somewhere between annoying and unbearable. As the stacks of pull requests get bigger, you end up spending more and more time switching things around with a high risk of messing things up. If you want to merge something in the middle of the stack, you are in for a fun ride. Many teams avoid stacked pull requests altogether because of the added complexities and have forgotten the joy of being able to work in composed units.
 
 I created SPR to solve this, a simple tool which does all the branch and pull request management for you, so you can just focus on your code and not have to spend time rebranching, updating and managing stacks of pull requests.
 
@@ -30,7 +30,7 @@ You can add and amend commits and a call to spr update will synchronize your pul
 [✗✗✔✔] github.com/ejoffe/spr-demo/pull/2 : Feature B
 [✔✔✔✔] github.com/ejoffe/spr-demo/pull/1 : Feature A
 ```
-Once a pull request has four checkmarks it means it has passed checks, got an approval, and has no conflicts. Your pull request is ready to merge. Use spr merge to merge all ready pull requests. 
+Once a pull request has four check marks it means it has passed checks, got an approval, and has no conflicts. Your pull request is ready to merge. Use spr merge to merge all ready pull requests. Request approval and checks requirement can be disabled in the 
 ```shell
 > git spr merge
 MERGED github.com/ejoffe/spr-demo/pull/1 : Feature A
