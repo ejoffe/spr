@@ -21,6 +21,8 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
+	cfg.Repo.GitHubRemote = "origin"
+	cfg.Repo.GitHubBranch = "master"
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -128,6 +130,8 @@ func TestSPRAmendCommit(t *testing.T) {
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
+	cfg.Repo.GitHubRemote = "origin"
+	cfg.Repo.GitHubBranch = "master"
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -227,6 +231,8 @@ func TestSPRReorderCommit(t *testing.T) {
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
+	cfg.Repo.GitHubRemote = "origin"
+	cfg.Repo.GitHubBranch = "master"
 	gitmock := mockgit.NewMockGit(t)
 	githubmock := mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{

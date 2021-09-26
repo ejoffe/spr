@@ -70,7 +70,9 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	commitIndex = commitIndex - 1
 	check(err)
 	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
-	sd.mustgit("rebase origin/master -i --autosquash --autostash", nil)
+	rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+	sd.mustgit(rebaseCommand, nil)
 }
 
 // UpdatePullRequests implements a stacked diff workflow on top of github.
@@ -183,7 +185,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	if sd.config.User.CleanupRemoteBranch {
-		sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", prToMerge.FromBranch), nil)
+		sd.gitcmd.Git(fmt.Sprintf("push -d %s %s", sd.config.Repo.GitHubRemote, prToMerge.FromBranch), nil)
 	}
 
 	// Close all the pull requests in the stack below the merged pr
@@ -198,7 +200,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		sd.github.ClosePullRequest(ctx, pr)
 
 		if sd.config.User.CleanupRemoteBranch {
-			sd.gitcmd.Git(fmt.Sprintf("push -d origin %s", pr.FromBranch), nil)
+			sd.gitcmd.Git(fmt.Sprintf("push -d %s %s", sd.config.Repo.GitHubRemote, pr.FromBranch), nil)
 		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
@@ -247,13 +249,15 @@ func (sd *stackediff) ProfilingSummary() {
 // getLocalCommitStack returns a list of unmerged commits
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
-	sd.mustgit("log origin/master..HEAD", &commitLog)
+	logCommand := fmt.Sprintf("log %s/%s..HEAD",
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+	sd.mustgit(logCommand, &commitLog)
 	commits, valid := sd.parseLocalCommitStack(commitLog)
 	if !valid {
 		// if not valid - it means commit hook was not installed
 		//  install commit-hook and try again
 		hook.InstallCommitHook(sd.gitcmd)
-		sd.mustgit("log origin/master..HEAD", &commitLog)
+		sd.mustgit(logCommand, &commitLog)
 		commits, valid = sd.parseLocalCommitStack(commitLog)
 		if !valid {
 			panic("unable to fetch local commits")
@@ -356,7 +360,9 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 
 	fetch := func() {
 		sd.mustgit("fetch", nil)
-		sd.mustgit("rebase origin/master --autostash", nil)
+		rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
+			sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.mustgit(rebaseCommand, nil)
 		waitgroup.Done()
 	}
 
@@ -368,7 +374,7 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 }
 
 // syncCommitStackToGitHub gets all the local commits in the given branch
-//  which are new (on top of origin/master) and creates a corresponding
+//  which are new (on top of remote branch) and creates a corresponding
 //  branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	commits []git.Commit, info *github.GitHubInfo) {
@@ -406,7 +412,9 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}
 	if len(updatedCommits) > 0 {
-		sd.mustgit("push --force --atomic origin "+strings.Join(refNames, " "), nil)
+		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
+		pushCommand += strings.Join(refNames, " ")
+		sd.mustgit(pushCommand, nil)
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
 }

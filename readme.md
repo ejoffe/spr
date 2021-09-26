@@ -124,6 +124,8 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubRepoName      | str  |         | name of the github repository (fetched from git remote config) |
 | requireChecks       | bool | true    | require checks to pass in order to merge                       |
 | requireApproval     | bool | true    | require pull request approval in order to merge                |
+| githubRemote        | str  | origin  | github remote name to use                                      |
+| githubBranch        | str  | master  | github branch for pull request target                          |
 
 | User Config         | Type | Default | Description                                                    |
 | ------------------- | ---- | ------- | -------------------------------------------------------------- |
