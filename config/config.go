@@ -24,6 +24,9 @@ type RepoConfig struct {
 
 	RequireChecks   bool `default:"true" yaml:"requireChecks"`
 	RequireApproval bool `default:"true" yaml:"requireApproval"`
+
+	GitHubRemote string `default:"origin" yaml:"githubRemote"`
+	GitHubBranch string `default:"master" yaml:"githubBranch"`
 }
 
 type UserConfig struct {
