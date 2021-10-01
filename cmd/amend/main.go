@@ -39,8 +39,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	gitcmd := realgit.NewGitCmd(config.EmptyConfig())
-
+	gitcmd := realgit.NewGitCmd(config.DefaultConfig())
 	//  check that we are inside a git dir
 	var output string
 	err = gitcmd.Git("status --porcelain", &output)
@@ -50,8 +49,11 @@ func main() {
 		os.Exit(2)
 	}
 
+	cfg := config.ParseConfig(gitcmd)
+	gitcmd = realgit.NewGitCmd(cfg)
 	ctx := context.Background()
-	sd := spr.NewStackedPR(nil, nil, gitcmd, os.Stdout)
+
+	sd := spr.NewStackedPR(cfg, nil, gitcmd, os.Stdout)
 	sd.AmendCommit(ctx)
 }
 

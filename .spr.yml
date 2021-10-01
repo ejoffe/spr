@@ -2,3 +2,5 @@ githubRepoOwner: ejoffe
 githubRepoName: spr
 requireChecks: true
 requireApproval: false
+githubRemote: origin
+githubBranch: master
