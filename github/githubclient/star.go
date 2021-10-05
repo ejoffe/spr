@@ -9,7 +9,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
-	"github.com/shurcooL/githubv4"
+	"github.com/ejoffe/spr/github/githubclient/gen/github_client"
 )
 
 const (
@@ -42,42 +42,26 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 }
 
 func (c *client) isStar(ctx context.Context) bool {
-	type queryType struct {
-		Viewer struct {
-			StarredRepositories struct {
-				Nodes []struct {
-					NameWithOwner string
-				}
-				Edges []struct {
-					Cursor string
-				}
-				TotalCount int
-			} `graphql:"starredRepositories(first: 100, after:$after)"`
-		}
-	}
-
 	iteration := 0
 	cursor := ""
 	for {
-		var query queryType
-		variables := map[string]interface{}{
-			"after": githubv4.String(cursor),
-		}
-		err := c.api.Query(ctx, &query, variables)
+		resp, err := c.api.IsStarred(ctx, &github_client.IsStarredInputArgs{
+			After: cursor,
+		})
 		check(err)
 
-		edgeCount := len(query.Viewer.StarredRepositories.Edges)
+		edgeCount := len(resp.Viewer.StarredRepositories.Edges)
 		if edgeCount == 0 {
 			return false
 		}
 
-		for _, node := range query.Viewer.StarredRepositories.Nodes {
+		for _, node := range resp.Viewer.StarredRepositories.Nodes {
 			if node.NameWithOwner == sprRepo {
 				return true
 			}
 		}
 
-		cursor = query.Viewer.StarredRepositories.Edges[edgeCount-1].Cursor
+		cursor = resp.Viewer.StarredRepositories.Edges[edgeCount-1].Cursor
 
 		iteration++
 		if iteration > 10 {
@@ -88,26 +72,16 @@ func (c *client) isStar(ctx context.Context) bool {
 }
 
 func (c *client) addStar(ctx context.Context) {
-	var repo struct {
-		Repository struct {
-			ID string
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
-	repoVariables := map[string]interface{}{
-		"owner": githubv4.String(sprRepoOwner),
-		"name":  githubv4.String(sprRepoName),
-	}
-	err := c.api.Query(ctx, &repo, repoVariables)
+	resp, err := c.api.Repository(ctx, &github_client.RepositoryInputArgs{
+		Owner: sprRepoOwner,
+		Name:  sprRepoName,
+	})
 	check(err)
 
-	var star struct {
-		AddStar struct {
-			ClientMutationID string
-		} `graphql:"addStar(input: $input)"`
-	}
-	input := githubv4.AddStarInput{
-		StarrableID: repo.Repository.ID,
-	}
-	err = c.api.Mutate(ctx, &star, input, nil)
+	_, err = c.api.AddStar(ctx, &github_client.AddStarInputArgs{
+		Input: github_client.AddStarInput{
+			StarrableId: resp.Repository.Id,
+		},
+	})
 	check(err)
 }

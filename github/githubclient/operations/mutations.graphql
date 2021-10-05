@@ -1,0 +1,56 @@
+mutation CreatePullRequest(
+	$input : CreatePullRequestInput!
+) {
+	createPullRequest(input:$input) {
+		pullRequest {
+			id
+			number
+		} 
+	}
+}
+
+mutation UpdatePullRequest(
+	$input : UpdatePullRequestInput!
+) {
+	updatePullRequest(input: $input) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+mutation CommentPullRequest(
+	$input : AddCommentInput!
+) {
+	addComment(input: $input) {
+		clientMutationId
+	}
+}
+
+mutation MergePullRequest(
+	$input : MergePullRequestInput!	
+) {
+	mergePullRequest(input: $input) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+mutation ClosePullRequest(
+	$input : ClosePullRequestInput!	
+) {
+	closePullRequest(input: $input) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+mutation AddStar(
+	$input : AddStarInput!
+) {
+	addStar(input : $input) {
+		clientMutationId
+	}
+}

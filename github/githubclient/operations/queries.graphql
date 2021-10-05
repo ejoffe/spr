@@ -1,0 +1,62 @@
+query GetInfo(
+	$repo_owner : String!
+	$repo_name : String!
+) {
+	viewer {
+		login
+		pullRequests(first:100, states:[OPEN]) {
+			nodes {
+				id
+				number
+				title
+				baseRefName
+				headRefName
+				mergeable
+				reviewDecision
+				repository {
+					id
+				}
+				commits(first:100) {
+					nodes {
+						commit {
+							oid
+							messageHeadline
+							messageBody
+							statusCheckRollup {
+								state
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	repository(owner:$repo_owner, name:$repo_name) {
+		id
+	}
+}
+
+query Repository (
+	$owner : String!
+	$name : String!
+) {
+	repository(owner: $owner, name: $name) {
+		id
+	}
+}
+
+query IsStarred(
+	$after: String!
+) {
+	viewer {
+		starredRepositories(first: 100, after: $after) {
+			nodes {
+				nameWithOwner
+			}
+			edges {
+				cursor
+			}
+			totalCount
+		}
+	}
+}
