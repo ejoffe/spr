@@ -30,11 +30,10 @@ type RepoConfig struct {
 }
 
 type UserConfig struct {
-	ShowPRLink          bool `default:"true" yaml:"showPRLink"`
-	CleanupRemoteBranch bool `default:"true" yaml:"cleanupRemoteBranch"`
-	LogGitCommands      bool `default:"false" yaml:"logGitCommands"`
-	LogGitHubCalls      bool `default:"false" yaml:"logGitHubCalls"`
-	StatusBitsHeader    bool `default:"true" yaml:"statusBitsHeader"`
+	ShowPRLink       bool `default:"true" yaml:"showPRLink"`
+	LogGitCommands   bool `default:"false" yaml:"logGitCommands"`
+	LogGitHubCalls   bool `default:"false" yaml:"logGitHubCalls"`
+	StatusBitsHeader bool `default:"true" yaml:"statusBitsHeader"`
 
 	Stargazer bool `default:"false" yaml:"stargazer"`
 	RunCount  int  `default:"0" yaml:"runcount"`
