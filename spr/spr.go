@@ -96,6 +96,10 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		//   first - rebase all pull requests to master
 		//   then - update all pull requests
 		for _, pr := range githubInfo.PullRequests {
+			fmt.Printf("DEBUG 1: UpdatePullReqeust info:%v\n", githubInfo)
+			fmt.Printf("DEBUG 1: UpdatePullReqeust pr:%v\n", pr)
+			fmt.Printf("DEBUG 1: UpdatePullReqeust c:%v\n", pr.Commit)
+			fmt.Printf("DEBUG 1: UpdatePullReqeust prevcommit:%v\n", nil)
 			sd.github.UpdatePullRequest(ctx, githubInfo, pr, pr.Commit, nil)
 		}
 		sd.profiletimer.Step("UpdatePullRequests::ReparentPullRequestsToMaster")
@@ -122,6 +126,10 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 					if commitIndex > 0 {
 						prevCommit = &localCommits[commitIndex-1]
 					}
+					fmt.Printf("DEBUG 2: UpdatePullReqeust info:%v\n", githubInfo)
+					fmt.Printf("DEBUG 2: UpdatePullReqeust pr:%v\n", pr)
+					fmt.Printf("DEBUG 2: UpdatePullReqeust c:%v\n", c)
+					fmt.Printf("DEBUG 2: UpdatePullReqeust prevcommit:%v\n", prevCommit)
 					sd.github.UpdatePullRequest(ctx, githubInfo, pr, c, prevCommit)
 					pr.Commit = c
 				}
@@ -184,10 +192,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	sd.github.MergePullRequest(ctx, prToMerge)
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
-	if sd.config.User.CleanupRemoteBranch {
-		sd.gitcmd.Git(fmt.Sprintf("push -d %s %s", sd.config.Repo.GitHubRemote, prToMerge.FromBranch), nil)
-	}
-
 	// Close all the pull requests in the stack below the merged pr
 	//  Before closing add a review comment with the pr that merged the commit.
 	for i := 0; i < prIndex; i++ {
@@ -198,10 +202,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 		sd.github.CommentPullRequest(ctx, pr, comment)
 
 		sd.github.ClosePullRequest(ctx, pr)
-
-		if sd.config.User.CleanupRemoteBranch {
-			sd.gitcmd.Git(fmt.Sprintf("push -d %s %s", sd.config.Repo.GitHubRemote, pr.FromBranch), nil)
-		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
 
