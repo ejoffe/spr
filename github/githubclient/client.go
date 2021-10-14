@@ -147,7 +147,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 func (c *client) CreatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := "master"
+	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
@@ -205,7 +205,7 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 		fmt.Printf("> github update %d - %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := "master"
+	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}

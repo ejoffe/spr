@@ -93,7 +93,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	if commitsReordered(localCommits, githubInfo.PullRequests) {
 		reorder = true
 		// if commits have been reordered :
-		//   first - rebase all pull requests to master
+		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
 		for _, pr := range githubInfo.PullRequests {
 			sd.github.UpdatePullRequest(ctx, githubInfo, pr, pr.Commit, nil)
@@ -176,7 +176,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	}
 	prToMerge := githubInfo.PullRequests[prIndex]
 
-	// Update the base of the merging pr to master
+	// Update the base of the merging pr to target branch
 	sd.github.UpdatePullRequest(ctx, githubInfo, prToMerge, prToMerge.Commit, nil)
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
@@ -248,11 +248,14 @@ func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	if !valid {
 		// if not valid - it means commit hook was not installed
 		//  install commit-hook and try again
-		hook.InstallCommitHook(sd.gitcmd)
+		hook.InstallCommitHook(sd.config, sd.gitcmd)
 		sd.mustgit(logCommand, &commitLog)
 		commits, valid = sd.parseLocalCommitStack(commitLog)
 		if !valid {
-			panic("unable to fetch local commits")
+			errMsg := "unable to fetch local commits\n"
+			errMsg += " most likely this is an issue with missing commit-id in the commit body\n"
+			errMsg += " which is caused by the commit-msg hook not being installed propertly\n"
+			panic(errMsg)
 		}
 	}
 	return commits
