@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 )
 
@@ -13,7 +14,7 @@ const (
 	hookPath = ".git/hooks/commit-msg"
 )
 
-func InstallCommitHook(gitcmd git.GitInterface) {
+func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 	var rootdir string
 	err := gitcmd.Git("rev-parse --show-toplevel", &rootdir)
 	check(err)
@@ -33,7 +34,9 @@ func InstallCommitHook(gitcmd git.GitInterface) {
 		// amend commit stack to add commit-id
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
-		gitcmd.GitWithEditor("rebase origin/master -i --autosquash --autostash", nil, rewordPath)
+		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
+			cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
+		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 	} else {
 		binPath, err := exec.LookPath("spr_commit_hook")
 		check(err)
@@ -43,6 +46,8 @@ func InstallCommitHook(gitcmd git.GitInterface) {
 		// amend commit stack to add commit-id
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
-		gitcmd.GitWithEditor("rebase origin/master -i --autosquash --autostash", nil, rewordPath)
+		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
+			cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
+		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 	}
 }

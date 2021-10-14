@@ -25,7 +25,7 @@ func TestSortPullRequests(t *testing.T) {
 		},
 	}
 
-	config := config.EmptyConfig()
+	config := config.DefaultConfig()
 	prs = SortPullRequests(prs, config)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)
@@ -57,7 +57,7 @@ func TestSortPullRequestsMixed(t *testing.T) {
 		},
 	}
 
-	config := config.EmptyConfig()
+	config := config.DefaultConfig()
 	prs = SortPullRequests(prs, config)
 	if prs[0].Number != 1 {
 		t.Fatalf("prs not sorted correctly %v\n", prs)

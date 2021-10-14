@@ -54,7 +54,7 @@ type PullRequestMergeStatus struct {
 }
 
 // SortPullRequests sorts the pull requests so that the one that is on top of
-//  master will come first followed by the ones that are stacked on top.
+//  the target branch will come first followed by the ones that are stacked on top.
 // The stack order is maintained so that multiple pull requests can be merged in
 //  the correct order.
 func SortPullRequests(prs []*PullRequest, config *config.Config) []*PullRequest {
@@ -65,7 +65,7 @@ func SortPullRequests(prs []*PullRequest, config *config.Config) []*PullRequest 
 		prs[j] = buf
 	}
 
-	targetBranch := "master"
+	targetBranch := config.Repo.GitHubBranch
 	j := 0
 	for i := 0; i < len(prs); i++ {
 		for j = i; j < len(prs); j++ {
