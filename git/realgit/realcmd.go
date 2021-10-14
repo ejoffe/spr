@@ -48,18 +48,13 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 	args := strings.Split(argStr, " ")
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.rootdir
-	envVarsToDerive := []string{
-		"SSH_AUTH_SOCK",
-		"SSH_AGENT_PID",
-		"HOME",
-		"XDG_CONFIG_HOME",
-	}
 
 	cmd.Env = []string{fmt.Sprintf("EDITOR=%s", editorCmd)}
-	for _, env := range envVarsToDerive {
-		envval := os.Getenv(env)
-		if envval != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", env, envval))
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+
+		if parts[1] != "" && strings.ToUpper(parts[0]) != "EDITOR" {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", parts[0], parts[1]))
 		}
 	}
 
