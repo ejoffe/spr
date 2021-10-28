@@ -76,7 +76,7 @@ VERSION: {{.Version}}
 		Authors: []*cli.Author{
 			{
 				Name:  "Eitan Joffe",
-				Email: "eitan@apomelo.com",
+				Email: "eitan@inigolabs.com",
 			},
 		},
 		Flags: []cli.Flag{
