@@ -70,9 +70,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	commitIndex = commitIndex - 1
 	check(err)
 	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
-	rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
-	sd.mustgit(rebaseCommand, nil)
+	sd.mustgit("rebase -i --autosquash --autostash", nil)
 }
 
 // UpdatePullRequests implements a stacked diff workflow on top of github.

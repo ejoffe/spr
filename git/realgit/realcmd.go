@@ -18,7 +18,8 @@ func NewGitCmd(cfg *config.Config) *gitcmd {
 	var rootdir string
 	err := initcmd.Git("rev-parse --show-toplevel", &rootdir)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(-1)
 	}
 	rootdir = strings.TrimSpace(rootdir)
 
