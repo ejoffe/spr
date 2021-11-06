@@ -359,6 +359,15 @@ func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		msg := err.Error()
+		if strings.Contains(msg, "401 Unauthorized") {
+			errmsg := "error : 401 Unauthorized\n"
+			errmsg += " make sure GITHUB_TOKEN env variable is set with a valid token\n"
+			errmsg += " to create a valid token goto: https://github.com/settings/tokens\n"
+			fmt.Fprint(os.Stderr, errmsg)
+			os.Exit(-1)
+		} else {
+			panic(err)
+		}
 	}
 }
