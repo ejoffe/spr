@@ -21,6 +21,7 @@ type Config struct {
 type RepoConfig struct {
 	GitHubRepoOwner string `yaml:"githubRepoOwner"`
 	GitHubRepoName  string `yaml:"githubRepoName"`
+	GitHubHost      string `default:"github.com" yaml:"githubHost"`
 
 	RequireChecks   bool `default:"true" yaml:"requireChecks"`
 	RequireApproval bool `default:"true" yaml:"requireApproval"`
@@ -66,7 +67,10 @@ func ParseConfig(gitcmd git.GitInterface) *Config {
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
 		rake.YamlFileWriter(RepoConfigFilePath(gitcmd)),
 	)
-
+	if cfg.Repo.GitHubHost == "" {
+		fmt.Println("unable to auto configure repository host - must be set manually in .spr.yml")
+		os.Exit(2)
+	}
 	if cfg.Repo.GitHubRepoOwner == "" {
 		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
 		os.Exit(3)
@@ -121,8 +125,9 @@ func (s *remoteSource) Load(_ interface{}) {
 	lines := strings.Split(output, "\n")
 
 	for _, line := range lines {
-		repoOwner, repoName, match := getRepoDetailsFromRemote(line)
+		githubHost, repoOwner, repoName, match := getRepoDetailsFromRemote(line)
 		if match {
+			s.config.Repo.GitHubHost = githubHost
 			s.config.Repo.GitHubRepoOwner = repoOwner
 			s.config.Repo.GitHubRepoName = repoName
 			break
@@ -130,14 +135,14 @@ func (s *remoteSource) Load(_ interface{}) {
 	}
 }
 
-func getRepoDetailsFromRemote(remote string) (string, string, bool) {
+func getRepoDetailsFromRemote(remote string) (string, string, string, bool) {
 	// Allows "https://", "ssh://" or no protocol at all (this means ssh)
 	protocolFormat := `(?:(https://)|(ssh://))?`
 	// This may or may not be present in the address
 	userFormat := `(git@)?`
 	// "/" is expected in "http://" or "ssh://" protocol, when no protocol given
 	// it should be ":"
-	repoFormat := `github.com(/|:)(?P<repoOwner>\w+)/(?P<repoName>[\w-]+)`
+	repoFormat := `(?P<githubHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>\w+)/(?P<repoName>[\w-]+)`
 	// This is neither required in https access nor in ssh one
 	suffixFormat := `(.git)?`
 	regexFormat := fmt.Sprintf(`^origin\s+%s%s%s%s \(push\)`,
@@ -145,11 +150,12 @@ func getRepoDetailsFromRemote(remote string) (string, string, bool) {
 	regex := regexp.MustCompile(regexFormat)
 	matches := regex.FindStringSubmatch(remote)
 	if matches != nil {
+		githubHostIndex := regex.SubexpIndex("githubHost")
 		repoOwnerIndex := regex.SubexpIndex("repoOwner")
 		repoNameIndex := regex.SubexpIndex("repoName")
-		return matches[repoOwnerIndex], matches[repoNameIndex], true
+		return matches[githubHostIndex], matches[repoOwnerIndex], matches[repoNameIndex], true
 	}
-	return "", "", false
+	return "", "", "", false
 }
 
 func check(err error) {

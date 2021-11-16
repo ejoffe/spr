@@ -167,8 +167,8 @@ func (pr *PullRequest) String(config *config.Config) string {
 
 	prInfo := fmt.Sprintf("%3d", pr.Number)
 	if config.User.ShowPRLink {
-		prInfo = fmt.Sprintf("github.com/%s/%s/pull/%d",
-			config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+		prInfo = fmt.Sprintf("%s/%s/%s/pull/%d",
+			config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
 	}
 
 	line := fmt.Sprintf("%s %s : %s", prStatus, prInfo, pr.Title)

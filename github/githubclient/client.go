@@ -3,6 +3,7 @@ package githubclient
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -19,7 +20,7 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
 		fmt.Printf("GitHub OAuth Token Required\n")
-		fmt.Printf("Make one at: https://github.com/settings/tokens\n")
+		fmt.Printf("Make one at: https://%s/settings/tokens\n", config.Repo.GitHubHost)
 		fmt.Printf("With repo scope selected.\n")
 		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value.\n")
 		os.Exit(3)
@@ -29,7 +30,22 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
-	api := githubv4.NewClient(tc)
+	var api *githubv4.Client
+	if strings.HasSuffix(config.Repo.GitHubHost, "github.com") {
+		api = githubv4.NewClient(tc)
+	} else {
+		var scheme, host string
+		gitHubRemoteUrl, err := url.Parse(config.Repo.GitHubHost)
+		check(err)
+		if gitHubRemoteUrl.Host == "" {
+			host = config.Repo.GitHubHost
+			scheme = "https"
+		} else {
+			host = gitHubRemoteUrl.Host
+			scheme = gitHubRemoteUrl.Scheme
+		}
+		api = githubv4.NewEnterpriseClient(fmt.Sprintf("%s://%s/api/graphql", scheme, host), tc)
+	}
 	return &client{
 		config: config,
 		api:    api,
