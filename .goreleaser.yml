@@ -80,7 +80,7 @@ nfpms:
     id: packages
     homepage: https://github.com/ejoffe/spr
     description: Stacked Pull Requests on GitHub
-    maintainer: Eitan <ejoffe@gmail.com>
+    maintainer: Eitan <eitan@inigolabs.com>
     license: MIT
     formats:
     - apk
