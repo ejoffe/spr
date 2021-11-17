@@ -323,6 +323,100 @@ func TestSPRReorderCommit(t *testing.T) {
 	// TODO : add a call to merge and check merge order
 }
 
+func TestSPRDeleteCommit(t *testing.T) {
+	assert := require.New(t)
+	cfg := config.EmptyConfig()
+	cfg.Repo.RequireChecks = true
+	cfg.Repo.RequireApproval = true
+	cfg.Repo.GitHubRemote = "origin"
+	cfg.Repo.GitHubBranch = "master"
+	gitmock := mockgit.NewMockGit(t)
+	githubmock := mockclient.NewMockClient(t)
+	githubmock.Info = &github.GitHubInfo{
+		UserName:     "TestSPR",
+		RepositoryID: "RepoID",
+		LocalBranch:  "master",
+	}
+	var output bytes.Buffer
+	s := NewStackedPR(cfg, githubmock, gitmock, &output)
+
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	c2 := git.Commit{
+		CommitID:   "00000002",
+		CommitHash: "c200000000000000000000000000000000000000",
+		Subject:    "test commit 2",
+	}
+	c3 := git.Commit{
+		CommitID:   "00000003",
+		CommitHash: "c300000000000000000000000000000000000000",
+		Subject:    "test commit 3",
+	}
+	c4 := git.Commit{
+		CommitID:   "00000004",
+		CommitHash: "c400000000000000000000000000000000000000",
+		Subject:    "test commit 4",
+	}
+
+	// 'git spr -s' :: StatusPullRequest
+	githubmock.ExpectGetInfo()
+	s.StatusPullRequests(ctx)
+	assert.Equal("pull request stack is empty\n", output.String())
+	output.Reset()
+
+	// 'git spr -u' :: UpdatePullRequest :: commits=[c1, c2, c3, c4]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c4, &c3, &c2, &c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c1, &c2, &c3, &c4})
+	githubmock.ExpectCreatePullRequest(c1, nil)
+	githubmock.ExpectCreatePullRequest(c2, &c1)
+	githubmock.ExpectCreatePullRequest(c3, &c2)
+	githubmock.ExpectCreatePullRequest(c4, &c3)
+	githubmock.ExpectGetInfo()
+
+	s.UpdatePullRequests(ctx)
+	fmt.Printf("OUT: %s\n", output.String())
+	lines := strings.Split(output.String(), "\n")
+	assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[0])
+	assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[1])
+	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[2])
+	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[3])
+	output.Reset()
+
+	// 'git spr -u' :: UpdatePullRequest :: commits=[c2, c4, c1, c3]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c4, &c1})
+	githubmock.ExpectCommentPullRequest(c2)
+	githubmock.ExpectClosePullRequest(c2)
+	githubmock.ExpectCommentPullRequest(c3)
+	githubmock.ExpectClosePullRequest(c3)
+	// update commits
+	c1.CommitHash = "c101000000000000000000000000000000000000"
+	c4.CommitHash = "c401000000000000000000000000000000000000"
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c4, &c1)
+	gitmock.ExpectPushCommits([]*git.Commit{&c1, &c4})
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx)
+	fmt.Printf("OUT: %s\n", output.String())
+	// TODO : Need to update pull requests in GetInfo expect to get this check to work
+	// lines = strings.Split(output.String(), "\n")
+	//assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[0])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[2])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
+	output.Reset()
+
+	// TODO : add a call to merge and check merge order
+}
+
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
 	sd := NewStackedPR(config.EmptyConfig(), nil, nil, &buffer)
