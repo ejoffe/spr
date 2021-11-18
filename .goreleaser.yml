@@ -61,20 +61,20 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-# brews:
-#   - 
-#     name: spr
-#     tap:
-#       owner: ejoffe
-#       name: homebrew-tap
-#     homepage: https://github.com/ejoffe/spr
-#     description: Stacked Pull Requests on GitHub
-#     install: |
-#       bin.install "git-spr"
-#       bin.install "git-amend"
-#       bin.install "spr_commit_hook"
-#       bin.install "spr_reword_helper"
-#     license: "MIT"
+brews:
+  - 
+    name: spr
+    tap:
+      owner: ejoffe
+      name: homebrew-tap
+    homepage: https://github.com/ejoffe/spr
+    description: Stacked Pull Requests on GitHub
+    install: |
+      bin.install "git-spr"
+      bin.install "git-amend"
+      bin.install "spr_commit_hook"
+      bin.install "spr_reword_helper"
+    license: "MIT"
 nfpms:
   - file_name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     id: packages
