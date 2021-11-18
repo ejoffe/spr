@@ -1,5 +1,6 @@
 githubRepoOwner: ejoffe
 githubRepoName: spr
+githubHost: github.com
 requireChecks: true
 requireApproval: false
 githubRemote: origin
