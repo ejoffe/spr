@@ -23,11 +23,15 @@ Installation
 > brew install spr
 ```
 
-### DEB | RPM | APK
-Download the .deb, .rpm or .apk from the [releases page](https://github.com/ejoffe/spr/releases) and install them with the appropriate tools.
+### Apt
+```bash
+> echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" > /etc/apt/sources.list.d/inigolabs.list
+> sudo apt update 
+> sudo apt install spr
+```
 
 ### Manual
-Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to the desired location.
+Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to your bin path.
 
 Workflow
 --------
