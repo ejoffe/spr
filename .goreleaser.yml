@@ -83,7 +83,6 @@ nfpms:
     maintainer: Eitan <eitan@inigolabs.com>
     license: MIT
     formats:
-    - apk
     - deb
     - rpm
     dependencies:
