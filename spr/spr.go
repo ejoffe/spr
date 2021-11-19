@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/ejoffe/profiletimer"
 	"github.com/ejoffe/spr/config"
@@ -87,6 +86,9 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
+	if githubInfo == nil {
+		return
+	}
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
 	localCommits := sd.getLocalCommitStack()
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
@@ -367,20 +369,17 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
-	var waitgroup sync.WaitGroup
-	waitgroup.Add(1)
-
-	fetch := func() {
-		sd.mustgit("fetch", nil)
-		rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-			sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
-		sd.mustgit(rebaseCommand, nil)
-		waitgroup.Done()
+	sd.mustgit("fetch", nil)
+	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+	var output string
+	err := sd.gitcmd.Git(rebaseCommand, &output)
+	if err != nil {
+		fmt.Fprintln(sd.output, output)
+		return nil
 	}
 
-	go fetch()
 	info := sd.github.GetInfo(ctx, sd.gitcmd)
-	waitgroup.Wait()
 
 	return info
 }
