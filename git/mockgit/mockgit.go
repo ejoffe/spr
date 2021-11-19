@@ -10,17 +10,17 @@ import (
 )
 
 // NewMockGit creates and new mock git instance
-func NewMockGit(t *testing.T) *mock {
-	return &mock{
+func NewMockGit(t *testing.T) *Mock {
+	return &Mock{
 		assert: require.New(t),
 	}
 }
 
-func (m *mock) GitWithEditor(args string, output *string, editorCmd string) error {
+func (m *Mock) GitWithEditor(args string, output *string, editorCmd string) error {
 	return m.Git(args, output)
 }
 
-func (m *mock) Git(args string, output *string) error {
+func (m *Mock) Git(args string, output *string) error {
 	fmt.Printf("CMD: git %s\n", args)
 
 	m.assert.NotEmpty(m.expectedCmd)
@@ -42,11 +42,11 @@ func (m *mock) Git(args string, output *string) error {
 	return nil
 }
 
-func (m *mock) RootDir() string {
+func (m *Mock) RootDir() string {
 	return ""
 }
 
-type mock struct {
+type Mock struct {
 	assert      *require.Assertions
 	expectedCmd []string
 	response    []responder
@@ -57,16 +57,16 @@ type responder interface {
 	Output() string
 }
 
-func (m *mock) ExpectFetch() {
+func (m *Mock) ExpectFetch() {
 	m.expect("git fetch")
 	m.expect("git rebase origin/master --autostash")
 }
 
-func (m *mock) ExpectLogAndRespond(commits []*git.Commit) {
+func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
 	m.expect("git log origin/master..HEAD").commitRespond(commits)
 }
 
-func (m *mock) ExpectPushCommits(commits []*git.Commit) {
+func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
 	m.expect("git status --porcelain --untracked-files=no").commitRespond(nil)
 
 	var refNames []string
@@ -77,26 +77,31 @@ func (m *mock) ExpectPushCommits(commits []*git.Commit) {
 	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))
 }
 
-func (m *mock) ExpectRemote(remote string) {
+func (m *Mock) ExpectRemote(remote string) {
 	response := fmt.Sprintf("origin  %s (fetch)\n", remote)
 	response += fmt.Sprintf("origin  %s (push)\n", remote)
 	m.expect("git remote -v").respond(response)
 }
 
-func (m *mock) expect(cmd string, args ...interface{}) *mock {
+func (m *Mock) ExpectFixup(commitHash string) {
+	m.expect("git commit --fixup " + commitHash)
+	m.expect("git rebase -i --autosquash --autostash")
+}
+
+func (m *Mock) expect(cmd string, args ...interface{}) *Mock {
 	m.expectedCmd = append(m.expectedCmd, fmt.Sprintf(cmd, args...))
 	m.response = append(m.response, &commitResponse{valid: false})
 	return m
 }
 
-func (m *mock) respond(response string) {
+func (m *Mock) respond(response string) {
 	m.response[len(m.response)-1] = &stringResponse{
 		valid:  true,
 		output: response,
 	}
 }
 
-func (m *mock) commitRespond(commits []*git.Commit) {
+func (m *Mock) commitRespond(commits []*git.Commit) {
 	m.response[len(m.response)-1] = &commitResponse{
 		valid:   true,
 		commits: commits,

@@ -53,7 +53,7 @@ func main() {
 	gitcmd = realgit.NewGitCmd(cfg)
 	ctx := context.Background()
 
-	sd := spr.NewStackedPR(cfg, nil, gitcmd, os.Stdout)
+	sd := spr.NewStackedPR(cfg, nil, gitcmd)
 	sd.AmendCommit(ctx)
 }
 

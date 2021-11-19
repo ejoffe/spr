@@ -19,14 +19,16 @@ import (
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface, writer io.Writer) *stackediff {
+func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface) *stackediff {
 
 	return &stackediff{
 		config:       config,
 		github:       github,
 		gitcmd:       gitcmd,
-		writer:       writer,
 		profiletimer: profiletimer.StartNoopTimer(),
+
+		output: os.Stdout,
+		input:  os.Stdin,
 	}
 }
 
@@ -34,9 +36,11 @@ type stackediff struct {
 	config        *config.Config
 	github        github.GitHubInterface
 	gitcmd        git.GitInterface
-	writer        io.Writer
 	profiletimer  profiletimer.Timer
 	DetailEnabled bool
+
+	output io.Writer
+	input  io.Reader
 }
 
 // AmendCommit enables one to easily amend a commit in the middle of a stack
@@ -44,27 +48,27 @@ type stackediff struct {
 func (sd *stackediff) AmendCommit(ctx context.Context) {
 	localCommits := sd.getLocalCommitStack()
 	if len(localCommits) == 0 {
-		fmt.Fprintf(sd.writer, "No commits to amend\n")
+		fmt.Fprintf(sd.output, "No commits to amend\n")
 		return
 	}
 
 	for i := len(localCommits) - 1; i >= 0; i-- {
 		commit := localCommits[i]
-		fmt.Fprintf(sd.writer, " %d : %s : %s\n", i+1, commit.CommitID[0:8], commit.Subject)
+		fmt.Fprintf(sd.output, " %d : %s : %s\n", i+1, commit.CommitID[0:8], commit.Subject)
 	}
 
 	if len(localCommits) == 1 {
-		fmt.Fprintf(sd.writer, "Commit to amend [%d]: ", 1)
+		fmt.Fprintf(sd.output, "Commit to amend [%d]: ", 1)
 	} else {
-		fmt.Fprintf(sd.writer, "Commit to amend [%d-%d]: ", 1, len(localCommits))
+		fmt.Fprintf(sd.output, "Commit to amend [%d-%d]: ", 1, len(localCommits))
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(sd.input)
 	line, _ := reader.ReadString('\n')
 	line = strings.TrimSpace(line)
 	commitIndex, err := strconv.Atoi(line)
-	if err != nil {
-		fmt.Fprint(sd.writer, "Invalid input\n")
+	if err != nil || commitIndex < 1 || commitIndex > len(localCommits) {
+		fmt.Fprint(sd.output, "Invalid input\n")
 		return
 	}
 	commitIndex = commitIndex - 1
@@ -213,7 +217,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		pr.Merged = true
-		fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+		fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -227,14 +231,14 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 
 	if len(githubInfo.PullRequests) == 0 {
-		fmt.Fprintf(sd.writer, "pull request stack is empty\n")
+		fmt.Fprintf(sd.output, "pull request stack is empty\n")
 	} else {
 		if sd.DetailEnabled {
-			fmt.Fprint(sd.writer, detailMessage)
+			fmt.Fprint(sd.output, detailMessage)
 		}
 		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 			pr := githubInfo.PullRequests[i]
-			fmt.Fprintf(sd.writer, "%s\n", pr.String(sd.config))
+			fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
 		}
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")

@@ -16,23 +16,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSPRBasicFlowFourCommits(t *testing.T) {
-	assert := require.New(t)
+func makeTestObjects(t *testing.T) (
+	s *stackediff, gitmock *mockgit.Mock, githubmock *mockclient.MockClient,
+	input *bytes.Buffer, output *bytes.Buffer) {
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
 	cfg.Repo.GitHubRemote = "origin"
 	cfg.Repo.GitHubBranch = "master"
-	gitmock := mockgit.NewMockGit(t)
-	githubmock := mockclient.NewMockClient(t)
+	gitmock = mockgit.NewMockGit(t)
+	githubmock = mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
 		UserName:     "TestSPR",
 		RepositoryID: "RepoID",
 		LocalBranch:  "master",
 	}
-	var output bytes.Buffer
-	s := NewStackedPR(cfg, githubmock, gitmock, &output)
+	s = NewStackedPR(cfg, githubmock, gitmock)
+	output = &bytes.Buffer{}
+	s.output = output
+	input = &bytes.Buffer{}
+	s.input = input
+	return
+}
 
+func TestSPRBasicFlowFourCommits(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
+	assert := require.New(t)
 	ctx := context.Background()
 
 	c1 := git.Commit{
@@ -126,22 +135,8 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 }
 
 func TestSPRAmendCommit(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
 	assert := require.New(t)
-	cfg := config.EmptyConfig()
-	cfg.Repo.RequireChecks = true
-	cfg.Repo.RequireApproval = true
-	cfg.Repo.GitHubRemote = "origin"
-	cfg.Repo.GitHubBranch = "master"
-	gitmock := mockgit.NewMockGit(t)
-	githubmock := mockclient.NewMockClient(t)
-	githubmock.Info = &github.GitHubInfo{
-		UserName:     "TestSPR",
-		RepositoryID: "RepoID",
-		LocalBranch:  "master",
-	}
-	var output bytes.Buffer
-	s := NewStackedPR(cfg, githubmock, gitmock, &output)
-
 	ctx := context.Background()
 
 	c1 := git.Commit{
@@ -227,22 +222,8 @@ func TestSPRAmendCommit(t *testing.T) {
 }
 
 func TestSPRReorderCommit(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
 	assert := require.New(t)
-	cfg := config.EmptyConfig()
-	cfg.Repo.RequireChecks = true
-	cfg.Repo.RequireApproval = true
-	cfg.Repo.GitHubRemote = "origin"
-	cfg.Repo.GitHubBranch = "master"
-	gitmock := mockgit.NewMockGit(t)
-	githubmock := mockclient.NewMockClient(t)
-	githubmock.Info = &github.GitHubInfo{
-		UserName:     "TestSPR",
-		RepositoryID: "RepoID",
-		LocalBranch:  "master",
-	}
-	var output bytes.Buffer
-	s := NewStackedPR(cfg, githubmock, gitmock, &output)
-
 	ctx := context.Background()
 
 	c1 := git.Commit{
@@ -324,22 +305,8 @@ func TestSPRReorderCommit(t *testing.T) {
 }
 
 func TestSPRDeleteCommit(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
 	assert := require.New(t)
-	cfg := config.EmptyConfig()
-	cfg.Repo.RequireChecks = true
-	cfg.Repo.RequireApproval = true
-	cfg.Repo.GitHubRemote = "origin"
-	cfg.Repo.GitHubBranch = "master"
-	gitmock := mockgit.NewMockGit(t)
-	githubmock := mockclient.NewMockClient(t)
-	githubmock.Info = &github.GitHubInfo{
-		UserName:     "TestSPR",
-		RepositoryID: "RepoID",
-		LocalBranch:  "master",
-	}
-	var output bytes.Buffer
-	s := NewStackedPR(cfg, githubmock, gitmock, &output)
-
 	ctx := context.Background()
 
 	c1 := git.Commit{
@@ -417,9 +384,89 @@ func TestSPRDeleteCommit(t *testing.T) {
 	// TODO : add a call to merge and check merge order
 }
 
+func TestAmendNoCommits(t *testing.T) {
+	s, gitmock, _, _, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{})
+	s.AmendCommit(ctx)
+	assert.Equal("No commits to amend\n", output.String())
+}
+
+func TestAmendOneCommit(t *testing.T) {
+	s, gitmock, _, input, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	gitmock.ExpectFixup(c1.CommitHash)
+	input.WriteString("1")
+	s.AmendCommit(ctx)
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: ", output.String())
+}
+
+func TestAmendTwoCommits(t *testing.T) {
+	s, gitmock, _, input, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	c2 := git.Commit{
+		CommitID:   "00000002",
+		CommitHash: "c200000000000000000000000000000000000000",
+		Subject:    "test commit 2",
+	}
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1, &c2})
+	gitmock.ExpectFixup(c2.CommitHash)
+	input.WriteString("1")
+	s.AmendCommit(ctx)
+	assert.Equal(" 2 : 00000001 : test commit 1\n 1 : 00000002 : test commit 2\nCommit to amend [1-2]: ", output.String())
+}
+
+func TestAmendInvalidInput(t *testing.T) {
+	s, gitmock, _, input, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	input.WriteString("a")
+	s.AmendCommit(ctx)
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	output.Reset()
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	input.WriteString("0")
+	s.AmendCommit(ctx)
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	output.Reset()
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	input.WriteString("2")
+	s.AmendCommit(ctx)
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	output.Reset()
+}
+
 func TestParseLocalCommitStack(t *testing.T) {
 	var buffer bytes.Buffer
-	sd := NewStackedPR(config.EmptyConfig(), nil, nil, &buffer)
+	sd := NewStackedPR(config.EmptyConfig(), nil, nil)
+	sd.output = &buffer
 	tests := []struct {
 		name            string
 		inputCommitLog  string
