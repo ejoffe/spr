@@ -29,9 +29,9 @@ func (m *mock) Git(args string, output *string) error {
 	actual := "git " + args
 	m.assert.Equal(expected, actual)
 
-	if m.response[0].valid {
+	if m.response[0].Valid() {
 		m.assert.NotNil(output)
-		*output = generateResponse(m.response[0])
+		*output = m.response[0].Output()
 	} else {
 		m.assert.Nil(output)
 	}
@@ -49,12 +49,12 @@ func (m *mock) RootDir() string {
 type mock struct {
 	assert      *require.Assertions
 	expectedCmd []string
-	response    []cmdresponse
+	response    []responder
 }
 
-type cmdresponse struct {
-	valid   bool
-	commits []*git.Commit
+type responder interface {
+	Valid() bool
+	Output() string
 }
 
 func (m *mock) ExpectFetch() {
@@ -63,11 +63,11 @@ func (m *mock) ExpectFetch() {
 }
 
 func (m *mock) ExpectLogAndRespond(commits []*git.Commit) {
-	m.expect("git log origin/master..HEAD").respond(commits)
+	m.expect("git log origin/master..HEAD").commitRespond(commits)
 }
 
 func (m *mock) ExpectPushCommits(commits []*git.Commit) {
-	m.expect("git status --porcelain --untracked-files=no").respond(nil)
+	m.expect("git status --porcelain --untracked-files=no").commitRespond(nil)
 
 	var refNames []string
 	for _, c := range commits {
@@ -77,26 +77,61 @@ func (m *mock) ExpectPushCommits(commits []*git.Commit) {
 	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))
 }
 
+func (m *mock) ExpectRemote(remote string) {
+	response := fmt.Sprintf("origin  %s (fetch)\n", remote)
+	response += fmt.Sprintf("origin  %s (push)\n", remote)
+	m.expect("git remote -v").respond(response)
+}
+
 func (m *mock) expect(cmd string, args ...interface{}) *mock {
 	m.expectedCmd = append(m.expectedCmd, fmt.Sprintf(cmd, args...))
-	m.response = append(m.response, cmdresponse{valid: false})
+	m.response = append(m.response, &commitResponse{valid: false})
 	return m
 }
 
-func (m *mock) respond(commits []*git.Commit) {
-	m.response[len(m.response)-1] = cmdresponse{
+func (m *mock) respond(response string) {
+	m.response[len(m.response)-1] = &stringResponse{
+		valid:  true,
+		output: response,
+	}
+}
+
+func (m *mock) commitRespond(commits []*git.Commit) {
+	m.response[len(m.response)-1] = &commitResponse{
 		valid:   true,
 		commits: commits,
 	}
 }
 
-func generateResponse(resp cmdresponse) string {
-	if !resp.valid {
+type stringResponse struct {
+	valid  bool
+	output string
+}
+
+func (r *stringResponse) Valid() bool {
+	return r.valid
+}
+
+func (r *stringResponse) Output() string {
+	return r.output
+}
+
+type commitResponse struct {
+	valid   bool
+	commits []*git.Commit
+}
+
+func (r *commitResponse) Valid() bool {
+	return r.valid
+}
+
+func (r *commitResponse) Output() string {
+	if !r.valid {
 		return ""
 	}
 
 	var b strings.Builder
-	for _, c := range resp.commits {
+	for _, c := range r.commits {
 		fmt.Fprintf(&b, "commit %s\n", c.CommitHash)
 		fmt.Fprintf(&b, "Author: Eitan Joffe <ejoffe@gmail.com>\n")
 		fmt.Fprintf(&b, "Date:   Fri Jun 11 14:15:49 2021 -0700\n")
