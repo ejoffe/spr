@@ -59,7 +59,7 @@ type responder interface {
 
 func (m *Mock) ExpectFetch() {
 	m.expect("git fetch")
-	m.expect("git rebase origin/master --autostash")
+	m.expect("git rebase origin/master --autostash").respond("")
 }
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
