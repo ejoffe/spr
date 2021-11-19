@@ -11,19 +11,19 @@ import (
 )
 
 // NewMockClient creates a new mock client
-func NewMockClient(t *testing.T) *mockclient {
-	return &mockclient{
+func NewMockClient(t *testing.T) *MockClient {
+	return &MockClient{
 		assert: require.New(t),
 	}
 }
 
-type mockclient struct {
+type MockClient struct {
 	assert *require.Assertions
 	Info   *github.GitHubInfo
 	expect []expectation
 }
 
-func (c *mockclient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
+func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	fmt.Printf("HUB: GetInfo\n")
 	c.verifyExpectation(expectation{
 		op: getInfoOP,
@@ -31,7 +31,7 @@ func (c *mockclient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *gith
 	return c.Info
 }
 
-func (c *mockclient) CreatePullRequest(ctx context.Context, info *github.GitHubInfo,
+func (c *MockClient) CreatePullRequest(ctx context.Context, info *github.GitHubInfo,
 	commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 	fmt.Printf("HUB: CreatePullRequest\n")
 	c.verifyExpectation(expectation{
@@ -58,7 +58,7 @@ func (c *mockclient) CreatePullRequest(ctx context.Context, info *github.GitHubI
 	}
 }
 
-func (c *mockclient) UpdatePullRequest(ctx context.Context, info *github.GitHubInfo,
+func (c *MockClient) UpdatePullRequest(ctx context.Context, info *github.GitHubInfo,
 	pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 	fmt.Printf("HUB: UpdatePullRequest\n")
 	c.verifyExpectation(expectation{
@@ -68,7 +68,7 @@ func (c *mockclient) UpdatePullRequest(ctx context.Context, info *github.GitHubI
 	})
 }
 
-func (c *mockclient) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
+func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
 	fmt.Printf("HUB: CommentPullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     commentPullRequestOP,
@@ -76,7 +76,7 @@ func (c *mockclient) CommentPullRequest(ctx context.Context, pr *github.PullRequ
 	})
 }
 
-func (c *mockclient) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
+func (c *MockClient) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
 	fmt.Printf("HUB: MergePullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     mergePullRequestOP,
@@ -84,7 +84,7 @@ func (c *mockclient) MergePullRequest(ctx context.Context, pr *github.PullReques
 	})
 }
 
-func (c *mockclient) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
+func (c *MockClient) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	fmt.Printf("HUB: ClosePullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     closePullRequestOP,
@@ -92,13 +92,13 @@ func (c *mockclient) ClosePullRequest(ctx context.Context, pr *github.PullReques
 	})
 }
 
-func (c *mockclient) ExpectGetInfo() {
+func (c *MockClient) ExpectGetInfo() {
 	c.expect = append(c.expect, expectation{
 		op: getInfoOP,
 	})
 }
 
-func (c *mockclient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit) {
+func (c *MockClient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     createPullRequestOP,
 		commit: commit,
@@ -106,7 +106,7 @@ func (c *mockclient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit
 	})
 }
 
-func (c *mockclient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit) {
+func (c *MockClient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     updatePullRequestOP,
 		commit: commit,
@@ -114,28 +114,28 @@ func (c *mockclient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit
 	})
 }
 
-func (c *mockclient) ExpectCommentPullRequest(commit git.Commit) {
+func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     commentPullRequestOP,
 		commit: commit,
 	})
 }
 
-func (c *mockclient) ExpectMergePullRequest(commit git.Commit) {
+func (c *MockClient) ExpectMergePullRequest(commit git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     mergePullRequestOP,
 		commit: commit,
 	})
 }
 
-func (c *mockclient) ExpectClosePullRequest(commit git.Commit) {
+func (c *MockClient) ExpectClosePullRequest(commit git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     closePullRequestOP,
 		commit: commit,
 	})
 }
 
-func (c *mockclient) verifyExpectation(actual expectation) {
+func (c *MockClient) verifyExpectation(actual expectation) {
 	expected := c.expect[0]
 	c.assert.Equal(expected, actual)
 	c.expect = c.expect[1:]
