@@ -21,4 +21,10 @@ jobs:
 
     - name: Test
       working-directory: ./
-      run: go test -v ./...
+      run: go test -race -coverprofile=./coverage.txt -covermode=atomic ./...
+    
+    #- name: Upload coverage
+    #  uses: codecov/codecov-action@v2
+    #  with:
+    #    files: ./coverage.txt
+
