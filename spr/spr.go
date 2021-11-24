@@ -119,7 +119,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		sd.profiletimer.Step("UpdatePullRequests::ReparentPullRequestsToMaster")
 	}
 
-	sd.syncCommitStackToGitHub(ctx, localCommits, githubInfo)
+	if !sd.syncCommitStackToGitHub(ctx, localCommits, githubInfo) {
+		return
+	}
 	sd.profiletimer.Step("UpdatePullRequests::SyncCommitStackToGithub")
 
 	type prUpdate struct {
@@ -379,10 +381,9 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 	sd.mustgit("fetch", nil)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
-	var output string
-	err := sd.gitcmd.Git(rebaseCommand, &output)
+	//var output string
+	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
-		fmt.Fprintln(sd.output, output)
 		return nil
 	}
 
@@ -395,12 +396,15 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 //  which are new (on top of remote branch) and creates a corresponding
 //  branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
-	commits []git.Commit, info *github.GitHubInfo) {
+	commits []git.Commit, info *github.GitHubInfo) bool {
 
 	var output string
 	sd.mustgit("status --porcelain --untracked-files=no", &output)
 	if output != "" {
-		sd.mustgit("stash", nil)
+		err := sd.gitcmd.Git("stash", nil)
+		if err != nil {
+			return false
+		}
 		defer sd.mustgit("stash pop", nil)
 	}
 
@@ -435,6 +439,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		sd.mustgit(pushCommand, nil)
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
+	return true
 }
 
 func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
