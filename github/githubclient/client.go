@@ -1,6 +1,7 @@
 package githubclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -181,7 +182,7 @@ func (c *client) CreatePullRequest(ctx context.Context,
 			}
 		} `graphql:"createPullRequest(input: $input)"`
 	}
-	commitBody := githubv4.String(commit.Body)
+	commitBody := githubv4.String(formatBody(commit, info.PullRequests))
 	input := githubv4.CreatePullRequestInput{
 		RepositoryID: info.RepositoryID,
 		BaseRefName:  githubv4.String(baseRefName),
@@ -214,6 +215,22 @@ func (c *client) CreatePullRequest(ctx context.Context,
 	return pr
 }
 
+func formatStackMarkdown(stack []*github.PullRequest) string {
+	var buf bytes.Buffer
+	for i := len(stack) - 1; i >= 0; i-- {
+		buf.WriteString(fmt.Sprintf("- #%d\n", stack[i].Number))
+	}
+
+	return buf.String()
+}
+
+func formatBody(commit git.Commit, stack []*github.PullRequest) string {
+	if len(stack) <= 1 {
+		return commit.Body
+	}
+	return fmt.Sprintf("**Stack**:\n%s\n\n%s", formatStackMarkdown(stack), commit.Body)
+}
+
 func (c *client) UpdatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 
@@ -239,7 +256,7 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 	}
 	baseRefNameStr := githubv4.String(baseRefName)
 	subject := githubv4.String(commit.Subject)
-	body := githubv4.String(commit.Body)
+	body := githubv4.String(formatBody(commit, info.PullRequests))
 	input := githubv4.UpdatePullRequestInput{
 		PullRequestID: pr.ID,
 		BaseRefName:   &baseRefNameStr,

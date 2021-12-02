@@ -109,9 +109,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	}
 	githubInfo.PullRequests = validPullRequests
 
-	reorder := false
 	if commitsReordered(localCommits, githubInfo.PullRequests) {
-		reorder = true
 		// if commits have been reordered :
 		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
@@ -124,6 +122,14 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	sd.syncCommitStackToGitHub(ctx, localCommits, githubInfo)
 	sd.profiletimer.Step("UpdatePullRequests::SyncCommitStackToGithub")
 
+	type prUpdate struct {
+		pr         *github.PullRequest
+		commit     git.Commit
+		prevCommit *git.Commit
+	}
+
+	updateQueue := make([]prUpdate, 0)
+
 	// iterate through local_commits and update pull_requests
 	for commitIndex, c := range localCommits {
 		if c.WIP {
@@ -133,18 +139,12 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 		for _, pr := range githubInfo.PullRequests {
 			if c.CommitID == pr.Commit.CommitID {
 				prFound = true
-				if c.CommitHash != pr.Commit.CommitHash || reorder {
-					// if commit id is same but commit hash changed it means the commit
-					//  has been amended and we need to update the pull request
-					// in the reorder case we also want to update the pull request
-
-					var prevCommit *git.Commit
-					if commitIndex > 0 {
-						prevCommit = &localCommits[commitIndex-1]
-					}
-					sd.github.UpdatePullRequest(ctx, githubInfo, pr, c, prevCommit)
-					pr.Commit = c
+				var prevCommit *git.Commit
+				if commitIndex > 0 {
+					prevCommit = &localCommits[commitIndex-1]
 				}
+				updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
+				pr.Commit = c
 				break
 			}
 		}
@@ -157,9 +157,16 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 			}
 			pr := sd.github.CreatePullRequest(ctx, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
+			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 		}
 	}
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
+
+	for _, pr := range updateQueue {
+		sd.github.UpdatePullRequest(ctx, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+	}
+
+	sd.profiletimer.Step("UpdatePullRequests::commitUpdateQueue")
 
 	sd.StatusPullRequests(ctx)
 }
