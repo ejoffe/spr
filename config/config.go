@@ -32,8 +32,8 @@ type RepoConfig struct {
 
 type UserConfig struct {
 	ShowPRLink       bool `default:"true" yaml:"showPRLink"`
-	LogGitCommands   bool `default:"false" yaml:"logGitCommands"`
-	LogGitHubCalls   bool `default:"false" yaml:"logGitHubCalls"`
+	LogGitCommands   bool `default:"true" yaml:"logGitCommands"`
+	LogGitHubCalls   bool `default:"true" yaml:"logGitHubCalls"`
 	StatusBitsHeader bool `default:"true" yaml:"statusBitsHeader"`
 
 	Stargazer bool `default:"false" yaml:"stargazer"`
