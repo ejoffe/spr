@@ -13,7 +13,7 @@ func TestPullRequestRegex(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		matches := pullRequestRegex.FindStringSubmatch(tc.input)
+		matches := BranchNameRegex.FindStringSubmatch(tc.input)
 		if tc.branch != matches[1] {
 			t.Fatalf("expected: '%v', actual: '%v'", tc.branch, matches[1])
 		}

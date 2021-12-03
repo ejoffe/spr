@@ -14,6 +14,7 @@ import (
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/hook"
 )
 
@@ -381,13 +382,20 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 	sd.mustgit("fetch", nil)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
-	//var output string
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil
 	}
-
 	info := sd.github.GetInfo(ctx, sd.gitcmd)
+	if githubclient.BranchNameRegex.FindString(info.LocalBranch) != "" {
+		fmt.Printf("error: don't run spr in a remote pr branch\n")
+		fmt.Printf(" this could lead to weird duplicate pull requests getting created\n")
+		fmt.Printf(" in general there is no need to checkout remote branches used for prs\n")
+		fmt.Printf(" instead use local branches and run spr update to sync your commit stack\n")
+		fmt.Printf("  with your pull requests on github\n")
+		fmt.Printf("branch name: %s\n", info.LocalBranch)
+		return nil
+	}
 
 	return info
 }
