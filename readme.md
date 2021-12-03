@@ -135,8 +135,8 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | User Config         | Type | Default | Description                                                       |
 | ------------------- | ---- | ------- | ----------------------------------------------------------------- |
 | showPRLink          | bool | true    | show full pull request http link                                  |
-| logGitCommands      | bool | false   | logs all git commands to stdout                                   |
-| logGitHubCalls      | bool | false   | logs all github api calls to stdout                               |
+| logGitCommands      | bool | true    | logs all git commands to stdout                                   |
+| logGitHubCalls      | bool | true    | logs all github api calls to stdout                               |
 | statusBitsHeader    | bool | true    | show status bits type headers                                     |
 
 Happy Coding!
