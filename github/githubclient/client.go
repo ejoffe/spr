@@ -58,7 +58,7 @@ type client struct {
 	api    *githubv4.Client
 }
 
-var pullRequestRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
+var BranchNameRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/]+)/([a-f0-9]{8})$`)
 
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	if c.config.User.LogGitHubCalls {
@@ -120,7 +120,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 			ToBranch:   node.BaseRefName,
 		}
 
-		matches := pullRequestRegex.FindStringSubmatch(node.HeadRefName)
+		matches := BranchNameRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil && matches[1] == branchname {
 			pullRequest.Commit = git.Commit{
 				CommitID:   matches[2],
