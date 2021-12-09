@@ -334,7 +334,13 @@ func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 
 	return fmt.Sprintf("**Stack**:\n%s\n\n%s",
 		formatStackMarkdown(commit, stack),
-		wrapInMarkdown(commit.Body))
+		addManualMergeNotice(wrapInMarkdown(commit.Body)))
+}
+
+func addManualMergeNotice(body string) string {
+	return body + "\n\n" +
+		"⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). " +
+		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
 func (c *client) UpdatePullRequest(ctx context.Context,
