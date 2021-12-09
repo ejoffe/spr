@@ -123,9 +123,19 @@ func (pr *PullRequest) Ready(config *config.Config) bool {
 	return true
 }
 
-const checkmark = "\xE2\x9C\x94"
-const crossmark = "\xE2\x9C\x97"
-const middledot = "\xC2\xB7"
+// Terminal escape codes for colors
+const (
+	colorReset = "\033[0m"
+	colorRed   = "\033[31m"
+	colorGreen = "\033[32m"
+	colorBlue  = "\033[34m"
+)
+
+const checkmark = colorGreen + "✅" + colorReset
+const crossmark = colorRed + "❌" + colorReset
+const hourglass = colorBlue + "⌛" + colorReset
+const questionmark = "❓"
+const empty = "➖"
 
 // StatusString returs a string representation of the merge status bits
 func (pr *PullRequest) StatusString(config *config.Config) string {
@@ -140,7 +150,7 @@ func (pr *PullRequest) StatusString(config *config.Config) string {
 			statusString += crossmark
 		}
 	} else {
-		statusString += "-"
+		statusString += empty
 	}
 
 	if pr.MergeStatus.NoConflicts {
@@ -192,16 +202,16 @@ func (cs checkStatus) String(config *config.Config) string {
 	if config.Repo.RequireChecks {
 		switch cs {
 		case CheckStatusUnknown:
-			return "?"
+			return questionmark
 		case CheckStatusPending:
-			return middledot
+			return hourglass
 		case CheckStatusFail:
 			return crossmark
 		case CheckStatusPass:
 			return checkmark
 		default:
-			return "?"
+			return questionmark
 		}
 	}
-	return "-"
+	return empty
 }
