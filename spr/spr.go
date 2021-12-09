@@ -461,7 +461,11 @@ func (sd *stackediff) mustgit(argStr string, output *string) {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		if os.Getenv("SPR_DEBUG") == "1" {
+			panic(err)
+		}
+		fmt.Printf("error: %s\n", err)
+		os.Exit(1)
 	}
 }
 
