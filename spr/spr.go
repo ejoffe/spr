@@ -219,7 +219,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
-			"commit MERGED in pull request [#%d](https://%s/%s/%s/pull/%d)",
+			"✓ Commit merged in pull request [#%d](https://%s/%s/%s/pull/%d)",
 			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 		sd.github.ClosePullRequest(ctx, pr)
