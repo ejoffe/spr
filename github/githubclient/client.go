@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 
@@ -17,13 +19,80 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func NewGitHubClient(ctx context.Context, config *config.Config) *client {
+type hubCLIConfig map[string][]struct {
+	User       string `yaml:"user"`
+	OauthToken string `yaml:"oauth_token"`
+	Protocol   string `yaml:"protocol"`
+}
+
+// readHubCLIConfig finds and deserialized the config file for
+// Github's "hub" CLI (https://hub.github.com/).
+func readHubCLIConfig(githubHost string) (hubCLIConfig, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	f, err := os.Open(path.Join(homeDir, ".config", "hub"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open hub config file: %w", err)
+	}
+
+	var cfg hubCLIConfig
+	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse hub config file: %w", err)
+	}
+
+	return cfg, nil
+}
+
+func findToken(githubHost string) string {
+	// Try environment variable first
 	token := os.Getenv("GITHUB_TOKEN")
+	if token != "" {
+		return token
+	}
+
+	// Try ~/config/hub
+	cfg, err := readHubCLIConfig(githubHost)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to read hub config file")
+		return ""
+	}
+
+	if c, ok := cfg["github.com"]; ok {
+		if len(c) == 0 {
+			log.Warn().Msg("no token found in hub config file")
+			return ""
+		}
+		if len(c) > 1 {
+			log.Warn().Msgf("multiple tokens found in hub config file, using first one: %s", c[0].User)
+		}
+
+		return c[0].OauthToken
+	}
+
+	return ""
+}
+
+const tokenHelpText = `
+No GitHub OAuth token found! You can either create one
+at https://%s/settings/tokens and set the GITHUB_TOKEN environment variable,
+or configure it in ~/.config/hub:
+
+	github.com:
+	- user: <your username>
+	  oauth_token: <your token>
+	  protocol: https
+
+This configuration file is shared with GitHub's "hub" CLI (https://hub.github.com/),
+so if you already use that, spr will automatically pick up your token. 
+`
+
+func NewGitHubClient(ctx context.Context, config *config.Config) *client {
+	token := findToken(config.Repo.GitHubHost)
 	if token == "" {
-		fmt.Printf("GitHub OAuth Token Required\n")
-		fmt.Printf("Make one at: https://%s/settings/tokens\n", config.Repo.GitHubHost)
-		fmt.Printf("With repo scope selected.\n")
-		fmt.Printf("And set an env variable called GITHUB_TOKEN with it's value.\n")
+		fmt.Printf(tokenHelpText, config.Repo.GitHubHost)
 		os.Exit(3)
 	}
 	ts := oauth2.StaticTokenSource(
