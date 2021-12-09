@@ -102,7 +102,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 	}
 	for _, pr := range githubInfo.PullRequests {
 		if _, found := localCommitMap[pr.Commit.CommitID]; !found {
-			sd.github.CommentPullRequest(ctx, pr, "closing pull request : commit has gone away")
+			sd.github.CommentPullRequest(ctx, pr, "Closing pull request: commit has gone away")
 			sd.github.ClosePullRequest(ctx, pr)
 		} else {
 			validPullRequests = append(validPullRequests, pr)
@@ -219,7 +219,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context) {
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
-			"commit MERGED in pull request [#%d](https://%s/%s/%s/pull/%d)",
+			"✓ Commit merged in pull request [#%d](https://%s/%s/%s/pull/%d)",
 			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 		sd.github.ClosePullRequest(ctx, pr)
