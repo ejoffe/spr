@@ -33,6 +33,19 @@ Installation
 ### Manual
 Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to your bin path.
 
+### From source
+
+Assuming you want to put the binaries into `~/.local/bin`:
+
+```
+git clone https://github.com/ejoffe/spr
+cd spr
+go build -o ~/.local/bin/git-spr github.com/ejoffe/spr/cmd/spr
+go build -o ~/.local/bin/git-amend github.com/ejoffe/spr/cmd/amend
+go build -o ~/.local/bin/spr_commit_hook github.com/ejoffe/spr/cmd/commithook
+go build -o ~/.local/bin/spr_reword_helper github.com/ejoffe/spr/cmd/reword
+```
+
 Workflow
 --------
 Commit your changes to a branch as you normally do. Note that every commit will end up becoming a pull request.
