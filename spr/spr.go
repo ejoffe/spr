@@ -477,8 +477,8 @@ func check(err error) {
 
 var detailMessage = `
  ┌─ github checks pass
- │┌── pull request approved
- ││┌─── no merge conflicts
- │││┌──── stack check
- ││││
+ │ ┌── pull request approved
+ │ │ ┌─── no merge conflicts
+ │ │ │ ┌──── stack check
+ │ │ │ │
 `
