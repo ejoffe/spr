@@ -86,7 +86,10 @@ func ParseConfig(gitcmd git.GitInterface) *Config {
 		rake.YamlFileSource(UserConfigFilePath()),
 	)
 
-	cfg.User.RunCount = cfg.User.RunCount + 1
+	if !cfg.User.Stargazer {
+		cfg.User.RunCount = cfg.User.RunCount + 1
+	}
+
 	rake.LoadSources(cfg.User,
 		rake.YamlFileWriter(UserConfigFilePath()))
 
