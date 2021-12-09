@@ -14,4 +14,5 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )
