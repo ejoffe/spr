@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
+	"mvdan.cc/xurls"
 )
 
 type hubCLIConfig map[string][]struct {
@@ -300,11 +301,40 @@ func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string 
 	return buf.String()
 }
 
+var issueReferenceRegex = regexp.MustCompile(`(?mi)((close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s)?([a-zA-Z-]+\/[a-zA-Z-]+#\d+|#\d+|https?://.+?/[a-zA-Z-]+\/[a-zA-Z-]+/(issues|pull)/\d+)`)
+
+// linkifyPlainLinks replaces plain links in the body by <a> tags, which makes them clickable
+// inside a GitHub code area.
+func linkifyPlainLinks(body string) string {
+	return string(xurls.Relaxed.ReplaceAll([]byte(body), []byte("<a href=\"$1\">$1</a>")))
+}
+
+func wrapInMarkdown(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return ""
+	}
+
+	// Extract issue references for GitHub to find them outside the code block
+	refs := issueReferenceRegex.FindAllString(s, -1)
+	var trailer bytes.Buffer
+	if len(refs) > 0 {
+		trailer.WriteString("**Issue references**: \n")
+		for _, ref := range refs {
+			trailer.WriteString(fmt.Sprintf("\n - %s", ref))
+		}
+	}
+
+	return fmt.Sprintf("<pre>\n%s\n</pre>\n%s", linkifyPlainLinks(s), trailer.String())
+}
+
 func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 	if len(stack) <= 1 {
-		return commit.Body
+		return wrapInMarkdown(commit.Body)
 	}
-	return fmt.Sprintf("**Stack**:\n%s\n\n%s", formatStackMarkdown(commit, stack), commit.Body)
+
+	return fmt.Sprintf("**Stack**:\n%s\n\n%s",
+		formatStackMarkdown(commit, stack),
+		wrapInMarkdown(commit.Body))
 }
 
 func (c *client) UpdatePullRequest(ctx context.Context,
