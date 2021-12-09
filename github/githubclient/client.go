@@ -284,10 +284,17 @@ func (c *client) CreatePullRequest(ctx context.Context,
 	return pr
 }
 
-func formatStackMarkdown(stack []*github.PullRequest) string {
+func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string {
 	var buf bytes.Buffer
 	for i := len(stack) - 1; i >= 0; i-- {
-		buf.WriteString(fmt.Sprintf("- #%d\n", stack[i].Number))
+		isCurrent := stack[i].Commit == commit
+		var suffix string
+		if isCurrent {
+			suffix = " ⮜"
+		} else {
+			suffix = ""
+		}
+		buf.WriteString(fmt.Sprintf("- #%d%s\n", stack[i].Number, suffix))
 	}
 
 	return buf.String()
@@ -297,7 +304,7 @@ func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 	if len(stack) <= 1 {
 		return commit.Body
 	}
-	return fmt.Sprintf("**Stack**:\n%s\n\n%s", formatStackMarkdown(stack), commit.Body)
+	return fmt.Sprintf("**Stack**:\n%s\n\n%s", formatStackMarkdown(commit, stack), commit.Body)
 }
 
 func (c *client) UpdatePullRequest(ctx context.Context,
