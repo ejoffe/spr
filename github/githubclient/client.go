@@ -20,6 +20,7 @@ import (
 	"mvdan.cc/xurls"
 )
 
+// hub cli config (https://hub.github.com)
 type hubCLIConfig map[string][]struct {
 	User       string `yaml:"user"`
 	OauthToken string `yaml:"oauth_token"`
@@ -28,7 +29,7 @@ type hubCLIConfig map[string][]struct {
 
 // readHubCLIConfig finds and deserialized the config file for
 // Github's "hub" CLI (https://hub.github.com/).
-func readHubCLIConfig(githubHost string) (hubCLIConfig, error) {
+func readHubCLIConfig() (hubCLIConfig, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
@@ -47,6 +48,32 @@ func readHubCLIConfig(githubHost string) (hubCLIConfig, error) {
 	return cfg, nil
 }
 
+// gh cli config (https://cli.github.com)
+type ghCLIConfig map[string]struct {
+	User        string `yaml:"user"`
+	OauthToken  string `yaml:"oauth_token"`
+	GitProtocol string `yaml:"git_protocol"`
+}
+
+func readGhCLIConfig() (*ghCLIConfig, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	f, err := os.Open(path.Join(homeDir, ".config", "gh", "hosts.yml"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open gh cli config file: %w", err)
+	}
+
+	var cfg ghCLIConfig
+	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse hub config file: %w", err)
+	}
+
+	return &cfg, nil
+}
+
 func findToken(githubHost string) string {
 	// Try environment variable first
 	token := os.Getenv("GITHUB_TOKEN")
@@ -54,14 +81,26 @@ func findToken(githubHost string) string {
 		return token
 	}
 
-	// Try ~/config/hub
-	cfg, err := readHubCLIConfig(githubHost)
+	// Try ~/.config/gh/hosts.yml
+	cfg, err := readGhCLIConfig()
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to read gh cli config file")
+	} else {
+		for host, user := range *cfg {
+			if host == githubHost {
+				return user.OauthToken
+			}
+		}
+	}
+
+	// Try ~/.config/hub
+	hubCfg, err := readHubCLIConfig()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to read hub config file")
 		return ""
 	}
 
-	if c, ok := cfg["github.com"]; ok {
+	if c, ok := hubCfg["github.com"]; ok {
 		if len(c) == 0 {
 			log.Warn().Msg("no token found in hub config file")
 			return ""
@@ -79,7 +118,11 @@ func findToken(githubHost string) string {
 const tokenHelpText = `
 No GitHub OAuth token found! You can either create one
 at https://%s/settings/tokens and set the GITHUB_TOKEN environment variable,
-or configure it in ~/.config/hub:
+or use the official "gh" CLI (https://cli.github.com) config to log in:
+
+	$ gh auth login
+
+Alternatively, configure a token manually in ~/.config/hub:
 
 	github.com:
 	- user: <your username>
