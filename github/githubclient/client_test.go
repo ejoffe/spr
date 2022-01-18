@@ -1,6 +1,11 @@
 package githubclient
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ejoffe/spr/git"
+	"github.com/ejoffe/spr/github"
+)
 
 func TestPullRequestRegex(t *testing.T) {
 	tests := []struct {
@@ -19,6 +24,67 @@ func TestPullRequestRegex(t *testing.T) {
 		}
 		if tc.commit != matches[2] {
 			t.Fatalf("expected: '%v', actual: '%v'", tc.commit, matches[2])
+		}
+	}
+}
+
+func TestFormatPullRequestBody(t *testing.T) {
+	simpleCommit := git.Commit{
+		CommitID:   "abc123",
+		CommitHash: "abcdef123456",
+	}
+	descriptiveCommit := git.Commit{
+		CommitID:   "def456",
+		CommitHash: "ghijkl7890",
+		Body: `This body describes my nice PR.
+It even includes some **markdown** formatting.`}
+
+	tests := []struct {
+		description string
+		commit      git.Commit
+		stack       []*github.PullRequest
+	}{
+		{
+			description: "",
+			commit:      git.Commit{},
+			stack:       []*github.PullRequest{},
+		},
+		{
+			description: `<pre>
+This body describes my nice PR.
+It even includes some **markdown** formatting.
+</pre>
+`,
+			commit: descriptiveCommit,
+			stack: []*github.PullRequest{
+				&github.PullRequest{Number: 2, Commit: descriptiveCommit},
+			},
+		},
+		{
+			description: `**Stack**:
+- #2 ⮜
+- #1
+
+
+<pre>
+This body describes my nice PR.
+It even includes some **markdown** formatting.
+</pre>
+
+
+⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
+			commit: descriptiveCommit,
+			stack: []*github.PullRequest{
+				&github.PullRequest{Number: 1, Commit: simpleCommit},
+				&github.PullRequest{Number: 2, Commit: descriptiveCommit},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		body := formatBody(tc.commit, tc.stack)
+		if body != tc.description {
+			t.Fatalf("expected: '%v', actual: '%v'", tc.description, body)
 		}
 	}
 }
