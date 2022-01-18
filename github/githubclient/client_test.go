@@ -50,26 +50,22 @@ It even includes some **markdown** formatting.`}
 			stack:       []*github.PullRequest{},
 		},
 		{
-			description: `<pre>
-This body describes my nice PR.
-It even includes some **markdown** formatting.
-</pre>
-`,
+			description: `This body describes my nice PR.
+It even includes some **markdown** formatting.`,
 			commit: descriptiveCommit,
 			stack: []*github.PullRequest{
 				&github.PullRequest{Number: 2, Commit: descriptiveCommit},
 			},
 		},
 		{
-			description: `**Stack**:
+			description: `This body describes my nice PR.
+It even includes some **markdown** formatting.
+
+---
+
+**Stack**:
 - #2 ⮜
 - #1
-
-
-<pre>
-This body describes my nice PR.
-It even includes some **markdown** formatting.
-</pre>
 
 
 ⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,

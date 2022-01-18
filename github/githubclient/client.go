@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -130,7 +131,7 @@ Alternatively, configure a token manually in ~/.config/hub:
 	  protocol: https
 
 This configuration file is shared with GitHub's "hub" CLI (https://hub.github.com/),
-so if you already use that, spr will automatically pick up your token. 
+so if you already use that, spr will automatically pick up your token.
 `
 
 func NewGitHubClient(ctx context.Context, config *config.Config) *client {
@@ -367,17 +368,24 @@ func wrapInMarkdown(s string) string {
 		}
 	}
 
-	return fmt.Sprintf("<pre>\n%s\n</pre>\n%s", linkifyPlainLinks(s), trailer.String())
+	return fmt.Sprintf("%s\n\n%s", linkifyPlainLinks(s), trailer.String())
 }
 
 func formatBody(commit git.Commit, stack []*github.PullRequest) string {
+	body := wrapInMarkdown(commit.Body)
+
 	if len(stack) <= 1 {
-		return wrapInMarkdown(commit.Body)
+		return strings.TrimSpace(body)
 	}
 
-	return fmt.Sprintf("**Stack**:\n%s\n\n%s",
-		formatStackMarkdown(commit, stack),
-		addManualMergeNotice(wrapInMarkdown(commit.Body)))
+	if body == "" {
+		return fmt.Sprintf("**Stack**:\n%s",
+			addManualMergeNotice(formatStackMarkdown(commit, stack)))
+	}
+
+	return fmt.Sprintf("%s---\n\n**Stack**:\n%s",
+		body,
+		addManualMergeNotice(formatStackMarkdown(commit, stack)))
 }
 
 func addManualMergeNotice(body string) string {
