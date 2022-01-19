@@ -345,7 +345,7 @@ func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string 
 	return buf.String()
 }
 
-var issueReferenceRegex = regexp.MustCompile(`(?mi)((close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s)?([a-zA-Z-]+\/[a-zA-Z-]+#\d+|#\d+|https?://.+?/[a-zA-Z-]+\/[a-zA-Z-]+/(issues|pull)/\d+)`)
+var issueReferenceRegex = regexp.MustCompile(`(?mi)((close|closes|closed|fix|fixes|fixed|ref|resolve|resolves|resolved)\s)?([a-zA-Z-]+\/[a-zA-Z-]+#\d+|#\d+|https?://.+?/[a-zA-Z-]+\/[a-zA-Z-]+/(issues|pull)/\d+)`)
 
 // linkifyPlainLinks replaces plain links in the body by <a> tags, which makes them clickable
 // inside a GitHub code area.
