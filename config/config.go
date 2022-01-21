@@ -35,6 +35,7 @@ type UserConfig struct {
 	LogGitCommands   bool `default:"true" yaml:"logGitCommands"`
 	LogGitHubCalls   bool `default:"true" yaml:"logGitHubCalls"`
 	StatusBitsHeader bool `default:"true" yaml:"statusBitsHeader"`
+	StatusBitsEmojis bool `default:"true" yaml:"statusBitsEmojis"`
 	CreateDraftPRs   bool `default:"false" yaml:"createDraftPRs"`
 
 	Stargazer bool `default:"false" yaml:"stargazer"`
