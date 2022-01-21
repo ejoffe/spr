@@ -175,6 +175,9 @@ func TestStatusString(t *testing.T) {
 				RequireChecks:   requireChecks,
 				RequireApproval: requireApproval,
 			},
+			User: &config.UserConfig{
+				StatusBitsEmojis: false,
+			},
 		}
 	}
 

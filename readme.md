@@ -71,9 +71,9 @@ Run **git spr update** to sync your whole commit stack to github and create pull
 
 ```shell
 > git spr update
-[·✗✔✗] 60: Feature 3
-[✔✔✔✔] 59: Feature 2
-[✔✔✔✔] 58: Feature 1
+[⌛❌✅❌] 60: Feature 3
+[✅✅✅✅] 59: Feature 2
+[✅✅✅✅] 58: Feature 1
 ```
 
 Amending Commits
@@ -94,20 +94,20 @@ Merge Status Bits
 -----------------
 Each pull request has four merge status bits signifying the request's ability to be merged. For a request to be merged, all required status bits need to show **✔**. Each status bit has the following meaning:
 1. github checks run and pass 
-  - · : pending 
-  - ✗ : some check failed 
-  - ✔ : all checks pass 
-  - \- : checks are not required to merge (can be configured in yml config)
+  - ⌛ : pending
+  - ❌ : some check failed
+  - ✅ : all checks pass
+  - ➖ : checks are not required to merge (can be configured in yml config)
 2. pull request approval
-  - ✗ : pull request hasn't been approved
-  - ✔ : pull request is approved
-  - \- : approval is not required to merge (can be configured in yml config)
+  - ❌ : pull request hasn't been approved
+  - ✅ : pull request is approved
+  - ➖ : approval is not required to merge (can be configured in yml config)
 3. merge conflicts
-  - ✗ : commit has conflicts that need to be resolved
-  - ✔ : commit has no conflicts 
+  - ❌ : commit has conflicts that need to be resolved
+  - ✅ : commit has no conflicts
 4. stack status
-  - ✗ : commit has other pull requests below it that can't merge
-  - ✔ : all commits below this one are clear to merge
+  - ❌ : commit has other pull requests below it that can't merge
+  - ✅ : all commits below this one are clear to merge
 
 Pull request approval and checks requirement can be disabled in the config file, see configuration section below for more details.
 
@@ -119,7 +119,7 @@ Your pull requests are stacked. Don't use the UI to merge pull requests, if you 
 > git spr merge
 MERGED #58 Feature 1
 MERGED #59 Feature 2
-[·✗✔✗] 60: Feature 3
+[⌛❌✅❌] 60: Feature 3
 ```
 
 To merge only part of the stack use the **--upto** flag with the top pull request number in the stack that you would like to merge.
@@ -135,8 +135,14 @@ Show Current Pull Requests
 --------------------------
 ```shell
 > git spr status
+<<<<<<< HEAD
 [·✗✔✗] 60: Feature 3
 [✔✔✔✔] 59: Feature 2
+||||||| parent of 0887d80 (Enable emoji status bits via user config)
+[·✗✔✗] 60: Feature 3
+=======
+[⌛❌✅❌] 60: Feature 3
+>>>>>>> 0887d80 (Enable emoji status bits via user config)
 ```
 
 Configuration
@@ -161,6 +167,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | logGitCommands      | bool | true    | logs all git commands to stdout                                   |
 | logGitHubCalls      | bool | true    | logs all github api calls to stdout                               |
 | statusBitsHeader    | bool | true    | show status bits type headers                                     |
+| statusBitsEmojis    | bool | true    | show status bits using fancy emojis                               |
 | createDraftPRs      | bool | false   | new pull requests are created as draft                            |
 
 Happy Coding!
