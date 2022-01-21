@@ -55,6 +55,9 @@ func DefaultConfig() *Config {
 	rake.LoadSources(cfg.User,
 		rake.DefaultSource(),
 	)
+
+	cfg.User.LogGitCommands = false
+	cfg.User.LogGitHubCalls = false
 	return cfg
 }
 
