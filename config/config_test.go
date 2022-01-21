@@ -75,8 +75,8 @@ func TestDefaultConfig(t *testing.T) {
 		},
 		User: &UserConfig{
 			ShowPRLink:       true,
-			LogGitCommands:   true,
-			LogGitHubCalls:   true,
+			LogGitCommands:   false,
+			LogGitHubCalls:   false,
 			StatusBitsHeader: true,
 			StatusBitsEmojis: true,
 			Stargazer:        false,
