@@ -123,46 +123,75 @@ func (pr *PullRequest) Ready(config *config.Config) bool {
 	return true
 }
 
-// Terminal escape codes for colors
 const (
+	// Terminal escape codes for colors
 	colorReset = "\033[0m"
 	colorRed   = "\033[31m"
 	colorGreen = "\033[32m"
 	colorBlue  = "\033[34m"
+
+	// ascii status bits
+	asciiCheckmark = "✔"
+	asciiCrossmark = "✗"
+	asciiPending   = "·"
+	asciiQuerymark = "?"
+	asciiEmpty     = "-"
+
+	// emoji status bits
+	emojiCheckmark    = "✅"
+	emojiCrossmark    = "❌"
+	emojiPending      = "⌛"
+	emojiQuestionmark = "❓"
+	emojiEmpty        = "➖"
 )
 
-const checkmark = colorGreen + "✅" + colorReset
-const crossmark = colorRed + "❌" + colorReset
-const hourglass = colorBlue + "⌛" + colorReset
-const questionmark = "❓"
-const empty = "➖"
+func statusBitIcons(config *config.Config) map[string]string {
+	if config.User.StatusBitsEmojis {
+		return map[string]string{
+			"checkmark":    colorGreen + emojiCheckmark + colorReset,
+			"crossmark":    colorRed + emojiCrossmark + colorReset,
+			"pending":      colorBlue + emojiPending + colorReset,
+			"questionmark": emojiQuestionmark,
+			"empty":        emojiEmpty,
+		}
+	} else {
+		return map[string]string{
+			"checkmark":    asciiCheckmark,
+			"crossmark":    asciiCrossmark,
+			"pending":      asciiPending,
+			"questionmark": asciiQuerymark,
+			"empty":        asciiEmpty,
+		}
+	}
+}
 
 // StatusString returs a string representation of the merge status bits
 func (pr *PullRequest) StatusString(config *config.Config) string {
+	icons := statusBitIcons(config)
 	statusString := "["
 
 	statusString += pr.MergeStatus.ChecksPass.String(config)
 
 	if config.Repo.RequireApproval {
 		if pr.MergeStatus.ReviewApproved {
-			statusString += checkmark
+			statusString += icons["checkmark"]
 		} else {
-			statusString += crossmark
+			statusString += icons["crossmark"]
 		}
 	} else {
-		statusString += empty
+		statusString += icons["empty"]
 	}
 
 	if pr.MergeStatus.NoConflicts {
-		statusString += checkmark
+		statusString += icons["checkmark"]
 	} else {
-		statusString += crossmark
+		statusString += icons["crossmark"]
 	}
 
 	if pr.MergeStatus.Stacked {
-		statusString += checkmark
+		statusString += icons["checkmark"]
 	} else {
-		statusString += crossmark
+		statusString += icons["crossmark"]
 	}
 
 	statusString += "]"
@@ -199,19 +228,20 @@ func (pr *PullRequest) String(config *config.Config) string {
 }
 
 func (cs checkStatus) String(config *config.Config) string {
+	icons := statusBitIcons(config)
 	if config.Repo.RequireChecks {
 		switch cs {
 		case CheckStatusUnknown:
-			return questionmark
+			return icons["questionmark"]
 		case CheckStatusPending:
-			return hourglass
+			return icons["pending"]
 		case CheckStatusFail:
-			return crossmark
+			return icons["crossmark"]
 		case CheckStatusPass:
-			return checkmark
+			return icons["checkmark"]
 		default:
-			return questionmark
+			return icons["questionmark"]
 		}
 	}
-	return empty
+	return icons["empty"]
 }

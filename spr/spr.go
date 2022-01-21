@@ -246,7 +246,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
 	} else {
 		if sd.DetailEnabled {
-			fmt.Fprint(sd.output, detailMessage)
+			fmt.Fprint(sd.output, header(sd.config))
 		}
 		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 			pr := githubInfo.PullRequests[i]
@@ -469,10 +469,22 @@ func check(err error) {
 	}
 }
 
-var detailMessage = `
+func header(config *config.Config) string {
+	if config.User.StatusBitsEmojis {
+		return `
  ┌─ github checks pass
  │ ┌── pull request approved
  │ │ ┌─── no merge conflicts
  │ │ │ ┌──── stack check
  │ │ │ │
 `
+	} else {
+		return `
+ ┌─ github checks pass
+ │┌── pull request approved
+ ││┌─── no merge conflicts
+ │││┌──── stack check
+ ││││
+`
+	}
+}

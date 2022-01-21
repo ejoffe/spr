@@ -78,6 +78,7 @@ func TestDefaultConfig(t *testing.T) {
 			LogGitCommands:   true,
 			LogGitHubCalls:   true,
 			StatusBitsHeader: true,
+			StatusBitsEmojis: true,
 			Stargazer:        false,
 			RunCount:         0,
 		},
