@@ -122,11 +122,21 @@ MERGED #59 Feature 2
 [·✗✔✗] 60: Feature 3
 ```
 
+To merge only part of the stack use the **--upto** flag with the top pull request number in the stack that you would like to merge.
+
+```shell
+> git spr merge --upto 58
+MERGED #58 Feature 1
+[·✗✔✗] 60: Feature 3
+[✔✔✔✔] 59: Feature 2
+```
+
 Show Current Pull Requests
 --------------------------
 ```shell
 > git spr status
 [·✗✔✗] 60: Feature 3
+[✔✔✔✔] 59: Feature 2
 ```
 
 Configuration
