@@ -151,6 +151,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | logGitCommands      | bool | true    | logs all git commands to stdout                                   |
 | logGitHubCalls      | bool | true    | logs all github api calls to stdout                               |
 | statusBitsHeader    | bool | true    | show status bits type headers                                     |
+| createDraftPRs      | bool | false   | new pull requests are created as draft                            |
 
 Happy Coding!
 -------------

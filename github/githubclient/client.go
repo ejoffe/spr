@@ -303,6 +303,7 @@ func (c *client) CreatePullRequest(ctx context.Context,
 		HeadRefName:  githubv4.String(headRefName),
 		Title:        githubv4.String(commit.Subject),
 		Body:         &commitBody,
+		Draft:        githubv4.NewBoolean(githubv4.Boolean(c.config.User.CreateDraftPRs)),
 	}
 	err := c.api.Mutate(ctx, &mutation, input, nil)
 	check(err)
