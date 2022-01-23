@@ -111,6 +111,18 @@ Each pull request has four merge status bits signifying the request's ability to
 
 Pull request approval and checks requirement can be disabled in the config file, see configuration section below for more details.
 
+Show Current Pull Requests
+--------------------------
+Use **git spr status** to see the status of our pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for approval. 
+
+```shell
+> git spr status
+[✅❌✅✅] 61: Feature 4
+[✅✅✅✅] 60: Feature 3
+[✅✅✅✅] 59: Feature 2
+[✅✅✅✅] 58: Feature 1
+```
+
 Merging Pull Requests
 ---------------------
 Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
@@ -119,30 +131,18 @@ Your pull requests are stacked. Don't use the UI to merge pull requests, if you 
 > git spr merge
 MERGED #58 Feature 1
 MERGED #59 Feature 2
-[⌛❌✅❌] 60: Feature 3
+MERGED #60 Feature 3
+[✅❌✅✅] 61: Feature 4
 ```
 
 To merge only part of the stack use the **--upto** flag with the top pull request number in the stack that you would like to merge.
 
 ```shell
-> git spr merge --upto 58
+> git spr merge --upto 59
 MERGED #58 Feature 1
-[·✗✔✗] 60: Feature 3
-[✔✔✔✔] 59: Feature 2
-```
-
-Show Current Pull Requests
---------------------------
-```shell
-> git spr status
-<<<<<<< HEAD
-[·✗✔✗] 60: Feature 3
-[✔✔✔✔] 59: Feature 2
-||||||| parent of 0887d80 (Enable emoji status bits via user config)
-[·✗✔✗] 60: Feature 3
-=======
-[⌛❌✅❌] 60: Feature 3
->>>>>>> 0887d80 (Enable emoji status bits via user config)
+MERGED #59 Feature 2
+[✅❌✅✅] 61: Feature 4
+[✅✅✅✅] 60: Feature 3
 ```
 
 Configuration
