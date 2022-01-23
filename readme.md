@@ -113,7 +113,7 @@ Pull request approval and checks requirement can be disabled in the config file,
 
 Show Current Pull Requests
 --------------------------
-Use **git spr status** to see the status of our pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for approval. 
+Use **git spr status** to see the status of your pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for review approval. 
 
 ```shell
 > git spr status
@@ -125,7 +125,7 @@ Use **git spr status** to see the status of our pull request stack. In the follo
 
 Merging Pull Requests
 ---------------------
-Your pull requests are stacked. Don't use the UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
+Your pull requests are stacked. Don't use the GitHub UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
 
 ```shell
 > git spr merge
