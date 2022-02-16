@@ -23,6 +23,8 @@ type RepoConfig struct {
 	GitHubRepoName  string `yaml:"githubRepoName"`
 	GitHubHost      string `default:"github.com" yaml:"githubHost"`
 
+	Reviewers []string `yaml:"reviewers"`
+
 	RequireChecks   bool `default:"true" yaml:"requireChecks"`
 	RequireApproval bool `default:"true" yaml:"requireApproval"`
 

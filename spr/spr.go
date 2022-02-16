@@ -38,6 +38,7 @@ type stackediff struct {
 	gitcmd        git.GitInterface
 	profiletimer  profiletimer.Timer
 	DetailEnabled bool
+	Reviewers     []string
 
 	output io.Writer
 	input  io.Reader
@@ -85,6 +86,10 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 //  In the case where commits are reordered, the corresponding pull requests
 //   will also be reordered to match the commit stack order.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
+	reviewers := []string{}
+	reviewers = append(reviewers, sd.Reviewers...)
+	reviewers = append(reviewers, sd.config.Repo.Reviewers...)
+	fmt.Fprintf(sd.output, "reviewers: %+v\n", reviewers)
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	if githubInfo == nil {
@@ -159,6 +164,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 				prevCommit = &localCommits[commitIndex-1]
 			}
 			pr := sd.github.CreatePullRequest(ctx, githubInfo, c, prevCommit)
+			pr.Reviewers = reviewers
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 		}

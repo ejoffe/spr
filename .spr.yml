@@ -1,6 +1,8 @@
-githubRepoOwner: ejoffe
+githubRepoOwner: wade13
 githubRepoName: spr
 githubHost: github.com
+reviewers:
+- ejoffe
 requireChecks: true
 requireApproval: true
 githubRemote: origin

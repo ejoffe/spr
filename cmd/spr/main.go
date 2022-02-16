@@ -136,11 +136,19 @@ VERSION: {{.Version}}
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
 				Action: func(c *cli.Context) error {
+					if c.IsSet("reviewer") {
+						stackedpr.Reviewers = append(stackedpr.Reviewers, c.StringSlice("reviewer")...)
+					}
 					stackedpr.UpdatePullRequests(ctx)
 					return nil
 				},
 				Flags: []cli.Flag{
 					detailFlag,
+					&cli.StringSliceFlag{
+						Name:    "reviewer",
+						Aliases: []string{"r"},
+						Usage:   "Assign reviewers to all modified pull requests",
+					},
 				},
 			},
 			{

@@ -17,6 +17,7 @@ type PullRequest struct {
 	ToBranch   string
 	Commit     git.Commit
 	Title      string
+	Reviewers  []string
 
 	MergeStatus PullRequestMergeStatus
 	Merged      bool
