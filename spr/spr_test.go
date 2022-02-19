@@ -12,6 +12,7 @@ import (
 	"github.com/ejoffe/spr/git/mockgit"
 	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/mockclient"
+	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +25,7 @@ func makeTestObjects(t *testing.T) (
 	cfg.Repo.RequireApproval = true
 	cfg.Repo.GitHubRemote = "origin"
 	cfg.Repo.GitHubBranch = "master"
+	cfg.Repo.MergeMethod = "rebase"
 	gitmock = mockgit.NewMockGit(t)
 	githubmock = mockclient.NewMockClient(t)
 	githubmock.Info = &github.GitHubInfo{
@@ -124,7 +126,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	// 'git spr -m' :: MergePullRequest :: commits=[a1, a2, a3, a4]
 	githubmock.ExpectGetInfo()
 	githubmock.ExpectUpdatePullRequest(c4, nil)
-	githubmock.ExpectMergePullRequest(c4)
+	githubmock.ExpectMergePullRequest(c4, githubv4.PullRequestMergeMethodRebase)
 	githubmock.ExpectCommentPullRequest(c1)
 	githubmock.ExpectClosePullRequest(c1)
 	githubmock.ExpectCommentPullRequest(c2)
@@ -218,7 +220,7 @@ func TestSPRAmendCommit(t *testing.T) {
 	// 'git spr -m' :: MergePullRequest :: commits=[a1, a2]
 	githubmock.ExpectGetInfo()
 	githubmock.ExpectUpdatePullRequest(c2, nil)
-	githubmock.ExpectMergePullRequest(c2)
+	githubmock.ExpectMergePullRequest(c2, githubv4.PullRequestMergeMethodRebase)
 	githubmock.ExpectCommentPullRequest(c1)
 	githubmock.ExpectClosePullRequest(c1)
 	githubmock.ExpectCommentPullRequest(c2)

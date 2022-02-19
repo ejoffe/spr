@@ -463,8 +463,12 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 	}
 }
 
-func (c *client) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
-	log.Debug().Interface("PR", pr).Msg("MergePullRequest")
+func (c *client) MergePullRequest(ctx context.Context,
+	pr *github.PullRequest, mergeMethod githubv4.PullRequestMergeMethod) {
+	log.Debug().
+		Interface("PR", pr).
+		Str("mergeMethod", string(mergeMethod)).
+		Msg("MergePullRequest")
 
 	var mergepr struct {
 		MergePullRequest struct {
@@ -473,7 +477,6 @@ func (c *client) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
 			}
 		} `graphql:"mergePullRequest(input: $input)"`
 	}
-	mergeMethod := githubv4.PullRequestMergeMethodRebase
 	mergePRInput := githubv4.MergePullRequestInput{
 		PullRequestID: pr.ID,
 		MergeMethod:   &mergeMethod,
