@@ -10,6 +10,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/git"
+	"github.com/shurcooL/githubv4"
 )
 
 type Config struct {
@@ -28,6 +29,7 @@ type RepoConfig struct {
 
 	GitHubRemote string `default:"origin" yaml:"githubRemote"`
 	GitHubBranch string `default:"master" yaml:"githubBranch"`
+	MergeMethod  string `default:"rebase" yaml:"mergeMethod"`
 }
 
 type UserConfig struct {
@@ -119,6 +121,25 @@ func GitHubRemoteSource(config *Config, gitcmd git.GitInterface) *remoteSource {
 		gitcmd: gitcmd,
 		config: config,
 	}
+}
+
+func (c Config) MergeMethod() (githubv4.PullRequestMergeMethod, error) {
+	var mergeMethod githubv4.PullRequestMergeMethod
+	var err error
+	switch strings.ToLower(c.Repo.MergeMethod) {
+	case "merge":
+		mergeMethod = githubv4.PullRequestMergeMethodMerge
+	case "squash":
+		mergeMethod = githubv4.PullRequestMergeMethodSquash
+	case "rebase", "":
+		mergeMethod = githubv4.PullRequestMergeMethodRebase
+	default:
+		err = fmt.Errorf(
+			`unknown merge method %q, choose from "merge", "squash", or "rebase"`,
+			c.Repo.MergeMethod,
+		)
+	}
+	return mergeMethod, err
 }
 
 type remoteSource struct {

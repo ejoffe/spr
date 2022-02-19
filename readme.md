@@ -137,6 +137,8 @@ MERGED #60 Feature 3
 
 To merge only part of the stack use the **--upto** flag with the top pull request number in the stack that you would like to merge.
 
+By default merges are done using the rebase merge method, this can be changed using the mergeMethod configuration.
+
 ```shell
 > git spr merge --upto 59
 MERGED #58 Feature 1
@@ -160,6 +162,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubRemote        | str  | origin     | github remote name to use                                      |
 | githubBranch        | str  | master     | github branch for pull request target                          |
 | githubHost          | str  | github.com | github host, can be updated for github enterprise usecase      |
+| mergeMethod         | str  | rebase     | merge method, valid values: [rebase, squash, merge]            |
 
 | User Config         | Type | Default | Description                                                       |
 | ------------------- | ---- | ------- | ----------------------------------------------------------------- |

@@ -5,3 +5,4 @@ requireChecks: true
 requireApproval: true
 githubRemote: origin
 githubBranch: master
+mergeMethod: rebase

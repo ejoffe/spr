@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ejoffe/spr/git/mockgit"
+	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,6 +73,7 @@ func TestDefaultConfig(t *testing.T) {
 			RequireApproval: true,
 			GitHubRemote:    "origin",
 			GitHubBranch:    "master",
+			MergeMethod:     "rebase",
 		},
 		User: &UserConfig{
 			ShowPRLink:       true,
@@ -100,6 +102,7 @@ func TestGitHubRemoteSource(t *testing.T) {
 			RequireApproval: false,
 			GitHubRemote:    "",
 			GitHubBranch:    "",
+			MergeMethod:     "",
 		},
 		User: &UserConfig{
 			ShowPRLink:       false,
@@ -118,4 +121,45 @@ func TestGitHubRemoteSource(t *testing.T) {
 	source := GitHubRemoteSource(&actual, mock)
 	source.Load(nil)
 	assert.Equal(t, expect, actual)
+}
+
+func TestMergeMethodHelper(t *testing.T) {
+	for _, tc := range []struct {
+		configValue string
+		expected    githubv4.PullRequestMergeMethod
+	}{
+		{
+			configValue: "rebase",
+			expected:    githubv4.PullRequestMergeMethodRebase,
+		},
+		{
+			configValue: "",
+			expected:    githubv4.PullRequestMergeMethodRebase,
+		},
+		{
+			configValue: "Merge",
+			expected:    githubv4.PullRequestMergeMethodMerge,
+		},
+		{
+			configValue: "SQUASH",
+			expected:    githubv4.PullRequestMergeMethodSquash,
+		},
+	} {
+		tcName := tc.configValue
+		if tcName == "" {
+			tcName = "<EMPTY>"
+		}
+		t.Run(tcName, func(t *testing.T) {
+			config := &Config{Repo: &RepoConfig{MergeMethod: tc.configValue}}
+			actual, err := config.MergeMethod()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+	t.Run("invalid", func(t *testing.T) {
+		config := &Config{Repo: &RepoConfig{MergeMethod: "magic"}}
+		actual, err := config.MergeMethod()
+		assert.Error(t, err)
+		assert.Empty(t, actual)
+	})
 }
