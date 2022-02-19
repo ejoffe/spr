@@ -7,6 +7,7 @@ import (
 
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,11 +77,13 @@ func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequ
 	})
 }
 
-func (c *MockClient) MergePullRequest(ctx context.Context, pr *github.PullRequest) {
-	fmt.Printf("HUB: MergePullRequest\n")
+func (c *MockClient) MergePullRequest(ctx context.Context,
+	pr *github.PullRequest, mergeMethod githubv4.PullRequestMergeMethod) {
+	fmt.Printf("HUB: MergePullRequest, method=%q\n", mergeMethod)
 	c.verifyExpectation(expectation{
-		op:     mergePullRequestOP,
-		commit: pr.Commit,
+		op:          mergePullRequestOP,
+		commit:      pr.Commit,
+		mergeMethod: mergeMethod,
 	})
 }
 
@@ -121,10 +124,11 @@ func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
 	})
 }
 
-func (c *MockClient) ExpectMergePullRequest(commit git.Commit) {
+func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod githubv4.PullRequestMergeMethod) {
 	c.expect = append(c.expect, expectation{
-		op:     mergePullRequestOP,
-		commit: commit,
+		op:          mergePullRequestOP,
+		commit:      commit,
+		mergeMethod: mergeMethod,
 	})
 }
 
@@ -153,7 +157,8 @@ const (
 )
 
 type expectation struct {
-	op     operation
-	commit git.Commit
-	prev   *git.Commit
+	op          operation
+	commit      git.Commit
+	prev        *git.Commit
+	mergeMethod githubv4.PullRequestMergeMethod
 }

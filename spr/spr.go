@@ -217,7 +217,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, upto *int) {
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
-	sd.github.MergePullRequest(ctx, prToMerge)
+	mergeMethod, err := sd.config.MergeMethod()
+	check(err)
+	sd.github.MergePullRequest(ctx, prToMerge, mergeMethod)
 	sd.profiletimer.Step("MergePullRequests::merge pr")
 
 	// Close all the pull requests in the stack below the merged pr
