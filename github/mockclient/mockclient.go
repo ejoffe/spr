@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	NobodyUserID = "U_kgDOBb2UmA"
+	NobodyLogin  = "nobody"
+)
+
 // NewMockClient creates a new mock client
 func NewMockClient(t *testing.T) *MockClient {
 	return &MockClient{
@@ -30,6 +35,20 @@ func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *gith
 		op: getInfoOP,
 	})
 	return c.Info
+}
+
+func (c *MockClient) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
+	fmt.Printf("HUB: GetAssignableUsers\n")
+	c.verifyExpectation(expectation{
+		op: getAssignableUsersOP,
+	})
+	return []github.RepoAssignee{
+		{
+			ID:    NobodyUserID,
+			Login: NobodyLogin,
+			Name:  "No Body",
+		},
+	}
 }
 
 func (c *MockClient) CreatePullRequest(ctx context.Context, info *github.GitHubInfo,
@@ -69,6 +88,13 @@ func (c *MockClient) UpdatePullRequest(ctx context.Context, info *github.GitHubI
 	})
 }
 
+func (c *MockClient) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
+	c.verifyExpectation(expectation{
+		op:      addReviewersOP,
+		userIDs: userIDs,
+	})
+}
+
 func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
 	fmt.Printf("HUB: CommentPullRequest\n")
 	c.verifyExpectation(expectation{
@@ -101,6 +127,12 @@ func (c *MockClient) ExpectGetInfo() {
 	})
 }
 
+func (c *MockClient) ExpectGetAssignableUsers() {
+	c.expect = append(c.expect, expectation{
+		op: getAssignableUsersOP,
+	})
+}
+
 func (c *MockClient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit) {
 	c.expect = append(c.expect, expectation{
 		op:     createPullRequestOP,
@@ -114,6 +146,13 @@ func (c *MockClient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit
 		op:     updatePullRequestOP,
 		commit: commit,
 		prev:   prev,
+	})
+}
+
+func (c *MockClient) ExpectAddReviewers(userIDs []string) {
+	c.expect = append(c.expect, expectation{
+		op:      addReviewersOP,
+		userIDs: userIDs,
 	})
 }
 
@@ -149,8 +188,10 @@ type operation string
 
 const (
 	getInfoOP            operation = "GetInfo"
+	getAssignableUsersOP operation = "GetAssignableUsers"
 	createPullRequestOP  operation = "CreatePullRequest"
 	updatePullRequestOP  operation = "UpdatePullRequest"
+	addReviewersOP       operation = "AddReviewers"
 	commentPullRequestOP operation = "CommentPullRequest"
 	mergePullRequestOP   operation = "MergePullRequest"
 	closePullRequestOP   operation = "ClosePullRequest"
@@ -161,4 +202,5 @@ type expectation struct {
 	commit      git.Commit
 	prev        *git.Commit
 	mergeMethod githubv4.PullRequestMergeMethod
+	userIDs     []string
 }

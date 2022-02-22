@@ -275,6 +275,49 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	return info
 }
 
+// GetAssignableUsers is taken from github.com/cli/cli/api and is the approach used by the official gh
+// client to resolve user IDs to "ID" values for the update PR API calls. See api.RepoAssignableUsers.
+func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
+	if c.config.User.LogGitHubCalls {
+		fmt.Printf("> github get assignable users\n")
+	}
+	type responseData struct {
+		Repository struct {
+			AssignableUsers struct {
+				Nodes    []github.RepoAssignee
+				PageInfo struct {
+					HasNextPage bool
+					EndCursor   string
+				}
+			} `graphql:"assignableUsers(first: 100, after: $endCursor)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	variables := map[string]interface{}{
+		"owner":     githubv4.String(c.config.Repo.GitHubRepoOwner),
+		"name":      githubv4.String(c.config.Repo.GitHubRepoName),
+		"endCursor": (*githubv4.String)(nil),
+	}
+
+	users := []github.RepoAssignee{}
+	for {
+		var query responseData
+		err := c.api.Query(ctx, &query, variables)
+		if err != nil {
+			log.Fatal().Err(err).Msg("get assignable users failed")
+			return nil
+		}
+
+		users = append(users, query.Repository.AssignableUsers.Nodes...)
+		if !query.Repository.AssignableUsers.PageInfo.HasNextPage {
+			break
+		}
+		variables["endCursor"] = githubv4.String(query.Repository.AssignableUsers.PageInfo.EndCursor)
+	}
+
+	return users
+}
+
 func (c *client) CreatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
@@ -435,6 +478,48 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 			Str("title", pr.Title).
 			Err(err).
 			Msg("pull request update failed")
+	}
+}
+
+func ghIds(s []string) *[]githubv4.ID {
+	ids := make([]githubv4.ID, len(s))
+	for i, v := range s {
+		ids[i] = v
+	}
+	return &ids
+}
+
+// AddReviewers adds reviewers to the provided pull request using the requestReviews() API call. It
+// takes github user IDs (ID type) as its input. These can be found by first querying the AssignableUsers
+// for the repo, and then mapping login name to ID.
+func (c *client) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
+	log.Debug().Strs("userIDs", userIDs).Msg("AddReviewers")
+	if c.config.User.LogGitHubCalls {
+		fmt.Printf("> github add reviewers %d - %s - %+v\n", pr.Number, pr.Title, userIDs)
+	}
+	var mutation struct {
+		RequestReviews struct {
+			PullRequest struct {
+				ID string
+			}
+		} `graphql:"requestReviews(input: $input)"`
+	}
+	union := githubv4.Boolean(false)
+	params := githubv4.RequestReviewsInput{
+		PullRequestID: pr.ID,
+		Union:         &union,
+		UserIDs:       ghIds(userIDs),
+	}
+	// variables := map[string]interface{}{"input": params}
+	err := c.api.Mutate(context.Background(), &mutation, params, nil)
+	if err != nil {
+		log.Fatal().
+			Str("id", pr.ID).
+			Int("number", pr.Number).
+			Str("title", pr.Title).
+			Strs("userIDs", userIDs).
+			Err(err).
+			Msg("add reviewers failed")
 	}
 }
 
