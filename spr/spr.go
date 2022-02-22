@@ -77,6 +77,25 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	sd.mustgit("rebase -i --autosquash --autostash", nil)
 }
 
+func (sd *stackediff) addReviewers(ctx context.Context, pr *github.PullRequest, reviewers []string) {
+	assignable := sd.github.GetAssignableUsers(ctx)
+	userIDs := make([]string, 0, len(reviewers))
+	for _, r := range reviewers {
+		found := false
+		for _, u := range assignable {
+			if strings.EqualFold(r, u.Login) {
+				found = true
+				userIDs = append(userIDs, u.ID)
+				break
+			}
+		}
+		if !found {
+			check(fmt.Errorf("unable to add reviewer, user %q not found", r))
+		}
+	}
+	sd.github.AddReviewers(ctx, pr, userIDs)
+}
+
 // UpdatePullRequests implements a stacked diff workflow on top of github.
 //  Each time it's called it compares the local branch unmerged commits
 //   with currently open pull requests in github.
@@ -84,7 +103,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 //   pull request if a commit has been amended.
 //  In the case where commits are reordered, the corresponding pull requests
 //   will also be reordered to match the commit stack order.
-func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
+func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	if githubInfo == nil {
@@ -148,6 +167,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 				}
 				updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 				pr.Commit = c
+				if len(reviewers) != 0 {
+					fmt.Fprintf(sd.output, "warning: not updating reviewers for PR #%d\n", pr.Number)
+				}
 				break
 			}
 		}
@@ -161,6 +183,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context) {
 			pr := sd.github.CreatePullRequest(ctx, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
+			if len(reviewers) != 0 {
+				sd.addReviewers(ctx, pr, reviewers)
+			}
 		}
 	}
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
