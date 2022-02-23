@@ -148,9 +148,9 @@ const (
 func statusBitIcons(config *config.Config) map[string]string {
 	if config.User.StatusBitsEmojis {
 		return map[string]string{
-			"checkmark":    colorGreen + emojiCheckmark + colorReset,
-			"crossmark":    colorRed + emojiCrossmark + colorReset,
-			"pending":      colorBlue + emojiPending + colorReset,
+			"checkmark":    emojiCheckmark,
+			"crossmark":    emojiCrossmark,
+			"pending":      emojiPending,
 			"questionmark": emojiQuestionmark,
 			"empty":        emojiEmpty,
 		}
@@ -217,11 +217,14 @@ func (pr *PullRequest) String(config *config.Config) string {
 	if err != nil {
 		terminalWidth = 1000
 	}
-	lineByteLength := len(line)
 	lineLength := utf8.RuneCountInString(line)
+	if config.User.StatusBitsEmojis {
+		// each emoji consumes 2 chars in the terminal
+		lineLength += 4
+	}
 	diff := lineLength - terminalWidth
 	if diff > 0 {
-		line = line[:lineByteLength-diff-3] + "..."
+		line = line[:terminalWidth-3] + "..."
 	}
 
 	return line
