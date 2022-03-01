@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	hookPath = ".git/hooks/commit-msg"
+	hookPath = "hooks/commit-msg"
 )
 
 func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 	var rootdir string
-	err := gitcmd.Git("rev-parse --show-toplevel", &rootdir)
+	err := gitcmd.Git("rev-parse --git-common-dir", &rootdir)
 	check(err)
 	rootdir = strings.TrimSpace(rootdir)
 	err = os.Chdir(rootdir)
