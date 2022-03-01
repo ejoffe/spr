@@ -379,7 +379,7 @@ func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string 
 		isCurrent := stack[i].Commit == commit
 		var suffix string
 		if isCurrent {
-			suffix = " ⮜"
+			suffix = " ⬅"
 		} else {
 			suffix = ""
 		}
