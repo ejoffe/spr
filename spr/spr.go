@@ -303,7 +303,7 @@ func (sd *stackediff) ProfilingSummary() {
 // getLocalCommitStack returns a list of unmerged commits
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
-	logCommand := fmt.Sprintf("log %s/%s..HEAD",
+	logCommand := fmt.Sprintf("log --no-color %s/%s..HEAD",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
 	sd.mustgit(logCommand, &commitLog)
 	commits, valid := sd.parseLocalCommitStack(commitLog)

@@ -611,7 +611,7 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 
 func getLocalBranchName(gitcmd git.GitInterface) string {
 	var output string
-	err := gitcmd.Git("branch", &output)
+	err := gitcmd.Git("branch --no-color", &output)
 	check(err)
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
