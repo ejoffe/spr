@@ -64,7 +64,7 @@ It even includes some **markdown** formatting.
 ---
 
 **Stack**:
-- #2 ⮜
+- #2 ⬅
 - #1
 
 
