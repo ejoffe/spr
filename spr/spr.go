@@ -77,8 +77,8 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	sd.mustgit("rebase -i --autosquash --autostash", nil)
 }
 
-func (sd *stackediff) addReviewers(ctx context.Context, pr *github.PullRequest, reviewers []string) {
-	assignable := sd.github.GetAssignableUsers(ctx)
+func (sd *stackediff) addReviewers(ctx context.Context,
+	pr *github.PullRequest, reviewers []string, assignable []github.RepoAssignee) {
 	userIDs := make([]string, 0, len(reviewers))
 	for _, r := range reviewers {
 		found := false
@@ -151,6 +151,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	}
 
 	updateQueue := make([]prUpdate, 0)
+	var assignable []github.RepoAssignee
 
 	// iterate through local_commits and update pull_requests
 	for commitIndex, c := range localCommits {
@@ -184,7 +185,10 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 			if len(reviewers) != 0 {
-				sd.addReviewers(ctx, pr, reviewers)
+				if assignable == nil {
+					assignable = sd.github.GetAssignableUsers(ctx)
+				}
+				sd.addReviewers(ctx, pr, reviewers, assignable)
 			}
 		}
 	}

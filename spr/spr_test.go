@@ -112,20 +112,32 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	gitmock.ExpectFetch()
 	gitmock.ExpectLogAndRespond([]*git.Commit{&c4, &c3, &c2, &c1})
 	gitmock.ExpectPushCommits([]*git.Commit{&c3, &c4})
+
+	// For the first "create" call we should call GetAssignableUsers
 	githubmock.ExpectCreatePullRequest(c3, &c2)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+
+	// For the first "create" call we should *not* call GetAssignableUsers
 	githubmock.ExpectCreatePullRequest(c4, &c3)
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+
 	githubmock.ExpectUpdatePullRequest(c1, nil)
 	githubmock.ExpectUpdatePullRequest(c2, &c1)
 	githubmock.ExpectUpdatePullRequest(c3, &c2)
 	githubmock.ExpectUpdatePullRequest(c4, &c3)
 	githubmock.ExpectGetInfo()
-	s.UpdatePullRequests(ctx, nil)
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin})
 	lines = strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
-	assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[1])
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[2])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[3])
+	assert.Equal([]string{
+		"warning: not updating reviewers for PR #1",
+		"warning: not updating reviewers for PR #1",
+		"[✔✔✔✔]   1 : test commit 4",
+		"[✔✔✔✔]   1 : test commit 3",
+		"[✔✔✔✔]   1 : test commit 2",
+		"[✔✔✔✔]   1 : test commit 1",
+	}, lines[:6])
 	output.Reset()
 
 	// 'git spr -m' :: MergePullRequest :: commits=[a1, a2, a3, a4]
