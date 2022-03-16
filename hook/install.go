@@ -8,6 +8,7 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -21,6 +22,8 @@ func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 	rootdir = strings.TrimSpace(rootdir)
 	err = os.Chdir(rootdir)
 	check(err)
+
+	log.Debug().Str("rootdir", rootdir).Msg("InstallCommitHook")
 
 	info, err := os.Lstat(hookPath)
 	if err == nil {
