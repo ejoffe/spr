@@ -16,6 +16,7 @@ import (
 	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/hook"
+	"github.com/rs/zerolog/log"
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
@@ -353,13 +354,16 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) ([]git.Commit, boo
 	var scannedCommit git.Commit
 
 	lines := strings.Split(commitLog, "\n")
+	log.Debug().Int("lines", len(lines)).Msg("parseLocalCommitStack")
 	for index, line := range lines {
 
 		// match commit hash : start of a new commit
 		matches := commitHashRegex.FindStringSubmatch(line)
 		if matches != nil {
+			log.Debug().Interface("matches", matches).Msg("parseLocalCommitStack :: commitHashMatch")
 			if commitScanOn {
 				// missing the commit-id
+				log.Debug().Msg("parseLocalCommitStack :: missing commit id")
 				return nil, false
 			}
 			commitScanOn = true
@@ -372,6 +376,7 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) ([]git.Commit, boo
 		// match commit id : last thing in the commit
 		matches = commitIDRegex.FindStringSubmatch(line)
 		if matches != nil {
+			log.Debug().Interface("matches", matches).Msg("parseLocalCommitStack :: commitIdMatch")
 			scannedCommit.CommitID = matches[1]
 			scannedCommit.Body = strings.TrimSpace(scannedCommit.Body)
 
@@ -400,9 +405,11 @@ func (sd *stackediff) parseLocalCommitStack(commitLog string) ([]git.Commit, boo
 	//  a commit-id
 	if commitScanOn {
 		// missing the commit-id
+		log.Debug().Msg("parseLocalCommitStack :: missing last commit id")
 		return nil, false
 	}
 
+	log.Debug().Interface("commits", commits).Msg("parseLocalCommitStack")
 	return commits, true
 }
 
