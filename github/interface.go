@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ejoffe/spr/git"
-	"github.com/shurcooL/githubv4"
+	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 )
 
 type GitHubInterface interface {
@@ -14,7 +14,7 @@ type GitHubInterface interface {
 	UpdatePullRequest(ctx context.Context, info *GitHubInfo, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
 	AddReviewers(ctx context.Context, pr *PullRequest, userIDs []string)
 	CommentPullRequest(ctx context.Context, pr *PullRequest, comment string)
-	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod githubv4.PullRequestMergeMethod)
+	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod genclient.PullRequestMergeMethod)
 	ClosePullRequest(ctx context.Context, pr *PullRequest)
 }
 

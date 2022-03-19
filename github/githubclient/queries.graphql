@@ -1,0 +1,161 @@
+query PullRequests(
+	$repo_owner: String!,	
+	$repo_name: String!,	
+){
+	viewer {
+		login
+		pullRequests(first:100, states:[OPEN]) {
+			nodes {
+				id
+				number
+				title
+				baseRefName
+				headRefName
+				mergeable
+				reviewDecision
+				repository {
+					id
+				}
+				commits(first:100) {
+					nodes {
+						commit {
+							oid
+							messageHeadline
+							messageBody
+							statusCheckRollup {
+								state
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	repository(owner:$repo_owner, name:$repo_name) {
+		id
+	}
+}
+
+query AssignableUsers(
+	$repo_owner: String!,	
+	$repo_name: String!,	
+	$end_cursor: String,
+) {
+	repository(owner:$repo_owner, name:$repo_name) {
+		assignableUsers(first:100, after:$end_cursor) {
+			nodes {
+				id
+				login
+				name
+			}
+			pageInfo {
+				hasNextPage
+				endCursor
+			}
+		}
+	}
+}
+
+mutation CreatePullRequest(
+	$input: CreatePullRequestInput!
+) {
+	createPullRequest(
+		input: $input
+	) {
+		pullRequest {
+			id
+			number
+		}
+	}
+}
+
+mutation UpdatePullRequest(
+	$input: UpdatePullRequestInput!
+) {
+	updatePullRequest(
+		input: $input
+	) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+mutation AddReviewers(
+	$input: RequestReviewsInput!
+) {
+	requestReviews(
+		input: $input
+	) {
+		pullRequest {
+			id
+		}
+	}
+}
+
+mutation CommentPullRequest(
+	$input: AddCommentInput!
+) {
+	addComment(
+		input: $input
+	) {
+		clientMutationId
+	}
+}
+
+mutation MergePullRequest(
+	$input: MergePullRequestInput!
+) {
+	mergePullRequest(
+		input: $input
+	) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+mutation ClosePullRequest(
+	$input: ClosePullRequestInput!
+) {
+	closePullRequest(
+		input: $input
+	) {
+		pullRequest {
+			number
+		}
+	}
+}
+
+query StarCheck(
+	$after: String,
+) {
+	viewer {
+		starredRepositories(first:100, after:$after) {
+			nodes {
+				nameWithOwner
+			}
+			edges {
+				cursor
+			}
+			totalCount
+		}
+	}
+}
+
+query StarGetRepo(
+	$owner: String!,
+	$name: String!,
+) {
+	repository(owner: $owner, name: $name) {
+		id
+	}
+}
+
+mutation StarAdd(
+	$input: AddStarInput!
+) {
+	addStar(input: $input) {
+		clientMutationId
+	}
+}

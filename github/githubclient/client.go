@@ -15,10 +15,12 @@ import (
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/rs/zerolog/log"
-	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
+
+//go:generate go run github.com/inigolabs/fezzik --config fezzik.yaml
 
 // hub cli config (https://hub.github.com)
 type hubCLIConfig map[string][]struct {
@@ -144,9 +146,9 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
-	var api *githubv4.Client
+	var api genclient.Client
 	if strings.HasSuffix(config.Repo.GitHubHost, "github.com") {
-		api = githubv4.NewClient(tc)
+		api = genclient.NewClient("https://api.github.com/graphql", tc)
 	} else {
 		var scheme, host string
 		gitHubRemoteUrl, err := url.Parse(config.Repo.GitHubHost)
@@ -158,7 +160,7 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 			host = gitHubRemoteUrl.Host
 			scheme = gitHubRemoteUrl.Scheme
 		}
-		api = githubv4.NewEnterpriseClient(fmt.Sprintf("%s://%s/api/graphql", scheme, host), tc)
+		api = genclient.NewClient(fmt.Sprintf("%s://%s/api/graphql", scheme, host), tc)
 	}
 	return &client{
 		config: config,
@@ -168,7 +170,7 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 
 type client struct {
 	config *config.Config
-	api    *githubv4.Client
+	api    genclient.Client
 }
 
 var BranchNameRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
@@ -177,56 +179,20 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
 	}
-	var query struct {
-		Viewer struct {
-			Login        string
-			PullRequests struct {
-				Nodes []struct {
-					ID             string
-					Number         int
-					Title          string
-					BaseRefName    string
-					HeadRefName    string
-					Mergeable      string
-					ReviewDecision string
-					Repository     struct {
-						ID string
-					}
-					Commits struct {
-						Nodes []struct {
-							Commit struct {
-								Oid               string
-								MessageHeadline   string
-								MessageBody       string
-								StatusCheckRollup struct {
-									State string
-								}
-							}
-						}
-					} `graphql:"commits(first:100)"`
-				}
-			} `graphql:"pullRequests(first:100, states:[OPEN])"`
-		}
-		Repository struct {
-			ID string
-		} `graphql:"repository(owner:$repo_owner, name:$repo_name)"`
-	}
-	variables := map[string]interface{}{
-		"repo_owner": githubv4.String(c.config.Repo.GitHubRepoOwner),
-		"repo_name":  githubv4.String(c.config.Repo.GitHubRepoName),
-	}
-	err := c.api.Query(ctx, &query, variables)
+	resp, err := c.api.PullRequests(ctx,
+		c.config.Repo.GitHubRepoOwner,
+		c.config.Repo.GitHubRepoName)
 	check(err)
 
 	branchname := getLocalBranchName(gitcmd)
 
 	var requests []*github.PullRequest
-	for _, node := range query.Viewer.PullRequests.Nodes {
-		if query.Repository.ID != node.Repository.ID {
+	for _, node := range *resp.Viewer.PullRequests.Nodes {
+		if resp.Repository.Id != node.Repository.Id {
 			continue
 		}
 		pullRequest := &github.PullRequest{
-			ID:         node.ID,
+			ID:         node.Id,
 			Number:     node.Number,
 			Title:      node.Title,
 			FromBranch: node.HeadRefName,
@@ -235,24 +201,27 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 
 		matches := BranchNameRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil && matches[1] == branchname {
+			commit := (*node.Commits.Nodes)[0].Commit
 			pullRequest.Commit = git.Commit{
 				CommitID:   matches[2],
-				CommitHash: node.Commits.Nodes[0].Commit.Oid,
-				Subject:    node.Commits.Nodes[0].Commit.MessageHeadline,
-				Body:       node.Commits.Nodes[0].Commit.MessageBody,
+				CommitHash: commit.Oid,
+				Subject:    commit.MessageHeadline,
+				Body:       commit.MessageBody,
 			}
 
 			checkStatus := github.CheckStatusFail
-			switch node.Commits.Nodes[0].Commit.StatusCheckRollup.State {
-			case "SUCCESS":
-				checkStatus = github.CheckStatusPass
-			case "PENDING":
-				checkStatus = github.CheckStatusPending
+			if commit.StatusCheckRollup != nil {
+				switch commit.StatusCheckRollup.State {
+				case "SUCCESS":
+					checkStatus = github.CheckStatusPass
+				case "PENDING":
+					checkStatus = github.CheckStatusPending
+				}
 			}
 
 			pullRequest.MergeStatus = github.PullRequestMergeStatus{
 				ChecksPass:     checkStatus,
-				ReviewApproved: node.ReviewDecision == "APPROVED",
+				ReviewApproved: node.ReviewDecision != nil && *node.ReviewDecision == "APPROVED",
 				NoConflicts:    node.Mergeable == "MERGEABLE",
 			}
 
@@ -263,8 +232,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	requests = github.SortPullRequests(requests, c.config)
 
 	info := &github.GitHubInfo{
-		UserName:     query.Viewer.Login,
-		RepositoryID: query.Repository.ID,
+		UserName:     resp.Viewer.Login,
+		RepositoryID: resp.Repository.Id,
 		LocalBranch:  branchname,
 		PullRequests: requests,
 	}
@@ -280,38 +249,29 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github get assignable users\n")
 	}
-	type responseData struct {
-		Repository struct {
-			AssignableUsers struct {
-				Nodes    []github.RepoAssignee
-				PageInfo struct {
-					HasNextPage bool
-					EndCursor   string
-				}
-			} `graphql:"assignableUsers(first: 100, after: $endCursor)"`
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
-
-	variables := map[string]interface{}{
-		"owner":     githubv4.String(c.config.Repo.GitHubRepoOwner),
-		"name":      githubv4.String(c.config.Repo.GitHubRepoName),
-		"endCursor": (*githubv4.String)(nil),
-	}
 
 	users := []github.RepoAssignee{}
+	var endCursor *string
 	for {
-		var query responseData
-		err := c.api.Query(ctx, &query, variables)
+		resp, err := c.api.AssignableUsers(ctx,
+			c.config.Repo.GitHubRepoOwner,
+			c.config.Repo.GitHubRepoName, endCursor)
 		if err != nil {
 			log.Fatal().Err(err).Msg("get assignable users failed")
 			return nil
 		}
 
-		users = append(users, query.Repository.AssignableUsers.Nodes...)
-		if !query.Repository.AssignableUsers.PageInfo.HasNextPage {
+		for _, node := range *resp.Repository.AssignableUsers.Nodes {
+			users = append(users, github.RepoAssignee{
+				ID:    node.Id,
+				Login: node.Login,
+				Name:  *node.Name,
+			})
+		}
+		if !resp.Repository.AssignableUsers.PageInfo.HasNextPage {
 			break
 		}
-		variables["endCursor"] = githubv4.String(query.Repository.AssignableUsers.PageInfo.EndCursor)
+		endCursor = resp.Repository.AssignableUsers.PageInfo.EndCursor
 	}
 
 	return users
@@ -330,29 +290,20 @@ func (c *client) CreatePullRequest(ctx context.Context,
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
 		Msg("CreatePullRequest")
 
-	var mutation struct {
-		CreatePullRequest struct {
-			PullRequest struct {
-				ID     string
-				Number int
-			}
-		} `graphql:"createPullRequest(input: $input)"`
-	}
-	commitBody := githubv4.String(formatBody(commit, info.PullRequests))
-	input := githubv4.CreatePullRequestInput{
-		RepositoryID: info.RepositoryID,
-		BaseRefName:  githubv4.String(baseRefName),
-		HeadRefName:  githubv4.String(headRefName),
-		Title:        githubv4.String(commit.Subject),
+	commitBody := formatBody(commit, info.PullRequests)
+	resp, err := c.api.CreatePullRequest(ctx, genclient.CreatePullRequestInput{
+		RepositoryId: info.RepositoryID,
+		BaseRefName:  baseRefName,
+		HeadRefName:  headRefName,
+		Title:        commit.Subject,
 		Body:         &commitBody,
-		Draft:        githubv4.NewBoolean(githubv4.Boolean(c.config.User.CreateDraftPRs)),
-	}
-	err := c.api.Mutate(ctx, &mutation, input, nil)
+		Draft:        &c.config.User.CreateDraftPRs,
+	})
 	check(err)
 
 	pr := &github.PullRequest{
-		ID:         mutation.CreatePullRequest.PullRequest.ID,
-		Number:     mutation.CreatePullRequest.PullRequest.Number,
+		ID:         resp.CreatePullRequest.PullRequest.Id,
+		Number:     resp.CreatePullRequest.PullRequest.Number,
 		FromBranch: headRefName,
 		ToBranch:   baseRefName,
 		Commit:     commit,
@@ -366,7 +317,7 @@ func (c *client) CreatePullRequest(ctx context.Context,
 	}
 
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github create %d: %s\n", pr.Number, pr.Title)
+		fmt.Printf("> github create %d : %s\n", pr.Number, pr.Title)
 	}
 
 	return pr
@@ -413,7 +364,7 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github update %d - %s\n", pr.Number, pr.Title)
+		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
 	baseRefName := c.config.Repo.GitHubBranch
@@ -425,27 +376,14 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 		Str("FromBranch", pr.FromBranch).Str("ToBranch", baseRefName).
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
-	var mutation struct {
-		UpdatePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"updatePullRequest(input: $input)"`
-	}
-	baseRefNameStr := githubv4.String(baseRefName)
-	subject := githubv4.String(commit.Subject)
-	body := githubv4.String(formatBody(commit, info.PullRequests))
-	input := githubv4.UpdatePullRequestInput{
-		PullRequestID: pr.ID,
-		BaseRefName:   &baseRefNameStr,
-		Title:         &subject,
+	body := formatBody(commit, info.PullRequests)
+	_, err := c.api.UpdatePullRequest(ctx, genclient.UpdatePullRequestInput{
+		PullRequestId: pr.ID,
+		BaseRefName:   &baseRefName,
+		Title:         &commit.Subject,
 		Body:          &body,
-	}
-	if c.config.User.PreserveTitleAndBody {
-		input.Title = nil
-		input.Body = nil
-	}
-	err := c.api.Mutate(ctx, &mutation, input, nil)
+	})
+
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).
@@ -456,37 +394,20 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 	}
 }
 
-func ghIds(s []string) *[]githubv4.ID {
-	ids := make([]githubv4.ID, len(s))
-	for i, v := range s {
-		ids[i] = v
-	}
-	return &ids
-}
-
 // AddReviewers adds reviewers to the provided pull request using the requestReviews() API call. It
 // takes github user IDs (ID type) as its input. These can be found by first querying the AssignableUsers
 // for the repo, and then mapping login name to ID.
 func (c *client) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
 	log.Debug().Strs("userIDs", userIDs).Msg("AddReviewers")
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github add reviewers %d - %s - %+v\n", pr.Number, pr.Title, userIDs)
+		fmt.Printf("> github add reviewers %d : %s - %+v\n", pr.Number, pr.Title, userIDs)
 	}
-	var mutation struct {
-		RequestReviews struct {
-			PullRequest struct {
-				ID string
-			}
-		} `graphql:"requestReviews(input: $input)"`
-	}
-	union := githubv4.Boolean(false)
-	params := githubv4.RequestReviewsInput{
-		PullRequestID: pr.ID,
+	union := false
+	_, err := c.api.AddReviewers(ctx, genclient.RequestReviewsInput{
+		PullRequestId: pr.ID,
 		Union:         &union,
-		UserIDs:       ghIds(userIDs),
-	}
-	// variables := map[string]interface{}{"input": params}
-	err := c.api.Mutate(context.Background(), &mutation, params, nil)
+		UserIds:       &userIDs,
+	})
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).
@@ -499,16 +420,10 @@ func (c *client) AddReviewers(ctx context.Context, pr *github.PullRequest, userI
 }
 
 func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
-	var updatepr struct {
-		PullRequest struct {
-			ClientMutationID string
-		} `graphql:"addComment(input: $input)"`
-	}
-	updatePRInput := githubv4.AddCommentInput{
-		SubjectID: pr.ID,
-		Body:      githubv4.String(comment),
-	}
-	err := c.api.Mutate(ctx, &updatepr, updatePRInput, nil)
+	_, err := c.api.CommentPullRequest(ctx, genclient.AddCommentInput{
+		SubjectId: pr.ID,
+		Body:      comment,
+	})
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).
@@ -519,29 +434,21 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 	}
 
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github add comment %d: %s\n", pr.Number, pr.Title)
+		fmt.Printf("> github add comment %d : %s\n", pr.Number, pr.Title)
 	}
 }
 
 func (c *client) MergePullRequest(ctx context.Context,
-	pr *github.PullRequest, mergeMethod githubv4.PullRequestMergeMethod) {
+	pr *github.PullRequest, mergeMethod genclient.PullRequestMergeMethod) {
 	log.Debug().
 		Interface("PR", pr).
 		Str("mergeMethod", string(mergeMethod)).
 		Msg("MergePullRequest")
 
-	var mergepr struct {
-		MergePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"mergePullRequest(input: $input)"`
-	}
-	mergePRInput := githubv4.MergePullRequestInput{
-		PullRequestID: pr.ID,
+	_, err := c.api.MergePullRequest(ctx, genclient.MergePullRequestInput{
+		PullRequestId: pr.ID,
 		MergeMethod:   &mergeMethod,
-	}
-	err := c.api.Mutate(ctx, &mergepr, mergePRInput, nil)
+	})
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).
@@ -553,23 +460,15 @@ func (c *client) MergePullRequest(ctx context.Context,
 	check(err)
 
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github merge %d: %s\n", pr.Number, pr.Title)
+		fmt.Printf("> github merge %d : %s\n", pr.Number, pr.Title)
 	}
 }
 
 func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	log.Debug().Interface("PR", pr).Msg("ClosePullRequest")
-	var closepr struct {
-		ClosePullRequest struct {
-			PullRequest struct {
-				Number int
-			}
-		} `graphql:"closePullRequest(input: $input)"`
-	}
-	closePRInput := githubv4.ClosePullRequestInput{
-		PullRequestID: pr.ID,
-	}
-	err := c.api.Mutate(ctx, &closepr, closePRInput, nil)
+	_, err := c.api.ClosePullRequest(ctx, genclient.ClosePullRequestInput{
+		PullRequestId: pr.ID,
+	})
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).
@@ -580,7 +479,7 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	}
 
 	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github close %d: %s\n", pr.Number, pr.Title)
+		fmt.Printf("> github close %d : %s\n", pr.Number, pr.Title)
 	}
 }
 

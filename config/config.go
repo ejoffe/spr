@@ -10,7 +10,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/git"
-	"github.com/shurcooL/githubv4"
+	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 )
 
 type Config struct {
@@ -125,16 +125,16 @@ func GitHubRemoteSource(config *Config, gitcmd git.GitInterface) *remoteSource {
 	}
 }
 
-func (c Config) MergeMethod() (githubv4.PullRequestMergeMethod, error) {
-	var mergeMethod githubv4.PullRequestMergeMethod
+func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
+	var mergeMethod genclient.PullRequestMergeMethod
 	var err error
 	switch strings.ToLower(c.Repo.MergeMethod) {
 	case "merge":
-		mergeMethod = githubv4.PullRequestMergeMethodMerge
+		mergeMethod = genclient.PullRequestMergeMethod_MERGE
 	case "squash":
-		mergeMethod = githubv4.PullRequestMergeMethodSquash
+		mergeMethod = genclient.PullRequestMergeMethod_SQUASH
 	case "rebase", "":
-		mergeMethod = githubv4.PullRequestMergeMethodRebase
+		mergeMethod = genclient.PullRequestMergeMethod_REBASE
 	default:
 		err = fmt.Errorf(
 			`unknown merge method %q, choose from "merge", "squash", or "rebase"`,
