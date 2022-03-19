@@ -21,10 +21,15 @@ jobs:
 
     - name: Test
       working-directory: ./
-      run: go test -race -coverprofile=./coverage.txt -covermode=atomic ./...
+      run: go test -race -coverprofile=./coverage.out -covermode=atomic ./...
     
-    #- name: Upload coverage
-    #  uses: codecov/codecov-action@v2
-    #  with:
-    #    files: ./coverage.txt
+    - name: Install goveralls
+      env:
+        GO111MODULE: off
+      run: go get -v github.com/mattn/goveralls
 
+    - name: Send coverage to Coveralls
+      working-directory: ./
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -service github -coverprofile coverage.out
