@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ejoffe/spr/git/mockgit"
-	"github.com/shurcooL/githubv4"
+	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -126,23 +126,23 @@ func TestGitHubRemoteSource(t *testing.T) {
 func TestMergeMethodHelper(t *testing.T) {
 	for _, tc := range []struct {
 		configValue string
-		expected    githubv4.PullRequestMergeMethod
+		expected    genclient.PullRequestMergeMethod
 	}{
 		{
 			configValue: "rebase",
-			expected:    githubv4.PullRequestMergeMethodRebase,
+			expected:    genclient.PullRequestMergeMethod_REBASE,
 		},
 		{
 			configValue: "",
-			expected:    githubv4.PullRequestMergeMethodRebase,
+			expected:    genclient.PullRequestMergeMethod_REBASE,
 		},
 		{
 			configValue: "Merge",
-			expected:    githubv4.PullRequestMergeMethodMerge,
+			expected:    genclient.PullRequestMergeMethod_MERGE,
 		},
 		{
 			configValue: "SQUASH",
-			expected:    githubv4.PullRequestMergeMethodSquash,
+			expected:    genclient.PullRequestMergeMethod_SQUASH,
 		},
 	} {
 		tcName := tc.configValue

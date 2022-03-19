@@ -1,0 +1,14 @@
+schemas: 
+  - github.schema.graphql
+operations:
+  - queries.graphql
+package_name: genclient
+package_dir: gen
+scalar_type_map:
+  ID:          string
+  GitObjectID: string
+  DateTime:    string
+  URI:         string
+  GitRefname:  string
+generate_mocks: false
+debug: false
