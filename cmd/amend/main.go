@@ -21,7 +21,8 @@ var (
 
 // command line opts
 type opts struct {
-	Version bool `short:"v" long:"version" description:"Show version info."`
+	Debug   bool `short:"d" long:"debug" description:"Show verbose debug info."`
+	Version bool `short:"v" long:"version" description:"Show version."`
 }
 
 func init() {
@@ -37,6 +38,10 @@ func main() {
 	if opts.Version {
 		fmt.Printf("amend version : %s : %s : %s\n", version, date, commit[:8])
 		os.Exit(0)
+	}
+
+	if opts.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
 	gitcmd := realgit.NewGitCmd(config.DefaultConfig())
