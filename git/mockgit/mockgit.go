@@ -85,7 +85,7 @@ func (m *Mock) ExpectRemote(remote string) {
 
 func (m *Mock) ExpectFixup(commitHash string) {
 	m.expect("git commit --fixup " + commitHash)
-	m.expect("git rebase -i --autosquash --autostash")
+	m.expect("git rebase -i --autosquash --autostash origin/master")
 }
 
 func (m *Mock) expect(cmd string, args ...interface{}) *Mock {

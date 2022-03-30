@@ -75,7 +75,10 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	commitIndex = commitIndex - 1
 	check(err)
 	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
-	sd.mustgit("rebase -i --autosquash --autostash", nil)
+
+	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+	sd.mustgit(rebaseCmd, nil)
 }
 
 func (sd *stackediff) addReviewers(ctx context.Context,
