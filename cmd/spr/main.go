@@ -43,7 +43,6 @@ func main() {
 
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, cfg)
-	client.MaybeStar(ctx, cfg)
 	stackedpr := spr.NewStackedPR(cfg, client, gitcmd)
 
 	detailFlag := &cli.BoolFlag{
@@ -116,6 +115,7 @@ VERSION: {{.Version}}
 				cfg.User.LogGitCommands = true
 				cfg.User.LogGitHubCalls = true
 			}
+			client.MaybeStar(ctx, cfg)
 			return nil
 		},
 		Commands: []*cli.Command{
