@@ -18,7 +18,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
-	"mvdan.cc/xurls"
 )
 
 // hub cli config (https://hub.github.com)
@@ -394,7 +393,7 @@ func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 		return strings.TrimSpace(commit.Body)
 	}
 
-	if body == "" {
+	if commit.Body == "" {
 		return fmt.Sprintf("**Stack**:\n%s",
 			addManualMergeNotice(formatStackMarkdown(commit, stack)))
 	}
