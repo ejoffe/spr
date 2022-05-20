@@ -398,7 +398,7 @@ func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 			addManualMergeNotice(formatStackMarkdown(commit, stack)))
 	}
 
-	return fmt.Sprintf("%s---\n\n**Stack**:\n%s",
+	return fmt.Sprintf("%s\n\n---\n\n**Stack**:\n%s",
 		commit.Body,
 		addManualMergeNotice(formatStackMarkdown(commit, stack)))
 }
