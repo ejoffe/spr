@@ -220,7 +220,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 //  pull request. This one merge in effect merges all the commits in the stack.
 //  We than close all the pull requests which are below the merged request, as
 //  their commits have already been merged.
-func (sd *stackediff) MergePullRequests(ctx context.Context, upto *int) {
+func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	sd.profiletimer.Step("MergePullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
@@ -233,7 +233,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, upto *int) {
 			prIndex--
 			break
 		}
-		if upto != nil && pr.Number == *upto {
+		if count != nil && (prIndex+1) == int(*count) {
 			break
 		}
 	}

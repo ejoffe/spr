@@ -135,17 +135,17 @@ MERGED #60 Feature 3
 [✅❌✅✅] 61: Feature 4
 ```
 
-To merge only part of the stack use the **--upto** flag with the top pull request number in the stack that you would like to merge.
-
-By default merges are done using the rebase merge method, this can be changed using the mergeMethod configuration.
+To merge only part of the stack use the **--count** flag with the number of pull requests in the stack that you would like to merge. Pull requests will be merged from the bottom of the stack upwards. 
 
 ```shell
-> git spr merge --upto 59
+> git spr merge --count 2
 MERGED #58 Feature 1
 MERGED #59 Feature 2
 [✅❌✅✅] 61: Feature 4
 [✅✅✅✅] 60: Feature 3
 ```
+
+By default merges are done using the rebase merge method, this can be changed using the mergeMethod configuration.
 
 Configuration
 -------------
