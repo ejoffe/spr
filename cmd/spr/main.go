@@ -153,9 +153,9 @@ VERSION: {{.Version}}
 				Usage: "Merge all mergeable pull requests",
 				Action: func(c *cli.Context) error {
 
-					if c.IsSet("upto") {
-						upto := c.Int("upto")
-						stackedpr.MergePullRequests(ctx, &upto)
+					if c.IsSet("count") {
+						count := c.Uint("count")
+						stackedpr.MergePullRequests(ctx, &count)
 					} else {
 						stackedpr.MergePullRequests(ctx, nil)
 					}
@@ -164,9 +164,10 @@ VERSION: {{.Version}}
 				},
 				Flags: []cli.Flag{
 					detailFlag,
-					&cli.IntFlag{
-						Name:  "upto",
-						Usage: "Only merge prs upto and including the provided pr number",
+					&cli.UintFlag{
+						Name:    "count",
+						Aliases: []string{"c"},
+						Usage:   "Merge a specified number of pull requests from the bottom of the stack",
 					},
 				},
 			},
