@@ -61,20 +61,25 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	if len(localCommits) == 1 {
 		fmt.Fprintf(sd.output, "Commit to amend [%d]: ", 1)
 	} else {
-		fmt.Fprintf(sd.output, "Commit to amend [%d-%d]: ", 1, len(localCommits))
+		fmt.Fprintf(sd.output, "Commit to amend (%d-%d): ", 1, len(localCommits))
 	}
 
 	reader := bufio.NewReader(sd.input)
 	line, _ := reader.ReadString('\n')
 	line = strings.TrimSpace(line)
-	commitIndex, err := strconv.Atoi(line)
-	if err != nil || commitIndex < 1 || commitIndex > len(localCommits) {
-		fmt.Fprint(sd.output, "Invalid input\n")
-		return
+	selectedCommitIndex := 0
+	if len(localCommits) == 1 && line == "" {
+		// do nothing, use the default
+	} else {
+		commitIndex, err := strconv.Atoi(line)
+		if err != nil || commitIndex < 1 || commitIndex > len(localCommits) {
+			fmt.Fprint(sd.output, "Invalid input\n")
+			return
+		}
+		selectedCommitIndex = commitIndex - 1
+		check(err)
 	}
-	commitIndex = commitIndex - 1
-	check(err)
-	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
+	sd.mustgit("commit --fixup "+localCommits[selectedCommitIndex].CommitHash, nil)
 
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)

@@ -448,6 +448,23 @@ func TestAmendOneCommit(t *testing.T) {
 	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: ", output.String())
 }
 
+func TestAmendOneCommitAndPickDefault(t *testing.T) {
+	s, gitmock, _, input, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	gitmock.ExpectFixup(c1.CommitHash)
+	input.WriteString("")
+	s.AmendCommit(ctx)
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: ", output.String())
+}
+
 func TestAmendTwoCommits(t *testing.T) {
 	s, gitmock, _, input, output := makeTestObjects(t)
 	assert := require.New(t)
@@ -467,7 +484,7 @@ func TestAmendTwoCommits(t *testing.T) {
 	gitmock.ExpectFixup(c2.CommitHash)
 	input.WriteString("1")
 	s.AmendCommit(ctx)
-	assert.Equal(" 2 : 00000001 : test commit 1\n 1 : 00000002 : test commit 2\nCommit to amend [1-2]: ", output.String())
+	assert.Equal(" 2 : 00000001 : test commit 1\n 1 : 00000002 : test commit 2\nCommit to amend (1-2): ", output.String())
 }
 
 func TestAmendInvalidInput(t *testing.T) {
