@@ -59,9 +59,9 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	}
 
 	if len(localCommits) == 1 {
-		fmt.Fprintf(sd.output, "Commit to amend [%d]: ", 1)
+		fmt.Fprintf(sd.output, "Commit to amend (%d): ", 1)
 	} else {
-		fmt.Fprintf(sd.output, "Commit to amend [%d-%d]: ", 1, len(localCommits))
+		fmt.Fprintf(sd.output, "Commit to amend (%d-%d): ", 1, len(localCommits))
 	}
 
 	reader := bufio.NewReader(sd.input)
