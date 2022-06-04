@@ -7,6 +7,7 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git/realgit"
+	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
 	"github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
@@ -23,6 +24,7 @@ var (
 type opts struct {
 	Debug   bool `short:"d" long:"debug" description:"Show verbose debug info."`
 	Version bool `short:"v" long:"version" description:"Show version."`
+	Update  bool `short:"u" long:"update" description:"Run spr update after amend."`
 }
 
 func init() {
@@ -54,12 +56,17 @@ func main() {
 		os.Exit(2)
 	}
 
-	cfg := config.ParseConfig(gitcmd)
-	gitcmd = realgit.NewGitCmd(cfg)
 	ctx := context.Background()
+	cfg := config.ParseConfig(gitcmd)
+	client := githubclient.NewGitHubClient(ctx, cfg)
+	gitcmd = realgit.NewGitCmd(cfg)
 
-	sd := spr.NewStackedPR(cfg, nil, gitcmd)
+	sd := spr.NewStackedPR(cfg, client, gitcmd)
 	sd.AmendCommit(ctx)
+
+	if opts.Update {
+		sd.UpdatePullRequests(ctx, nil, nil)
+	}
 }
 
 func check(err error) {
