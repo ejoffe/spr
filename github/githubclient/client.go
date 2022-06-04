@@ -441,6 +441,10 @@ func (c *client) UpdatePullRequest(ctx context.Context,
 		Title:         &subject,
 		Body:          &body,
 	}
+	if c.config.User.PreserveTitleAndBody {
+		input.Title = nil
+		input.Body = nil
+	}
 	err := c.api.Mutate(ctx, &mutation, input, nil)
 	if err != nil {
 		log.Fatal().
