@@ -445,7 +445,7 @@ func TestAmendOneCommit(t *testing.T) {
 	gitmock.ExpectFixup(c1.CommitHash)
 	input.WriteString("1")
 	s.AmendCommit(ctx)
-	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: ", output.String())
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend (1): ", output.String())
 }
 
 func TestAmendTwoCommits(t *testing.T) {
@@ -467,7 +467,7 @@ func TestAmendTwoCommits(t *testing.T) {
 	gitmock.ExpectFixup(c2.CommitHash)
 	input.WriteString("1")
 	s.AmendCommit(ctx)
-	assert.Equal(" 2 : 00000001 : test commit 1\n 1 : 00000002 : test commit 2\nCommit to amend [1-2]: ", output.String())
+	assert.Equal(" 2 : 00000001 : test commit 1\n 1 : 00000002 : test commit 2\nCommit to amend (1-2): ", output.String())
 }
 
 func TestAmendInvalidInput(t *testing.T) {
@@ -484,19 +484,19 @@ func TestAmendInvalidInput(t *testing.T) {
 	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
 	input.WriteString("a")
 	s.AmendCommit(ctx)
-	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend (1): Invalid input\n", output.String())
 	output.Reset()
 
 	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
 	input.WriteString("0")
 	s.AmendCommit(ctx)
-	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend (1): Invalid input\n", output.String())
 	output.Reset()
 
 	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
 	input.WriteString("2")
 	s.AmendCommit(ctx)
-	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend [1]: Invalid input\n", output.String())
+	assert.Equal(" 1 : 00000001 : test commit 1\nCommit to amend (1): Invalid input\n", output.String())
 	output.Reset()
 }
 
