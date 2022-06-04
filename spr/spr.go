@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ejoffe/profiletimer"
 	"github.com/ejoffe/spr/config"
@@ -202,9 +203,17 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	}
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
 
-	for _, pr := range updateQueue {
+	var wg sync.WaitGroup
+
+	updatePullRequest := func(ctx context.Context, pr prUpdate) {
 		sd.github.UpdatePullRequest(ctx, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+		wg.Done()
 	}
+	for _, pr := range updateQueue {
+		wg.Add(1)
+		go updatePullRequest(ctx, pr)
+	}
+	wg.Wait()
 
 	sd.profiletimer.Step("UpdatePullRequests::commitUpdateQueue")
 
