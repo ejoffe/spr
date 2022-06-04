@@ -136,7 +136,12 @@ VERSION: {{.Version}}
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
 				Action: func(c *cli.Context) error {
-					stackedpr.UpdatePullRequests(ctx, c.StringSlice("reviewer"))
+					if c.IsSet("count") {
+						count := c.Uint("count")
+						stackedpr.UpdatePullRequests(ctx, c.StringSlice("reviewer"), &count)
+					} else {
+						stackedpr.UpdatePullRequests(ctx, c.StringSlice("reviewer"), nil)
+					}
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -145,6 +150,11 @@ VERSION: {{.Version}}
 						Name:    "reviewer",
 						Aliases: []string{"r"},
 						Usage:   "Add the specified reviewer to newly created pull requests",
+					},
+					&cli.UintFlag{
+						Name:    "count",
+						Aliases: []string{"c"},
+						Usage:   "Update a specified number of pull requests from the bottom of the stack",
 					},
 				},
 			},
@@ -159,7 +169,7 @@ VERSION: {{.Version}}
 					} else {
 						stackedpr.MergePullRequests(ctx, nil)
 					}
-					stackedpr.UpdatePullRequests(ctx, nil)
+					stackedpr.UpdatePullRequests(ctx, nil, nil)
 					return nil
 				},
 				Flags: []cli.Flag{

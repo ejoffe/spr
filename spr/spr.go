@@ -107,7 +107,7 @@ func (sd *stackediff) addReviewers(ctx context.Context,
 //   pull request if a commit has been amended.
 //  In the case where commits are reordered, the corresponding pull requests
 //   will also be reordered to match the commit stack order.
-func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string) {
+func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string, count *uint) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	if githubInfo == nil {
@@ -194,6 +194,10 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 				}
 				sd.addReviewers(ctx, pr, reviewers, assignable)
 			}
+		}
+
+		if count != nil && (commitIndex+1) == int(*count) {
+			break
 		}
 	}
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")

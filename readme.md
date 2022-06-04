@@ -76,6 +76,8 @@ Run **git spr update** to sync your whole commit stack to github and create pull
 [✅✅✅✅] 58: Feature 1
 ```
 
+To update only part of the stack use the **--count** flag with the number of pull requests in the stack that you would like to update. Pull requests will be updated from the bottom of the stack upwards. 
+
 Amending Commits
 ----------------
 When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
