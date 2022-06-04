@@ -54,7 +54,7 @@ It even includes some **markdown** formatting.`}
 It even includes some **markdown** formatting.`,
 			commit: descriptiveCommit,
 			stack: []*github.PullRequest{
-				&github.PullRequest{Number: 2, Commit: descriptiveCommit},
+				{Number: 2, Commit: descriptiveCommit},
 			},
 		},
 		{
@@ -71,8 +71,8 @@ It even includes some **markdown** formatting.
 ⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
 			commit: descriptiveCommit,
 			stack: []*github.PullRequest{
-				&github.PullRequest{Number: 1, Commit: simpleCommit},
-				&github.PullRequest{Number: 2, Commit: descriptiveCommit},
+				{Number: 1, Commit: simpleCommit},
+				{Number: 2, Commit: descriptiveCommit},
 			},
 		},
 	}
