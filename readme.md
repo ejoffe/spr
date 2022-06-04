@@ -128,6 +128,7 @@ Use **git spr status** to see the status of your pull request stack. In the foll
 Merging Pull Requests
 ---------------------
 Your pull requests are stacked. Don't use the GitHub UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
+In order to merge all pull requests in one shot without causing extra github checks to trigger, spr finds the top mergable pull request. It then combines all the commits up to this pull request into one single pull request, merges this request, and closes the rest of the pull requests. This is a bit surprising at first, and has some side effects, but no better solution has been found to date. 
 
 ```shell
 > git spr merge
