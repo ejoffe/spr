@@ -11,15 +11,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	hookPath = "hooks/commit-msg"
-)
+var hookPath = "hooks/commit-msg"
 
 func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 	var rootdir string
 	err := gitcmd.Git("rev-parse --git-common-dir", &rootdir)
 	check(err)
 	rootdir = strings.TrimSpace(rootdir)
+
+	_, err = os.Stat(rootdir)
+	if os.IsNotExist(err) {
+		err = gitcmd.Git("rev-parse --show-toplevel", &rootdir)
+		check(err)
+		rootdir = strings.TrimSpace(rootdir)
+		hookPath = ".git/" + hookPath
+	}
+
 	err = os.Chdir(rootdir)
 	check(err)
 
