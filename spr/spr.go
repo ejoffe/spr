@@ -140,13 +140,16 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	if commitsReordered(localCommits, githubInfo.PullRequests) {
 		wg := new(sync.WaitGroup)
 		wg.Add(len(githubInfo.PullRequests))
-		cctx := context.WithValue(ctx, "wg", wg)
 
 		// if commits have been reordered :
 		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
-		for _, pr := range githubInfo.PullRequests {
-			go sd.github.UpdatePullRequest(cctx, sd.gitcmd, githubInfo, pr, pr.Commit, nil)
+		for i := range githubInfo.PullRequests {
+			go func(i int) {
+				pr := githubInfo.PullRequests[i]
+				sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr, pr.Commit, nil)
+				wg.Done()
+			}(i)
 		}
 
 		wg.Wait()
@@ -214,10 +217,13 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 
 	wg := new(sync.WaitGroup)
 	wg.Add(len(updateQueue))
-	cctx := context.WithValue(ctx, "wg", wg)
 
-	for _, pr := range updateQueue {
-		go sd.github.UpdatePullRequest(cctx, sd.gitcmd, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+	for i := range updateQueue {
+		go func(i int) {
+			pr := updateQueue[i]
+			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+			wg.Done()
+		}(i)
 	}
 
 	wg.Wait()

@@ -3,6 +3,7 @@ package mockclient
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -25,9 +26,10 @@ func NewMockClient(t *testing.T) *MockClient {
 }
 
 type MockClient struct {
-	assert *require.Assertions
-	Info   *github.GitHubInfo
-	expect []expectation
+	assert      *require.Assertions
+	Info        *github.GitHubInfo
+	expect      []expectation
+	expectMutex sync.Mutex
 }
 
 func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
@@ -87,11 +89,6 @@ func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterf
 		commit: commit,
 		prev:   prevCommit,
 	})
-
-	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
-	if ok {
-		wg.Done()
-	}
 }
 
 func (c *MockClient) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
@@ -128,18 +125,27 @@ func (c *MockClient) ClosePullRequest(ctx context.Context, pr *github.PullReques
 }
 
 func (c *MockClient) ExpectGetInfo() {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op: getInfoOP,
 	})
 }
 
 func (c *MockClient) ExpectGetAssignableUsers() {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op: getAssignableUsersOP,
 	})
 }
 
 func (c *MockClient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:     createPullRequestOP,
 		commit: commit,
@@ -148,6 +154,9 @@ func (c *MockClient) ExpectCreatePullRequest(commit git.Commit, prev *git.Commit
 }
 
 func (c *MockClient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:     updatePullRequestOP,
 		commit: commit,
@@ -156,6 +165,9 @@ func (c *MockClient) ExpectUpdatePullRequest(commit git.Commit, prev *git.Commit
 }
 
 func (c *MockClient) ExpectAddReviewers(userIDs []string) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:      addReviewersOP,
 		userIDs: userIDs,
@@ -163,6 +175,9 @@ func (c *MockClient) ExpectAddReviewers(userIDs []string) {
 }
 
 func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:     commentPullRequestOP,
 		commit: commit,
@@ -170,6 +185,9 @@ func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
 }
 
 func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod genclient.PullRequestMergeMethod) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:          mergePullRequestOP,
 		commit:      commit,
@@ -178,6 +196,9 @@ func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod gencl
 }
 
 func (c *MockClient) ExpectClosePullRequest(commit git.Commit) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
 	c.expect = append(c.expect, expectation{
 		op:     closePullRequestOP,
 		commit: commit,
@@ -185,6 +206,15 @@ func (c *MockClient) ExpectClosePullRequest(commit git.Commit) {
 }
 
 func (c *MockClient) verifyExpectation(actual expectation) {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
+	for _, expected := range c.expect {
+		if reflect.DeepEqual(expected, actual) {
+			return
+		}
+	}
+
 	expected := c.expect[0]
 	c.assert.Equal(expected, actual)
 	c.expect = c.expect[1:]
