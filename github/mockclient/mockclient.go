@@ -3,6 +3,7 @@ package mockclient
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/ejoffe/spr/git"
@@ -86,6 +87,11 @@ func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterf
 		commit: commit,
 		prev:   prevCommit,
 	})
+
+	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
+	if ok {
+		wg.Done()
+	}
 }
 
 func (c *MockClient) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
