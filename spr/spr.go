@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ejoffe/profiletimer"
 	"github.com/ejoffe/spr/config"
@@ -45,7 +46,8 @@ type stackediff struct {
 }
 
 // AmendCommit enables one to easily amend a commit in the middle of a stack
-//  of commits. A list of commits is printed and one can be chosen to be amended.
+//
+//	of commits. A list of commits is printed and one can be chosen to be amended.
 func (sd *stackediff) AmendCommit(ctx context.Context) {
 	localCommits := sd.getLocalCommitStack()
 	if len(localCommits) == 0 {
@@ -102,12 +104,13 @@ func (sd *stackediff) addReviewers(ctx context.Context,
 }
 
 // UpdatePullRequests implements a stacked diff workflow on top of github.
-//  Each time it's called it compares the local branch unmerged commits
-//   with currently open pull requests in github.
-//  It will create a new pull request for all new commits, and update the
-//   pull request if a commit has been amended.
-//  In the case where commits are reordered, the corresponding pull requests
-//   will also be reordered to match the commit stack order.
+//
+//	Each time it's called it compares the local branch unmerged commits
+//	 with currently open pull requests in github.
+//	It will create a new pull request for all new commits, and update the
+//	 pull request if a commit has been amended.
+//	In the case where commits are reordered, the corresponding pull requests
+//	 will also be reordered to match the commit stack order.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string, count *uint) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
@@ -135,12 +138,18 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	githubInfo.PullRequests = validPullRequests
 
 	if commitsReordered(localCommits, githubInfo.PullRequests) {
+		wg := new(sync.WaitGroup)
+		wg.Add(len(githubInfo.PullRequests))
+		cctx := context.WithValue(ctx, "wg", wg)
+
 		// if commits have been reordered :
 		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
 		for _, pr := range githubInfo.PullRequests {
-			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr, pr.Commit, nil)
+			go sd.github.UpdatePullRequest(cctx, sd.gitcmd, githubInfo, pr, pr.Commit, nil)
 		}
+
+		wg.Wait()
 		sd.profiletimer.Step("UpdatePullRequests::ReparentPullRequestsToMaster")
 	}
 
@@ -203,9 +212,15 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	}
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
 
+	wg := new(sync.WaitGroup)
+	wg.Add(len(updateQueue))
+	cctx := context.WithValue(ctx, "wg", wg)
+
 	for _, pr := range updateQueue {
-		sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+		go sd.github.UpdatePullRequest(cctx, sd.gitcmd, githubInfo, pr.pr, pr.commit, pr.prevCommit)
 	}
+
+	wg.Wait()
 
 	sd.profiletimer.Step("UpdatePullRequests::commitUpdateQueue")
 
@@ -213,18 +228,22 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 }
 
 // MergePullRequests will go through all the current pull requests
-//  and merge all requests that are mergeable.
+//
+//	and merge all requests that are mergeable.
+//
 // For a pull request to be mergeable it has to:
-//  - have at least one approver
-//  - pass all checks
-//  - have no merge conflicts
-//  - not be on top of another unmergable request
+//   - have at least one approver
+//   - pass all checks
+//   - have no merge conflicts
+//   - not be on top of another unmergable request
+//
 // In order to merge a stack of pull requests without generating conflicts
-//  and other pr issues. We find the top mergeable pull request in the stack,
-//  than we change this pull request's base to be master and then merge the
-//  pull request. This one merge in effect merges all the commits in the stack.
-//  We than close all the pull requests which are below the merged request, as
-//  their commits have already been merged.
+//
+//	and other pr issues. We find the top mergeable pull request in the stack,
+//	than we change this pull request's base to be master and then merge the
+//	pull request. This one merge in effect merges all the commits in the stack.
+//	We than close all the pull requests which are below the merged request, as
+//	their commits have already been merged.
 func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	sd.profiletimer.Step("MergePullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
@@ -282,8 +301,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 }
 
 // StatusPullRequests fetches all the users pull requests from github and
-//  prints out the status of each. It does not make any updates locally or
-//  remotely on github.
+//
+//	prints out the status of each. It does not make any updates locally or
+//	remotely on github.
 func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
@@ -478,8 +498,9 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 }
 
 // syncCommitStackToGitHub gets all the local commits in the given branch
-//  which are new (on top of remote branch) and creates a corresponding
-//  branch on github for each commit.
+//
+//	which are new (on top of remote branch) and creates a corresponding
+//	branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	commits []git.Commit, info *github.GitHubInfo) bool {
 

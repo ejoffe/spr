@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -484,6 +485,11 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 			Str("title", pr.Title).
 			Err(err).
 			Msg("pull request update failed")
+	}
+
+	wg, ok := ctx.Value("wg").(*sync.WaitGroup)
+	if ok {
+		wg.Done()
 	}
 }
 
