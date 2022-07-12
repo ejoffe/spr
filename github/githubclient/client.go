@@ -229,7 +229,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		}
 	}
 
-	requests = github.SortPullRequests(requests, c.config)
+	targetBranch := GetRemoteBranchName(gitcmd, c.config.Repo)
+	requests = sortPullRequests(requests, c.config, targetBranch)
 
 	info := &github.GitHubInfo{
 		UserName:     resp.Viewer.Login,
@@ -277,10 +278,10 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 	return users
 }
 
-func (c *client) CreatePullRequest(ctx context.Context,
+func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := GetRemoteBranchName(gitcmd, c.config.Repo)
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
@@ -360,14 +361,14 @@ func addManualMergeNotice(body string) string {
 		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
-func (c *client) UpdatePullRequest(ctx context.Context,
+func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := GetRemoteBranchName(gitcmd, c.config.Repo)
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
@@ -496,8 +497,53 @@ func getLocalBranchName(gitcmd git.GitInterface) string {
 	panic("cannot determine local git branch name")
 }
 
+func GetRemoteBranchName(gitcmd git.GitInterface, repoConfig *config.RepoConfig) string {
+	localBranchName := getLocalBranchName(gitcmd)
+
+	for _, remoteBranchName := range repoConfig.RemoteBranches {
+		if localBranchName == remoteBranchName {
+			return remoteBranchName
+		}
+	}
+	return repoConfig.GitHubBranch
+}
+
 func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 	return "pr/" + info.UserName + "/" + info.LocalBranch + "/" + commit.CommitID
+}
+
+// sortPullRequests sorts the pull requests so that the one that is on top of
+//  the target branch will come first followed by the ones that are stacked on top.
+// The stack order is maintained so that multiple pull requests can be merged in
+//  the correct order.
+func sortPullRequests(prs []*github.PullRequest, config *config.Config, targetBranch string) []*github.PullRequest {
+	swap := func(i int, j int) {
+		buf := prs[i]
+		prs[i] = prs[j]
+		prs[j] = buf
+	}
+
+	j := 0
+	for i := 0; i < len(prs); i++ {
+		for j = i; j < len(prs); j++ {
+			if prs[j].ToBranch == targetBranch {
+				targetBranch = prs[j].FromBranch
+				swap(i, j)
+				break
+			}
+		}
+	}
+
+	// update stacked merge status flag
+	for _, pr := range prs {
+		if pr.Ready(config) {
+			pr.MergeStatus.Stacked = true
+		} else {
+			break
+		}
+	}
+
+	return prs
 }
 
 func check(err error) {

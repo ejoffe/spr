@@ -51,7 +51,7 @@ func (c *MockClient) GetAssignableUsers(ctx context.Context) []github.RepoAssign
 	}
 }
 
-func (c *MockClient) CreatePullRequest(ctx context.Context, info *github.GitHubInfo,
+func (c *MockClient) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *github.GitHubInfo,
 	commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 	fmt.Printf("HUB: CreatePullRequest\n")
 	c.verifyExpectation(expectation{
@@ -78,7 +78,7 @@ func (c *MockClient) CreatePullRequest(ctx context.Context, info *github.GitHubI
 	}
 }
 
-func (c *MockClient) UpdatePullRequest(ctx context.Context, info *github.GitHubInfo,
+func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *github.GitHubInfo,
 	pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 	fmt.Printf("HUB: UpdatePullRequest\n")
 	c.verifyExpectation(expectation{

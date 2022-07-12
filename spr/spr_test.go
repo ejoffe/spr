@@ -141,7 +141,9 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	output.Reset()
 
 	// 'git spr merge' :: MergePullRequest :: commits=[a1, a2, a3, a4]
+	gitmock.ExpectLocalBranch("master")
 	githubmock.ExpectGetInfo()
+	gitmock.ExpectLocalBranch("master")
 	githubmock.ExpectUpdatePullRequest(c4, nil)
 	githubmock.ExpectMergePullRequest(c4, genclient.PullRequestMergeMethod_REBASE)
 	githubmock.ExpectCommentPullRequest(c1)

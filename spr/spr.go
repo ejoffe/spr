@@ -76,8 +76,9 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	check(err)
 	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
+	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.GitHubRemote, targetBranch)
 	sd.mustgit(rebaseCmd, nil)
 }
 
@@ -138,7 +139,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
 		for _, pr := range githubInfo.PullRequests {
-			sd.github.UpdatePullRequest(ctx, githubInfo, pr, pr.Commit, nil)
+			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr, pr.Commit, nil)
 		}
 		sd.profiletimer.Step("UpdatePullRequests::ReparentPullRequestsToMaster")
 	}
@@ -185,7 +186,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 			if commitIndex > 0 {
 				prevCommit = &localCommits[commitIndex-1]
 			}
-			pr := sd.github.CreatePullRequest(ctx, githubInfo, c, prevCommit)
+			pr := sd.github.CreatePullRequest(ctx, sd.gitcmd, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 			if len(reviewers) != 0 {
@@ -203,7 +204,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	sd.profiletimer.Step("UpdatePullRequests::updatePullRequests")
 
 	for _, pr := range updateQueue {
-		sd.github.UpdatePullRequest(ctx, githubInfo, pr.pr, pr.commit, pr.prevCommit)
+		sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, pr.pr, pr.commit, pr.prevCommit)
 	}
 
 	sd.profiletimer.Step("UpdatePullRequests::commitUpdateQueue")
@@ -250,7 +251,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	prToMerge := githubInfo.PullRequests[prIndex]
 
 	// Update the base of the merging pr to target branch
-	sd.github.UpdatePullRequest(ctx, githubInfo, prToMerge, prToMerge.Commit, nil)
+	sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, prToMerge, prToMerge.Commit, nil)
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
@@ -315,8 +316,9 @@ func (sd *stackediff) ProfilingSummary() {
 // getLocalCommitStack returns a list of unmerged commits
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
+	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
 	logCommand := fmt.Sprintf("log --no-color %s/%s..HEAD",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.GitHubRemote, targetBranch)
 	sd.mustgit(logCommand, &commitLog)
 	commits, valid := sd.parseLocalCommitStack(commitLog)
 	if !valid {
@@ -431,8 +433,9 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
 	sd.mustgit("fetch", nil)
+	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.GitHubRemote, targetBranch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil

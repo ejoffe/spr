@@ -27,9 +27,11 @@ type RepoConfig struct {
 	RequireChecks   bool `default:"true" yaml:"requireChecks"`
 	RequireApproval bool `default:"true" yaml:"requireApproval"`
 
-	GitHubRemote string `default:"origin" yaml:"githubRemote"`
-	GitHubBranch string `default:"master" yaml:"githubBranch"`
-	MergeMethod  string `default:"rebase" yaml:"mergeMethod"`
+	GitHubRemote   string   `default:"origin" yaml:"githubRemote"`
+	GitHubBranch   string   `default:"master" yaml:"githubBranch"`
+	RemoteBranches []string `yaml:"remoteBranches"`
+
+	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
 }
 
 type UserConfig struct {
