@@ -10,8 +10,8 @@ import (
 type GitHubInterface interface {
 	GetInfo(ctx context.Context, gitcmd git.GitInterface) *GitHubInfo
 	GetAssignableUsers(ctx context.Context) []RepoAssignee
-	CreatePullRequest(ctx context.Context, info *GitHubInfo, commit git.Commit, prevCommit *git.Commit) *PullRequest
-	UpdatePullRequest(ctx context.Context, info *GitHubInfo, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
+	CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, commit git.Commit, prevCommit *git.Commit) *PullRequest
+	UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
 	AddReviewers(ctx context.Context, pr *PullRequest, userIDs []string)
 	CommentPullRequest(ctx context.Context, pr *PullRequest, comment string)
 	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod genclient.PullRequestMergeMethod)

@@ -3,6 +3,7 @@ package githubclient
 import (
 	"testing"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
 )
@@ -82,5 +83,69 @@ It even includes some **markdown** formatting.
 		if body != tc.description {
 			t.Fatalf("expected: '%v', actual: '%v'", tc.description, body)
 		}
+	}
+}
+
+func TestSortPullRequests(t *testing.T) {
+	prs := []*github.PullRequest{
+		{
+			Number:     3,
+			FromBranch: "third",
+			ToBranch:   "second",
+		},
+		{
+			Number:     2,
+			FromBranch: "second",
+			ToBranch:   "first",
+		},
+		{
+			Number:     1,
+			FromBranch: "first",
+			ToBranch:   "master",
+		},
+	}
+
+	config := config.DefaultConfig()
+	prs = sortPullRequests(prs, config, "master")
+	if prs[0].Number != 1 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
+	}
+	if prs[1].Number != 2 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
+	}
+	if prs[2].Number != 3 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
+	}
+}
+
+func TestSortPullRequestsMixed(t *testing.T) {
+	prs := []*github.PullRequest{
+		{
+			Number:     3,
+			FromBranch: "third",
+			ToBranch:   "second",
+		},
+		{
+			Number:     1,
+			FromBranch: "first",
+			ToBranch:   "master",
+		},
+		{
+			Number:     2,
+			FromBranch: "second",
+			ToBranch:   "first",
+		},
+	}
+
+	config := config.DefaultConfig()
+	prs = sortPullRequests(prs, config, "master")
+	if prs[0].Number != 1 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
+	}
+	if prs[1].Number != 2 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
+	}
+	if prs[2].Number != 3 {
+		t.Fatalf("prs not sorted correctly %v\n", prs)
 	}
 }

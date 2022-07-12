@@ -8,6 +8,7 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
+	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,8 +45,9 @@ func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 		// amend commit stack to add commit-id
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
+		targetBranch := githubclient.GetRemoteBranchName(gitcmd, cfg.Repo)
 		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-			cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
+			cfg.Repo.GitHubRemote, targetBranch)
 		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 	} else {
 		binPath, err := exec.LookPath("spr_commit_hook")
@@ -56,8 +58,9 @@ func InstallCommitHook(cfg *config.Config, gitcmd git.GitInterface) {
 		// amend commit stack to add commit-id
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
+		targetBranch := githubclient.GetRemoteBranchName(gitcmd, cfg.Repo)
 		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-			cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
+			cfg.Repo.GitHubRemote, targetBranch)
 		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 	}
 }
