@@ -20,7 +20,7 @@ Installation
 ### Brew
 ```bash
 > brew tap ejoffe/homebrew-tap
-> brew install spr
+> brew install ejoffe/tap/spr
 ```
 
 ### Apt
