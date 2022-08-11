@@ -378,12 +378,21 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
 	body := formatBody(commit, info.PullRequests)
-	_, err := c.api.UpdatePullRequest(ctx, genclient.UpdatePullRequestInput{
+	title := &commit.Subject
+
+	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
 		BaseRefName:   &baseRefName,
-		Title:         &commit.Subject,
+		Title:         title,
 		Body:          &body,
-	})
+	}
+
+	if c.config.User.PreserveTitleAndBody {
+		input.Title = nil
+		input.Body = nil
+	}
+
+	_, err := c.api.UpdatePullRequest(ctx, input)
 
 	if err != nil {
 		log.Fatal().

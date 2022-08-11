@@ -175,7 +175,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | statusBitsHeader     | bool | true    | show status bits type headers                                     |
 | statusBitsEmojis     | bool | true    | show status bits using fancy emojis                               |
 | createDraftPRs       | bool | false   | new pull requests are created as draft                            |
-| PreserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body   |
+| preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body   |
 
 Happy Coding!
 -------------
