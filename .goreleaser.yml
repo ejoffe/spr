@@ -22,15 +22,6 @@ builds:
       - darwin
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
-  - main: ./cmd/commithook
-    id: commithook
-    binary: spr_commit_hook
-    goos:
-      - linux
-      - windows
-      - darwin
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
   - main: ./cmd/reword
     id: reword
     binary: spr_reword_helper
@@ -72,7 +63,6 @@ brews:
     install: |
       bin.install "git-spr"
       bin.install "git-amend"
-      bin.install "spr_commit_hook"
       bin.install "spr_reword_helper"
     license: "MIT"
 nfpms:
