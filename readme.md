@@ -18,13 +18,13 @@ Installation
 ------------
 
 ### Brew
-```bash
+```shell
 > brew tap ejoffe/homebrew-tap
 > brew install ejoffe/tap/spr
 ```
 
 ### Apt
-```bash
+```shell
 > echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" | sudo tee /etc/apt/sources.list.d/inigolabs.list
 > sudo apt update 
 > sudo apt install spr
@@ -34,16 +34,9 @@ Installation
 Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to your bin path.
 
 ### From source
-
-Assuming you want to put the binaries into `~/.local/bin`:
-
-```
-git clone https://github.com/ejoffe/spr
-cd spr
-go build -o ~/.local/bin/git-spr github.com/ejoffe/spr/cmd/spr
-go build -o ~/.local/bin/git-amend github.com/ejoffe/spr/cmd/amend
-go build -o ~/.local/bin/spr_commit_hook github.com/ejoffe/spr/cmd/commithook
-go build -o ~/.local/bin/spr_reword_helper github.com/ejoffe/spr/cmd/reword
+Install [goreleaser](https://goreleaser.com/) and run make. Binaries can be found in the **dist** directory.
+```shell
+> make bin
 ```
 
 Workflow
