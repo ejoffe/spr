@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/githubclient"
-	"github.com/ejoffe/spr/hook"
 	"github.com/rs/zerolog/log"
 )
 
@@ -322,15 +322,20 @@ func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	sd.mustgit(logCommand, &commitLog)
 	commits, valid := sd.parseLocalCommitStack(commitLog)
 	if !valid {
-		// if not valid - it means commit hook was not installed
-		//  install commit-hook and try again
-		hook.InstallCommitHook(sd.config, sd.gitcmd)
+		// if not valid - run rebase to add commit ids
+		rewordPath, err := exec.LookPath("spr_reword_helper")
+		check(err)
+		targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
+		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
+			sd.config.Repo.GitHubRemote, targetBranch)
+		sd.gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
+
 		sd.mustgit(logCommand, &commitLog)
 		commits, valid = sd.parseLocalCommitStack(commitLog)
 		if !valid {
+			// if still not valid - panic
 			errMsg := "unable to fetch local commits\n"
 			errMsg += " most likely this is an issue with missing commit-id in the commit body\n"
-			errMsg += " which is caused by the commit-msg hook not being installed propertly\n"
 			panic(errMsg)
 		}
 	}
