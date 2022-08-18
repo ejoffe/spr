@@ -34,18 +34,22 @@ func main() {
 		}
 		writefile.Close()
 	} else {
-		if shouldAppendCommitID(filename) {
-			appendCommitID(filename)
+		missingCommitID, missingNewLine := shouldAppendCommitID(filename)
+		if missingCommitID {
+			appendCommitID(filename, missingNewLine)
 		}
 	}
 }
 
-func shouldAppendCommitID(filename string) bool {
+func shouldAppendCommitID(filename string) (missingCommitID bool, missingNewLine bool) {
 	readfile, err := os.Open(filename)
 	check(err)
 	defer readfile.Close()
 
-	i := 0
+	missingCommitID = false
+	missingNewLine = false
+
+	lineCount := 0
 	nonEmptyCommitMessage := false
 	scanner := bufio.NewScanner(readfile)
 	for scanner.Scan() {
@@ -53,21 +57,37 @@ func shouldAppendCommitID(filename string) bool {
 		if line != "" && !strings.HasPrefix(line, "#") {
 			nonEmptyCommitMessage = true
 		}
-		if strings.HasPrefix(line, "commit-id:") {
-			return false
+		if !strings.HasPrefix(line, "#") {
+			lineCount += 1
 		}
-		i++
+		if strings.HasPrefix(line, "commit-id:") {
+			missingCommitID = false
+			return
+		}
 	}
+
+	if lineCount == 1 {
+		missingNewLine = true
+	} else {
+		missingNewLine = false
+	}
+
 	check(scanner.Err())
-	return nonEmptyCommitMessage
+	if nonEmptyCommitMessage {
+		missingCommitID = true
+	}
+	return
 }
 
-func appendCommitID(filename string) {
+func appendCommitID(filename string, missingNewLine bool) {
 	appendfile, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0666)
 	check(err)
 	defer appendfile.Close()
 
 	commitID := uuid.New()
+	if missingNewLine {
+		appendfile.WriteString("\n")
+	}
 	appendfile.WriteString("\n")
 	appendfile.WriteString(fmt.Sprintf("commit-id:%s\n", commitID.String()[:8]))
 }
