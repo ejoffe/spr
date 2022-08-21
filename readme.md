@@ -10,9 +10,9 @@
 # Stacked Pull Requests on GitHub
 
 Easily manage stacks of pull requests on GitHub. 
-**git spr** is a client side tool that achieves a simple streamlined stacked diff workflow using github pull requests and branches. **git spr** manages your pull request stacks for you, so you don't have to. 
+`git spr` is a client side tool that achieves a simple streamlined stacked diff workflow using github pull requests and branches. `git spr` manages your pull request stacks for you, so you don't have to. 
 
-With **git spr** each commit becomes a pull request, and each branch becomes a stack of pull requests. This allows for multiple commits to be stacked on top of each other in a single branch, avoiding the overhead of starting a new branch for every new change or feature. Small changes and pull requests are easy and fast to achieve. One doesn't have to worry about stacked branches on top of each other and managing complicated pull request stacks. The end result is a more streamlined faster software development cycle.
+With `git spr` each commit becomes a pull request, and each branch becomes a stack of pull requests. This allows for multiple commits to be stacked on top of each other in a single branch, avoiding the overhead of starting a new branch for every new change or feature. Small changes and pull requests are easy and fast to achieve. One doesn't have to worry about stacked branches on top of each other and managing complicated pull request stacks. The end result is a more streamlined faster software development cycle.
 
 Installation 
 ------------
@@ -56,11 +56,11 @@ Commit your changes to a branch as you normally do. Note that every commit will 
 
 The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
 If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
-There is no need to create new branches for every change, and you don't have to call git push to get your code to github. Instead just call **git spr update**.
+There is no need to create new branches for every change, and you don't have to call git push to get your code to github. Instead just call `git spr update`.
 
 Managing Pull Requests
 ----------------------
-Run **git spr update** to sync your whole commit stack to github and create pull requests for each new commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. **git spr update** pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
+Run `git spr update` to sync your whole commit stack to github and create pull requests for each new commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. `git spr update` pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
 
 ```shell
 > git spr update
@@ -69,12 +69,12 @@ Run **git spr update** to sync your whole commit stack to github and create pull
 [✅✅✅✅] 58: Feature 1
 ```
 
-To update only part of the stack use the **--count** flag with the number of pull requests in the stack that you would like to update. Pull requests will be updated from the bottom of the stack upwards. 
+To update only part of the stack use the `--count` flag with the number of pull requests in the stack that you would like to update. Pull requests will be updated from the bottom of the stack upwards. 
 
 Amending Commits
 ----------------
 When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
-Use **git amend** to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use **git amend** and choose the commit you want to amend when prompted.  
+Use `git amend` to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use `git amend` and choose the commit you want to amend when prompted.  
 ```shell
 > touch feature_2
 > git add feature_2
@@ -108,7 +108,7 @@ Pull request approval and checks requirement can be disabled in the config file,
 
 Show Current Pull Requests
 --------------------------
-Use **git spr status** to see the status of your pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for review approval. 
+Use `git spr status` to see the status of your pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for review approval. 
 
 ```shell
 > git spr status
@@ -120,8 +120,8 @@ Use **git spr status** to see the status of your pull request stack. In the foll
 
 Merging Pull Requests
 ---------------------
-Your pull requests are stacked. Don't use the GitHub UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use **git spr merge** and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
-In order to merge all pull requests in one shot without causing extra github checks to trigger, spr finds the top mergable pull request. It then combines all the commits up to this pull request into one single pull request, merges this request, and closes the rest of the pull requests. This is a bit surprising at first, and has some side effects, but no better solution has been found to date. 
+Your pull requests are stacked. Don't use the GitHub UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use `git spr merge` and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
+In order to merge all pull requests in one shot without causing extra github checks to trigger, spr finds the top mergeable pull request. It then combines all the commits up to this pull request into one single pull request, merges this request, and closes the rest of the pull requests. This is a bit surprising at first, and has some side effects, but no better solution has been found to date. 
 
 ```shell
 > git spr merge
@@ -131,7 +131,7 @@ MERGED #60 Feature 3
 [✅❌✅✅] 61: Feature 4
 ```
 
-To merge only part of the stack use the **--count** flag with the number of pull requests in the stack that you would like to merge. Pull requests will be merged from the bottom of the stack upwards. 
+To merge only part of the stack use the `--count` flag with the number of pull requests in the stack that you would like to merge. Pull requests will be merged from the bottom of the stack upwards. 
 
 ```shell
 > git spr merge --count 2
@@ -157,7 +157,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubRepoName       | str  |            | name of the github repository (fetched from git remote config) |
 | githubRemote         | str  | origin     | github remote name to use                                      |
 | githubBranch         | str  | master     | github branch for pull request target                          |
-| githubHost           | str  | github.com | github host, can be updated for github enterprise usecase      |
+| githubHost           | str  | github.com | github host, can be updated for github enterprise use case     |
 | mergeMethod          | str  | rebase     | merge method, valid values: [rebase, squash, merge]            |
 
 | User Config          | Type | Default | Description                                                       |
