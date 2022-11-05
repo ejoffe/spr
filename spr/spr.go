@@ -317,7 +317,7 @@ func (sd *stackediff) ProfilingSummary() {
 func (sd *stackediff) getLocalCommitStack() []git.Commit {
 	var commitLog string
 	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
-	logCommand := fmt.Sprintf("log --no-color %s/%s..HEAD",
+	logCommand := fmt.Sprintf("log --no-abbrev-commit --no-color %s/%s..HEAD",
 		sd.config.Repo.GitHubRemote, targetBranch)
 	sd.mustgit(logCommand, &commitLog)
 	commits, valid := sd.parseLocalCommitStack(commitLog)

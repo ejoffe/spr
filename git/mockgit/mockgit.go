@@ -65,7 +65,7 @@ func (m *Mock) ExpectFetch() {
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
 	m.expect("git branch --no-color").respond("* master")
-	m.expect("git log --no-color origin/master..HEAD").commitRespond(commits)
+	m.expect("git log --no-abbrev-commit --no-color origin/master..HEAD").commitRespond(commits)
 }
 
 func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
