@@ -32,6 +32,10 @@ type RepoConfig struct {
 	RemoteBranches []string `yaml:"remoteBranches"`
 
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
+
+	PRTemplatePath        string `yaml:"prTemplatePath"`
+	PRTemplateInsertStart string `yaml:"prTemplateInsertStart"`
+	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd"`
 }
 
 type UserConfig struct {
