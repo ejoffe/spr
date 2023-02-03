@@ -1,6 +1,7 @@
 package githubclient
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ejoffe/spr/config"
@@ -83,6 +84,188 @@ It even includes some **markdown** formatting.
 		if body != tc.description {
 			t.Fatalf("expected: '%v', actual: '%v'", tc.description, body)
 		}
+	}
+}
+
+func TestInsertBodyIntoPRTemplateHappyPath(t *testing.T) {
+	tests := []struct {
+		name                string
+		body                string
+		pullRequestTemplate string
+		repo                *config.RepoConfig
+		pr                  *github.PullRequest
+		expected            string
+	}{
+		{
+			name: "create PR",
+			body: "inserted body",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here -->
+
+## Description
+<!--- Describe your changes in detail -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "## Description",
+				PRTemplateInsertEnd:   "## Checklist",
+			},
+			pr: nil,
+			expected: `
+## Related Issues
+<!--- Add any related issues here -->
+
+## Description
+inserted body
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+		},
+		{
+			name: "update PR",
+			body: "updated description",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here -->
+
+## Description
+<!--- Describe your changes in detail -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "## Description",
+				PRTemplateInsertEnd:   "## Checklist",
+			},
+			pr: &github.PullRequest{
+				Body: `
+## Related Issues
+* Issue #1234
+
+## Description
+original description
+
+## Checklist
+- [x] My code follows the style guidelines of this project`,
+			},
+			expected: `
+## Related Issues
+* Issue #1234
+
+## Description
+updated description
+
+## Checklist
+- [x] My code follows the style guidelines of this project`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, _ := insertBodyIntoPRTemplate(tt.body, tt.pullRequestTemplate, tt.repo, tt.pr)
+			if body != tt.expected {
+				t.Fatalf("expected: '%v', actual: '%v'", tt.expected, body)
+			}
+		})
+	}
+}
+
+func TestInsertBodyIntoPRTemplateErrors(t *testing.T) {
+	tests := []struct {
+		name                string
+		body                string
+		pullRequestTemplate string
+		repo                *config.RepoConfig
+		pr                  *github.PullRequest
+		expected            string
+	}{
+		{
+			name: "no match insert start",
+			body: "inserted body",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here -->
+
+## Description
+<!--- Describe your changes in detail -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "does not exist",
+				PRTemplateInsertEnd:   "## Checklist",
+			},
+			pr:       nil,
+			expected: "no matches found: PR template insert start",
+		},
+		{
+			name: "no match insert end",
+			body: "inserted body",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here -->
+
+## Description
+<!--- Describe your changes in detail -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "## Description",
+				PRTemplateInsertEnd:   "does not exist",
+			},
+			pr:       nil,
+			expected: "no matches found: PR template insert end",
+		},
+		{
+			name: "multiple many matches insert start",
+			body: "inserted body",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here duplicate -->
+
+## Description
+<!--- Describe your changes in detail duplicate -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "duplicate",
+				PRTemplateInsertEnd:   "## Checklist",
+			},
+			pr:       nil,
+			expected: "multiple matches found: PR template insert start",
+		},
+		{
+			name: "multiple many matches insert end",
+			body: "inserted body",
+			pullRequestTemplate: `
+## Related Issues
+<!--- Add any related issues here duplicate -->
+
+## Description
+<!--- Describe your changes in detail duplicate -->
+
+## Checklist
+- [ ] My code follows the style guidelines of this project`,
+			repo: &config.RepoConfig{
+				PRTemplateInsertStart: "## Description",
+				PRTemplateInsertEnd:   "duplicate",
+			},
+			pr:       nil,
+			expected: "multiple matches found: PR template insert end",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := insertBodyIntoPRTemplate(tt.body, tt.pullRequestTemplate, tt.repo, tt.pr)
+			if !strings.Contains(err.Error(), tt.expected) {
+				t.Fatalf("expected: '%v', actual: '%v'", tt.expected, err.Error())
+			}
+		})
 	}
 }
 

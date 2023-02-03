@@ -66,14 +66,17 @@ func TestEmptyConfig(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	expect := &Config{
 		Repo: &RepoConfig{
-			GitHubRepoOwner: "",
-			GitHubRepoName:  "",
-			GitHubHost:      "github.com",
-			RequireChecks:   true,
-			RequireApproval: true,
-			GitHubRemote:    "origin",
-			GitHubBranch:    "master",
-			MergeMethod:     "rebase",
+			GitHubRepoOwner:       "",
+			GitHubRepoName:        "",
+			GitHubHost:            "github.com",
+			RequireChecks:         true,
+			RequireApproval:       true,
+			GitHubRemote:          "origin",
+			GitHubBranch:          "master",
+			MergeMethod:           "rebase",
+			PRTemplatePath:        "",
+			PRTemplateInsertStart: "",
+			PRTemplateInsertEnd:   "",
 		},
 		User: &UserConfig{
 			ShowPRLink:       true,

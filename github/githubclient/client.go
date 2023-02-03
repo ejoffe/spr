@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -195,6 +195,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 			ID:         node.Id,
 			Number:     node.Number,
 			Title:      node.Title,
+			Body:       node.Body,
 			FromBranch: node.HeadRefName,
 			ToBranch:   node.BaseRefName,
 		}
@@ -291,13 +292,23 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
 		Msg("CreatePullRequest")
 
-	commitBody := formatBody(commit, info.PullRequests)
+	body := formatBody(commit, info.PullRequests)
+	if c.config.Repo.PRTemplatePath != "" {
+		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to read PR template")
+		}
+		body, err = insertBodyIntoPRTemplate(body, pullRequestTemplate, c.config.Repo, nil)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to insert body into PR template")
+		}
+	}
 	resp, err := c.api.CreatePullRequest(ctx, genclient.CreatePullRequestInput{
 		RepositoryId: info.RepositoryID,
 		BaseRefName:  baseRefName,
 		HeadRefName:  headRefName,
 		Title:        commit.Subject,
-		Body:         &commitBody,
+		Body:         &body,
 		Draft:        &c.config.User.CreateDraftPRs,
 	})
 	check(err)
@@ -355,6 +366,68 @@ func formatBody(commit git.Commit, stack []*github.PullRequest) string {
 		addManualMergeNotice(formatStackMarkdown(commit, stack)))
 }
 
+// Reads the specified PR template file and returns it as a string
+func readPRTemplate(gitcmd git.GitInterface, templatePath string) (string, error) {
+	repoRootDir := gitcmd.RootDir()
+	fullTemplatePath := filepath.Clean(path.Join(repoRootDir, templatePath))
+	pullRequestTemplateBytes, err := os.ReadFile(fullTemplatePath)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to read template %v", err, fullTemplatePath)
+	}
+	return string(pullRequestTemplateBytes), nil
+}
+
+// insertBodyIntoPRTemplate inserts a text body into the given PR template and returns the result as a string.
+// It uses the PRTemplateInsertStart and PRTemplateInsertEnd values defined in RepoConfig to determine where the body
+// should be inserted in the PR template. If there are issues finding the correct place to insert the body
+// an error will be returned.
+//
+// NOTE: on PR update, rather than using the PR template, it will use the existing PR body, which should have
+// the PR template from the initial PR create.
+func insertBodyIntoPRTemplate(body, prTemplate string, repo *config.RepoConfig, pr *github.PullRequest) (string, error) {
+	templateOrExistingPRBody := prTemplate
+	if pr != nil && pr.Body != "" {
+		templateOrExistingPRBody = pr.Body
+	}
+
+	startPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, repo.PRTemplateInsertStart, BeforeMatch)
+	if err != nil {
+		return "", fmt.Errorf("%w: PR template insert start = '%v'", err, repo.PRTemplateInsertStart)
+	}
+
+	endPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, repo.PRTemplateInsertEnd, AfterMatch)
+	if err != nil {
+		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, repo.PRTemplateInsertStart)
+	}
+
+	return fmt.Sprintf("%v%v\n%v\n\n%v%v", startPRTemplateSection, repo.PRTemplateInsertStart, body,
+		repo.PRTemplateInsertEnd, endPRTemplateSection), nil
+}
+
+const (
+	BeforeMatch = iota
+	AfterMatch
+)
+
+// getSectionOfPRTemplate searches text for a matching searchString and will return the text before or after the
+// match as a string. If there are no matches or more than one match is found, an error will be returned.
+func getSectionOfPRTemplate(text, searchString string, returnMatch int) (string, error) {
+	split := strings.Split(text, searchString)
+	switch len(split) {
+	case 2:
+		if returnMatch == BeforeMatch {
+			return split[0], nil
+		} else if returnMatch == AfterMatch {
+			return split[1], nil
+		}
+		return "", fmt.Errorf("invalid enum value")
+	case 1:
+		return "", fmt.Errorf("no matches found")
+	default:
+		return "", fmt.Errorf("multiple matches found")
+	}
+}
+
 func addManualMergeNotice(body string) string {
 	return body + "\n\n" +
 		"⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). " +
@@ -378,6 +451,16 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
 	body := formatBody(commit, info.PullRequests)
+	if c.config.Repo.PRTemplatePath != "" {
+		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to read PR template")
+		}
+		body, err = insertBodyIntoPRTemplate(body, pullRequestTemplate, c.config.Repo, pr)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to insert body into PR template")
+		}
+	}
 	title := &commit.Subject
 
 	input := genclient.UpdatePullRequestInput{
@@ -522,9 +605,9 @@ func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 }
 
 // sortPullRequests sorts the pull requests so that the one that is on top of
-//  the target branch will come first followed by the ones that are stacked on top.
+// the target branch will come first followed by the ones that are stacked on top.
 // The stack order is maintained so that multiple pull requests can be merged in
-//  the correct order.
+// the correct order.
 func sortPullRequests(prs []*github.PullRequest, config *config.Config, targetBranch string) []*github.PullRequest {
 	swap := func(i int, j int) {
 		buf := prs[i]

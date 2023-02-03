@@ -9,6 +9,7 @@ query PullRequests(
 				id
 				number
 				title
+				body
 				baseRefName
 				headRefName
 				mergeable
