@@ -178,14 +178,13 @@ VERSION: {{.Version}}
 				Name:  "merge",
 				Usage: "Merge all mergeable pull requests",
 				Action: func(c *cli.Context) error {
-
 					if c.IsSet("count") {
 						count := c.Uint("count")
 						stackedpr.MergePullRequests(ctx, &count)
 					} else {
 						stackedpr.MergePullRequests(ctx, nil)
+						stackedpr.UpdatePullRequests(ctx, nil, nil)
 					}
-					stackedpr.UpdatePullRequests(ctx, nil, nil)
 					return nil
 				},
 				Flags: []cli.Flag{
