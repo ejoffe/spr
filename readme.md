@@ -17,6 +17,8 @@ With `git spr` each commit becomes a pull request, and each branch becomes a sta
 Installation 
 ------------
 
+#
+
 ### Brew
 ```shell
 > brew tap ejoffe/homebrew-tap
