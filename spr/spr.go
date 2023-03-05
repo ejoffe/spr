@@ -302,6 +302,24 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::End")
 }
 
+// SyncStack synchronizes your local stack with remote's
+func (sd *stackediff) SyncStack(ctx context.Context) {
+	sd.profiletimer.Step("SyncStack::Start")
+	defer sd.profiletimer.Step("SyncStack::End")
+
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+
+	if len(githubInfo.PullRequests) == 0 {
+		fmt.Fprintf(sd.output, "pull request stack is empty\n")
+		return
+	}
+
+	lastPR := githubInfo.PullRequests[len(githubInfo.PullRequests)-1]
+	syncCommand := fmt.Sprintf("cherry-pick ..%s", lastPR.Commit.CommitHash)
+	err := sd.gitcmd.Git(syncCommand, nil)
+	check(err)
+}
+
 // ProfilingEnable enables stopwatch profiling
 func (sd *stackediff) ProfilingEnable() {
 	sd.profiletimer = profiletimer.StartProfileTimer()

@@ -132,6 +132,14 @@ VERSION: {{.Version}}
 				},
 			},
 			{
+				Name:  "sync",
+				Usage: "Synchronize local stack with remote",
+				Action: func(c *cli.Context) error {
+					stackedpr.SyncStack(ctx)
+					return nil
+				},
+			},
+			{
 				Name:    "update",
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
