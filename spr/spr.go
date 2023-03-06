@@ -481,7 +481,7 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
-	sd.mustgit("fetch", nil)
+	sd.mustgit("fetch --tags", nil)
 	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
 		sd.config.Repo.GitHubRemote, targetBranch)
