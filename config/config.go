@@ -47,6 +47,7 @@ type UserConfig struct {
 
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
+	NoRebase             bool `default:"false" yaml:"noRebase"`
 
 	Stargazer bool `default:"false" yaml:"stargazer"`
 	RunCount  int  `default:"0" yaml:"runcount"`

@@ -144,6 +144,9 @@ VERSION: {{.Version}}
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
 				Action: func(c *cli.Context) error {
+					if c.Bool("no-rebase") {
+						os.Setenv("SPR_NOREBASE", "true")
+					}
 					if c.IsSet("count") {
 						count := c.Uint("count")
 						stackedpr.UpdatePullRequests(ctx, c.StringSlice("reviewer"), &count)
@@ -163,6 +166,11 @@ VERSION: {{.Version}}
 						Name:    "count",
 						Aliases: []string{"c"},
 						Usage:   "Update a specified number of pull requests from the bottom of the stack",
+					},
+					&cli.BoolFlag{
+						Name:    "no-rebase",
+						Aliases: []string{"nr"},
+						Usage:   "Disable rebasing",
 					},
 				},
 			},
