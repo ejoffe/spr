@@ -33,9 +33,9 @@ type RepoConfig struct {
 
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
 
-	PRTemplatePath        string `yaml:"prTemplatePath"`
-	PRTemplateInsertStart string `yaml:"prTemplateInsertStart"`
-	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd"`
+	PRTemplatePath        string `yaml:"prTemplatePath,omitempty"`
+	PRTemplateInsertStart string `yaml:"prTemplateInsertStart,omitempty"`
+	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd,omitempty"`
 }
 
 type UserConfig struct {
