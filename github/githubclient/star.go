@@ -20,12 +20,12 @@ const (
 )
 
 func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
-	if !cfg.User.Stargazer && cfg.User.RunCount%promptCycle == 0 {
+	if !cfg.Internal.Stargazer && cfg.Internal.RunCount%promptCycle == 0 {
 		if c.isStar(ctx) {
 			log.Debug().Bool("stargazer", true).Msg("MaybeStar")
-			cfg.User.Stargazer = true
-			rake.LoadSources(cfg.User,
-				rake.YamlFileWriter(config.UserConfigFilePath()))
+			cfg.Internal.Stargazer = true
+			rake.LoadSources(cfg.Internal,
+				rake.YamlFileWriter(config.InternalConfigFilePath()))
 		} else {
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar")
 			fmt.Print("enjoying git spr? add a GitHub star? [Y/n]:")
@@ -35,9 +35,9 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 			if line != "n" {
 				log.Debug().Msg("MaybeStar : adding star")
 				c.addStar(ctx)
-				cfg.User.Stargazer = true
-				rake.LoadSources(cfg.User,
-					rake.YamlFileWriter(config.UserConfigFilePath()))
+				cfg.Internal.Stargazer = true
+				rake.LoadSources(cfg.Internal,
+					rake.YamlFileWriter(config.InternalConfigFilePath()))
 				fmt.Println("Thank you! Happy Coding!")
 			}
 		}

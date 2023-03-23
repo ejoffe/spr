@@ -51,13 +51,13 @@ type UserConfig struct {
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
-
-	Stargazer bool `default:"false" yaml:"stargazer"`
-	RunCount  int  `default:"0" yaml:"runcount"`
 }
 
 type InternalConfig struct {
 	MergeCheckCommit map[string]string `yaml:"mergeCheckCommit"`
+
+	Stargazer bool `default:"false" yaml:"stargazer"`
+	RunCount  int  `default:"0" yaml:"runcount"`
 }
 
 func EmptyConfig() *Config {
@@ -117,12 +117,10 @@ func ParseConfig(gitcmd git.GitInterface) *Config {
 		rake.YamlFileSource(InternalConfigFilePath()),
 	)
 
-	if !cfg.User.Stargazer {
-		cfg.User.RunCount = cfg.User.RunCount + 1
-	}
-
 	rake.LoadSources(cfg.User,
 		rake.YamlFileWriter(UserConfigFilePath()))
+
+	cfg.Internal.RunCount = cfg.Internal.RunCount + 1
 
 	rake.LoadSources(cfg.Internal,
 		rake.YamlFileWriter(InternalConfigFilePath()))
