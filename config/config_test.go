@@ -87,8 +87,6 @@ func TestDefaultConfig(t *testing.T) {
 			LogGitHubCalls:   false,
 			StatusBitsHeader: true,
 			StatusBitsEmojis: true,
-			Stargazer:        false,
-			RunCount:         0,
 		},
 		Internal: &InternalConfig{
 			MergeCheckCommit: map[string]string{},
@@ -118,8 +116,6 @@ func TestGitHubRemoteSource(t *testing.T) {
 			LogGitCommands:   false,
 			LogGitHubCalls:   false,
 			StatusBitsHeader: false,
-			Stargazer:        false,
-			RunCount:         0,
 		},
 	}
 
