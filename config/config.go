@@ -14,8 +14,9 @@ import (
 )
 
 type Config struct {
-	Repo *RepoConfig
-	User *UserConfig
+	Repo     *RepoConfig
+	User     *UserConfig
+	Internal *InternalConfig
 }
 
 // Config object to hold spr configuration
@@ -36,6 +37,8 @@ type RepoConfig struct {
 	PRTemplatePath        string `yaml:"prTemplatePath,omitempty"`
 	PRTemplateInsertStart string `yaml:"prTemplateInsertStart,omitempty"`
 	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd,omitempty"`
+
+	MergeCheck string `yaml:"mergeCheck,omitempty"`
 }
 
 type UserConfig struct {
@@ -53,10 +56,17 @@ type UserConfig struct {
 	RunCount  int  `default:"0" yaml:"runcount"`
 }
 
+type InternalConfig struct {
+	MergeCheckCommit map[string]string `yaml:"mergeCheckCommit"`
+}
+
 func EmptyConfig() *Config {
 	return &Config{
 		Repo: &RepoConfig{},
 		User: &UserConfig{},
+		Internal: &InternalConfig{
+			MergeCheckCommit: map[string]string{},
+		},
 	}
 }
 
@@ -102,12 +112,20 @@ func ParseConfig(gitcmd git.GitInterface) *Config {
 		rake.YamlFileSource(UserConfigFilePath()),
 	)
 
+	rake.LoadSources(cfg.Internal,
+		rake.DefaultSource(),
+		rake.YamlFileSource(InternalConfigFilePath()),
+	)
+
 	if !cfg.User.Stargazer {
 		cfg.User.RunCount = cfg.User.RunCount + 1
 	}
 
 	rake.LoadSources(cfg.User,
 		rake.YamlFileWriter(UserConfigFilePath()))
+
+	rake.LoadSources(cfg.Internal,
+		rake.YamlFileWriter(InternalConfigFilePath()))
 
 	return cfg
 }
@@ -122,6 +140,13 @@ func UserConfigFilePath() string {
 	rootdir, err := os.UserHomeDir()
 	check(err)
 	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
+	return filepath
+}
+
+func InternalConfigFilePath() string {
+	rootdir, err := os.UserHomeDir()
+	check(err)
+	filepath := filepath.Clean(path.Join(rootdir, ".spr.state"))
 	return filepath
 }
 
@@ -201,19 +226,3 @@ func check(err error) {
 		panic(err)
 	}
 }
-
-/*
-func installCommitHook() {
-	var rootdir string
-	mustgit("rev-parse --show-toplevel", &rootdir)
-	rootdir = strings.TrimSpace(rootdir)
-	err := os.Chdir(rootdir)
-	check(err)
-	path, err := exec.LookPath("spr_commit_hook")
-	check(err)
-	cmd := exec.Command("ln", "-s", path, ".git/hooks/commit-msg")
-	_, err = cmd.CombinedOutput()
-	check(err)
-	fmt.Printf("- Installed commit hook in .git/hooks/commit-msg\n")
-}
-*/

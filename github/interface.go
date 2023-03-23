@@ -30,3 +30,7 @@ type RepoAssignee struct {
 	Login string
 	Name  string
 }
+
+func (i *GitHubInfo) Key() string {
+	return i.RepositoryID + ":" + i.LocalBranch
+}
