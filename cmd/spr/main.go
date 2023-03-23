@@ -197,6 +197,14 @@ VERSION: {{.Version}}
 				},
 			},
 			{
+				Name:  "check",
+				Usage: "Run pre merge checks (configured by MergeCheck in repository config)",
+				Action: func(c *cli.Context) error {
+					stackedpr.RunMergeCheck(ctx)
+					return nil
+				},
+			},
+			{
 				Name:  "version",
 				Usage: "Show version info",
 				Action: func(c *cli.Context) error {

@@ -58,6 +58,9 @@ func TestEmptyConfig(t *testing.T) {
 	expect := &Config{
 		Repo: &RepoConfig{},
 		User: &UserConfig{},
+		Internal: &InternalConfig{
+			MergeCheckCommit: map[string]string{},
+		},
 	}
 	actual := EmptyConfig()
 	assert.Equal(t, expect, actual)
@@ -86,6 +89,9 @@ func TestDefaultConfig(t *testing.T) {
 			StatusBitsEmojis: true,
 			Stargazer:        false,
 			RunCount:         0,
+		},
+		Internal: &InternalConfig{
+			MergeCheckCommit: map[string]string{},
 		},
 	}
 	actual := DefaultConfig()

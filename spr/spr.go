@@ -3,16 +3,20 @@ package spr
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/ejoffe/profiletimer"
+	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
@@ -242,6 +246,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 //   - pass all checks
 //   - have no merge conflicts
 //   - not be on top of another unmergable request
+//   - pass merge checks (using 'spr check') if configured
 //
 // In order to merge a stack of pull requests without generating conflicts
 //
@@ -254,6 +259,19 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	sd.profiletimer.Step("MergePullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
+
+	// MergeCheck
+	if sd.config.Repo.MergeCheck != "" {
+		localCommits := sd.getLocalCommitStack()
+		if len(localCommits) > 0 {
+			lastCommit := localCommits[len(localCommits)-1]
+			checkedCommit, found := sd.config.Internal.MergeCheckCommit[githubInfo.Key()]
+
+			if !found || checkedCommit == "SKIP" || lastCommit.CommitHash != checkedCommit {
+				check(errors.New("need to run merge check 'spr check' before merging"))
+			}
+		}
+	}
 
 	// Figure out top most pr in the stack that is mergeable
 	var prIndex int
@@ -344,6 +362,67 @@ func (sd *stackediff) SyncStack(ctx context.Context) {
 	syncCommand := fmt.Sprintf("cherry-pick ..%s", lastPR.Commit.CommitHash)
 	err := sd.gitcmd.Git(syncCommand, nil)
 	check(err)
+}
+
+func (sd *stackediff) RunMergeCheck(ctx context.Context) {
+	sd.profiletimer.Step("RunMergeCheck::Start")
+	defer sd.profiletimer.Step("RunMergeCheck::End")
+
+	if sd.config.Repo.MergeCheck == "" {
+		fmt.Println("use MergeCheck to configure a pre merge check command to run")
+		return
+	}
+
+	localCommits := sd.getLocalCommitStack()
+	if len(localCommits) == 0 {
+		fmt.Println("no local commits - nothing to check")
+		return
+	}
+
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigch)
+
+	var cmd *exec.Cmd
+	splitCmd := strings.Split(sd.config.Repo.MergeCheck, " ")
+	if len(splitCmd) == 1 {
+		cmd = exec.Command(splitCmd[0])
+	} else {
+		cmd = exec.Command(splitCmd[0], splitCmd[1:]...)
+	}
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	check(err)
+
+	go func() {
+		_, ok := <-sigch
+		if ok {
+			fmt.Println("INTERRUPT")
+			err := cmd.Process.Signal(syscall.SIGKILL)
+			check(err)
+		}
+	}()
+
+	err = cmd.Wait()
+
+	if err != nil {
+		sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = ""
+		rake.LoadSources(sd.config.Internal,
+			rake.YamlFileWriter(config.InternalConfigFilePath()))
+		fmt.Printf("MergeCheck FAILED: %s\n", err)
+		return
+	}
+
+	lastCommit := localCommits[len(localCommits)-1]
+	sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = lastCommit.CommitHash
+	rake.LoadSources(sd.config.Internal,
+		rake.YamlFileWriter(config.InternalConfigFilePath()))
+	fmt.Println("MergeCheck PASSED")
 }
 
 // ProfilingEnable enables stopwatch profiling
