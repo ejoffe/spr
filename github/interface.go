@@ -32,5 +32,5 @@ type RepoAssignee struct {
 }
 
 func (i *GitHubInfo) Key() string {
-	return i.RepositoryID + ":" + i.LocalBranch
+	return i.RepositoryID + "_" + i.LocalBranch
 }

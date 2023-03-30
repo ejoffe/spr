@@ -267,7 +267,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.Internal.MergeCheckCommit[githubInfo.Key()]
 
-			if !found || checkedCommit == "SKIP" || lastCommit.CommitHash != checkedCommit {
+			if !found {
+				check(errors.New("need to run merge check 'spr check' before merging"))
+			} else if checkedCommit != "SKIP" && lastCommit.CommitHash != checkedCommit {
 				check(errors.New("need to run merge check 'spr check' before merging"))
 			}
 		}
