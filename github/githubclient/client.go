@@ -174,7 +174,7 @@ type client struct {
 	api    genclient.Client
 }
 
-var BranchNameRegex = regexp.MustCompile(`pr/[a-zA-Z0-9_\-]+/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
+var BranchNameRegex = regexp.MustCompile(`spr/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
 
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	if c.config.User.LogGitHubCalls {
@@ -605,7 +605,7 @@ func GetRemoteBranchName(gitcmd git.GitInterface, repoConfig *config.RepoConfig)
 }
 
 func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
-	return "pr/" + info.UserName + "/" + info.LocalBranch + "/" + commit.CommitID
+	return "spr/" + info.LocalBranch + "/" + commit.CommitID
 }
 
 // sortPullRequests sorts the pull requests so that the one that is on top of

@@ -636,7 +636,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 }
 
 func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
-	return "pr/" + info.UserName + "/" + info.LocalBranch + "/" + commit.CommitID
+	return "spr/" + info.LocalBranch + "/" + commit.CommitID
 }
 
 func (sd *stackediff) mustgit(argStr string, output *string) {

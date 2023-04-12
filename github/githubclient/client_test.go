@@ -15,8 +15,8 @@ func TestPullRequestRegex(t *testing.T) {
 		branch string
 		commit string
 	}{
-		{input: "pr/username/branchname/deadbeef", branch: "branchname", commit: "deadbeef"},
-		{input: "pr/username/branch/name/deadbeef", branch: "branch/name", commit: "deadbeef"},
+		{input: "spr/branchname/deadbeef", branch: "branchname", commit: "deadbeef"},
+		{input: "spr/branch/name/deadbeef", branch: "branch/name", commit: "deadbeef"},
 	}
 
 	for _, tc := range tests {
