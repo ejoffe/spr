@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -264,11 +265,14 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 		}
 
 		for _, node := range *resp.Repository.AssignableUsers.Nodes {
-			users = append(users, github.RepoAssignee{
+			user := github.RepoAssignee{
 				ID:    node.Id,
 				Login: node.Login,
-				Name:  *node.Name,
-			})
+			}
+			if node.Name != nil {
+				user.Name = *node.Name
+			}
+			users = append(users, user)
 		}
 		if !resp.Repository.AssignableUsers.PageInfo.HasNextPage {
 			break
