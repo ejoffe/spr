@@ -188,7 +188,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	branchname := getLocalBranchName(gitcmd)
 
 	var requests []*github.PullRequest
-	for _, node := range *resp.Viewer.PullRequests.Nodes {
+	for _, node := range *resp.Repository.PullRequests.Nodes {
 		if resp.Repository.Id != node.Repository.Id {
 			continue
 		}
