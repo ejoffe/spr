@@ -188,7 +188,7 @@ func (pr *PullRequest) String(config *config.Config) string {
 		lineLength += 4
 	}
 	diff := lineLength - terminalWidth
-	if diff > 0 {
+	if diff > 0 && terminalWidth > 3 {
 		line = line[:terminalWidth-3] + "..."
 	}
 
