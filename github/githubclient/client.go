@@ -542,10 +542,18 @@ func (c *client) MergePullRequest(ctx context.Context,
 		Str("mergeMethod", string(mergeMethod)).
 		Msg("MergePullRequest")
 
-	_, err := c.api.MergePullRequest(ctx, genclient.MergePullRequestInput{
-		PullRequestId: pr.ID,
-		MergeMethod:   &mergeMethod,
-	})
+	var err error
+	if c.config.Repo.MergeQueue {
+		_, err = c.api.AutoMergePullRequest(ctx, genclient.EnablePullRequestAutoMergeInput{
+			PullRequestId: pr.ID,
+			MergeMethod:   &mergeMethod,
+		})
+	} else {
+		_, err = c.api.MergePullRequest(ctx, genclient.MergePullRequestInput{
+			PullRequestId: pr.ID,
+			MergeMethod:   &mergeMethod,
+		})
+	}
 	if err != nil {
 		log.Fatal().
 			Str("id", pr.ID).

@@ -5,10 +5,12 @@ operations:
 package_name: genclient
 package_dir: gen
 scalar_type_map:
-  ID:          string
-  GitObjectID: string
-  DateTime:    string
-  URI:         string
-  GitRefname:  string
+  ID:           string
+  GitObjectID:  string
+  DateTime:     string
+  URI:          string
+  GitRefname:   string
+  Date:         string
+  Base64String: string
 generate_mocks: false
 debug: false
