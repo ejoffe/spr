@@ -48,23 +48,28 @@ type Client interface {
 		input MergePullRequestInput,
 	) (*MergePullRequestResponse, error)
 
-	// ClosePullRequest from github/githubclient/queries.graphql:119
+	// AutoMergePullRequest from github/githubclient/queries.graphql:119
+	AutoMergePullRequest(ctx context.Context,
+		input EnablePullRequestAutoMergeInput,
+	) (*AutoMergePullRequestResponse, error)
+
+	// ClosePullRequest from github/githubclient/queries.graphql:131
 	ClosePullRequest(ctx context.Context,
 		input ClosePullRequestInput,
 	) (*ClosePullRequestResponse, error)
 
-	// StarCheck from github/githubclient/queries.graphql:131
+	// StarCheck from github/githubclient/queries.graphql:143
 	StarCheck(ctx context.Context,
 		after *string,
 	) (*StarCheckResponse, error)
 
-	// StarGetRepo from github/githubclient/queries.graphql:147
+	// StarGetRepo from github/githubclient/queries.graphql:159
 	StarGetRepo(ctx context.Context,
 		owner string,
 		name string,
 	) (*StarGetRepoResponse, error)
 
-	// StarAdd from github/githubclient/queries.graphql:156
+	// StarAdd from github/githubclient/queries.graphql:168
 	StarAdd(ctx context.Context,
 		input AddStarInput,
 	) (*StarAddResponse, error)

@@ -28,6 +28,7 @@ type RepoConfig struct {
 	RemoteBranches []string `yaml:"remoteBranches"`
 
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
+	MergeQueue  bool   `default:"false" yaml:"mergeQueue"`
 
 	PRTemplatePath        string `yaml:"prTemplatePath,omitempty"`
 	PRTemplateInsertStart string `yaml:"prTemplateInsertStart,omitempty"`

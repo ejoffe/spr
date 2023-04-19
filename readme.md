@@ -159,6 +159,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubBranch          | str  | master     | github branch for pull request target                                             |
 | githubHost            | str  | github.com | github host, can be updated for github enterprise use case                        |
 | mergeMethod           | str  | rebase     | merge method, valid values: [rebase, squash, merge]                               |
+| mergeQueue            | bool | false      | use GitHub merge queue to merge pull requests |
 | prTemplatePath        | str  |            | path to PR template (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md) |
 | prTemplateInsertStart | str  |            | text to search for in PR template that determines body insert start location      |
 | prTemplateInsertEnd   | str  |            | text to search for in PR template that determines body insert end location        |
