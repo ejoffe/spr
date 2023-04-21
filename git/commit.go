@@ -1,5 +1,12 @@
 package git
 
+type GitInterface interface {
+	GitWithEditor(args string, output *string, editorCmd string) error
+	Git(args string, output *string) error
+	MustGit(args string, output *string)
+	RootDir() string
+}
+
 // Commit has all the git commit info
 type Commit struct {
 	// CommitID is a long lasting id describing the commit.

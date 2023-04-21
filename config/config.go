@@ -2,14 +2,9 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/ejoffe/rake"
-	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 )
 
@@ -84,77 +79,6 @@ func DefaultConfig() *Config {
 	return cfg
 }
 
-func ParseConfig(gitcmd git.GitInterface) *Config {
-	cfg := EmptyConfig()
-
-	rake.LoadSources(cfg.Repo,
-		rake.DefaultSource(),
-		GitHubRemoteSource(cfg, gitcmd),
-		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
-		rake.YamlFileWriter(RepoConfigFilePath(gitcmd)),
-	)
-	if cfg.Repo.GitHubHost == "" {
-		fmt.Println("unable to auto configure repository host - must be set manually in .spr.yml")
-		os.Exit(2)
-	}
-	if cfg.Repo.GitHubRepoOwner == "" {
-		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
-		os.Exit(3)
-	}
-
-	if cfg.Repo.GitHubRepoName == "" {
-		fmt.Println("unable to auto configure repository name - must be set manually in .spr.yml")
-		os.Exit(4)
-	}
-
-	rake.LoadSources(cfg.User,
-		rake.DefaultSource(),
-		rake.YamlFileSource(UserConfigFilePath()),
-	)
-
-	rake.LoadSources(cfg.Internal,
-		rake.DefaultSource(),
-		rake.YamlFileSource(InternalConfigFilePath()),
-	)
-
-	rake.LoadSources(cfg.User,
-		rake.YamlFileWriter(UserConfigFilePath()))
-
-	cfg.Internal.RunCount = cfg.Internal.RunCount + 1
-
-	rake.LoadSources(cfg.Internal,
-		rake.YamlFileWriter(InternalConfigFilePath()))
-
-	return cfg
-}
-
-func RepoConfigFilePath(gitcmd git.GitInterface) string {
-	rootdir := gitcmd.RootDir()
-	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
-	return filepath
-}
-
-func UserConfigFilePath() string {
-	rootdir, err := os.UserHomeDir()
-	check(err)
-	filepath := filepath.Clean(path.Join(rootdir, ".spr.yml"))
-	return filepath
-}
-
-func InternalConfigFilePath() string {
-	rootdir, err := os.UserHomeDir()
-	check(err)
-	filepath := filepath.Clean(path.Join(rootdir, ".spr.state"))
-	return filepath
-}
-
-func GitHubRemoteSource(config *Config, gitcmd git.GitInterface) *remoteSource {
-	return &remoteSource{
-		gitcmd: gitcmd,
-		config: config,
-	}
-}
-
 func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
 	var mergeMethod genclient.PullRequestMergeMethod
 	var err error
@@ -172,51 +96,6 @@ func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
 		)
 	}
 	return mergeMethod, err
-}
-
-type remoteSource struct {
-	gitcmd git.GitInterface
-	config *Config
-}
-
-func (s *remoteSource) Load(_ interface{}) {
-	var output string
-	err := s.gitcmd.Git("remote -v", &output)
-	check(err)
-	lines := strings.Split(output, "\n")
-
-	for _, line := range lines {
-		githubHost, repoOwner, repoName, match := getRepoDetailsFromRemote(line)
-		if match {
-			s.config.Repo.GitHubHost = githubHost
-			s.config.Repo.GitHubRepoOwner = repoOwner
-			s.config.Repo.GitHubRepoName = repoName
-			break
-		}
-	}
-}
-
-func getRepoDetailsFromRemote(remote string) (string, string, string, bool) {
-	// Allows "https://", "ssh://" or no protocol at all (this means ssh)
-	protocolFormat := `(?:(https://)|(ssh://))?`
-	// This may or may not be present in the address
-	userFormat := `(git@)?`
-	// "/" is expected in "http://" or "ssh://" protocol, when no protocol given
-	// it should be ":"
-	repoFormat := `(?P<githubHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>\w+)/(?P<repoName>[\w-]+)`
-	// This is neither required in https access nor in ssh one
-	suffixFormat := `(.git)?`
-	regexFormat := fmt.Sprintf(`^origin\s+%s%s%s%s \(push\)`,
-		protocolFormat, userFormat, repoFormat, suffixFormat)
-	regex := regexp.MustCompile(regexFormat)
-	matches := regex.FindStringSubmatch(remote)
-	if matches != nil {
-		githubHostIndex := regex.SubexpIndex("githubHost")
-		repoOwnerIndex := regex.SubexpIndex("repoOwner")
-		repoNameIndex := regex.SubexpIndex("repoName")
-		return matches[githubHostIndex], matches[repoOwnerIndex], matches[repoNameIndex], true
-	}
-	return "", "", "", false
 }
 
 func check(err error) {
