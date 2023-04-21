@@ -9,6 +9,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/config/config_parser"
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/rs/zerolog/log"
 )
@@ -25,7 +26,7 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 			log.Debug().Bool("stargazer", true).Msg("MaybeStar")
 			cfg.Internal.Stargazer = true
 			rake.LoadSources(cfg.Internal,
-				rake.YamlFileWriter(config.InternalConfigFilePath()))
+				rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 		} else {
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar")
 			fmt.Print("enjoying git spr? add a GitHub star? [Y/n]:")
@@ -37,7 +38,7 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 				c.addStar(ctx)
 				cfg.Internal.Stargazer = true
 				rake.LoadSources(cfg.Internal,
-					rake.YamlFileWriter(config.InternalConfigFilePath()))
+					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 				fmt.Println("Thank you! Happy Coding!")
 			}
 		}

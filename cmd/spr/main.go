@@ -7,6 +7,7 @@ import (
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/config/config_parser"
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
@@ -38,7 +39,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	cfg := config.ParseConfig(gitcmd)
+	cfg := config_parser.ParseConfig(gitcmd)
 	gitcmd = realgit.NewGitCmd(cfg)
 
 	ctx := context.Background()
