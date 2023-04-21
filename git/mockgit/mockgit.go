@@ -42,6 +42,13 @@ func (m *Mock) Git(args string, output *string) error {
 	return nil
 }
 
+func (m *Mock) MustGit(argStr string, output *string) {
+	err := m.Git(argStr, output)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (m *Mock) RootDir() string {
 	return ""
 }

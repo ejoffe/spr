@@ -38,6 +38,13 @@ func (c *gitcmd) Git(argStr string, output *string) error {
 	return c.GitWithEditor(argStr, output, "/usr/bin/true")
 }
 
+func (c *gitcmd) MustGit(argStr string, output *string) {
+	err := c.Git(argStr, output)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) error {
 	// runs a git command
 	//  if output is not nil it will be set to the output of the command

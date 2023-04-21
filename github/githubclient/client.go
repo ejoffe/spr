@@ -185,7 +185,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		c.config.Repo.GitHubRepoName)
 	check(err)
 
-	branchname := getLocalBranchName(gitcmd)
+	branchname := git.GetLocalBranchName(gitcmd)
 
 	var requests []*github.PullRequest
 	for _, node := range *resp.Repository.PullRequests.Nodes {
@@ -231,7 +231,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		}
 	}
 
-	targetBranch := GetRemoteBranchName(gitcmd, c.config.Repo)
+	targetBranch := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	requests = sortPullRequests(requests, c.config, targetBranch)
 
 	info := &github.GitHubInfo{
@@ -286,7 +286,7 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := GetRemoteBranchName(gitcmd, c.config.Repo)
+	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
@@ -445,7 +445,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := GetRemoteBranchName(gitcmd, c.config.Repo)
+	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
 		baseRefName = branchNameFromCommit(info, *prevCommit)
 	}
@@ -578,30 +578,6 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github close %d : %s\n", pr.Number, pr.Title)
 	}
-}
-
-func getLocalBranchName(gitcmd git.GitInterface) string {
-	var output string
-	err := gitcmd.Git("branch --no-color", &output)
-	check(err)
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "* ") {
-			return line[2:]
-		}
-	}
-	panic("cannot determine local git branch name")
-}
-
-func GetRemoteBranchName(gitcmd git.GitInterface, repoConfig *config.RepoConfig) string {
-	localBranchName := getLocalBranchName(gitcmd)
-
-	for _, remoteBranchName := range repoConfig.RemoteBranches {
-		if localBranchName == remoteBranchName {
-			return remoteBranchName
-		}
-	}
-	return repoConfig.GitHubBranch
 }
 
 func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
