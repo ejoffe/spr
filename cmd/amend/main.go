@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/config/config_parser"
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	cfg := config.ParseConfig(gitcmd)
+	cfg := config_parser.ParseConfig(gitcmd)
 	client := githubclient.NewGitHubClient(ctx, cfg)
 	gitcmd = realgit.NewGitCmd(cfg)
 

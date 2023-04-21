@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,10 +17,10 @@ import (
 	"github.com/ejoffe/profiletimer"
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/config/config_parser"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/githubclient"
-	"github.com/rs/zerolog/log"
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
@@ -53,7 +52,7 @@ type stackediff struct {
 //
 //	of commits. A list of commits is printed and one can be chosen to be amended.
 func (sd *stackediff) AmendCommit(ctx context.Context) {
-	localCommits := sd.getLocalCommitStack()
+	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
 	if len(localCommits) == 0 {
 		fmt.Fprintf(sd.output, "No commits to amend\n")
 		return
@@ -80,12 +79,12 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	}
 	commitIndex = commitIndex - 1
 	check(err)
-	sd.mustgit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
+	sd.gitcmd.MustGit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
-	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
+	targetBranch := git.GetRemoteBranchName(sd.config.Repo, sd.gitcmd)
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
 		sd.config.Repo.GitHubRemote, targetBranch)
-	sd.mustgit(rebaseCmd, nil)
+	sd.gitcmd.MustGit(rebaseCmd, nil)
 }
 
 func (sd *stackediff) addReviewers(ctx context.Context,
@@ -122,7 +121,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		return
 	}
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
-	localCommits := sd.getLocalCommitStack()
+	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
 
 	// close prs for deleted commits
@@ -262,7 +261,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 
 	// MergeCheck
 	if sd.config.Repo.MergeCheck != "" {
-		localCommits := sd.getLocalCommitStack()
+		localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.Internal.MergeCheckCommit[githubInfo.Key()]
@@ -375,7 +374,7 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 		return
 	}
 
-	localCommits := sd.getLocalCommitStack()
+	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
 	if len(localCommits) == 0 {
 		fmt.Println("no local commits - nothing to check")
 		return
@@ -415,7 +414,7 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 	if err != nil {
 		sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = ""
 		rake.LoadSources(sd.config.Internal,
-			rake.YamlFileWriter(config.InternalConfigFilePath()))
+			rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 		fmt.Printf("MergeCheck FAILED: %s\n", err)
 		return
 	}
@@ -423,7 +422,7 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 	lastCommit := localCommits[len(localCommits)-1]
 	sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = lastCommit.CommitHash
 	rake.LoadSources(sd.config.Internal,
-		rake.YamlFileWriter(config.InternalConfigFilePath()))
+		rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 	fmt.Println("MergeCheck PASSED")
 }
 
@@ -438,120 +437,6 @@ func (sd *stackediff) ProfilingSummary() {
 	check(err)
 }
 
-// getLocalCommitStack returns a list of unmerged commits
-func (sd *stackediff) getLocalCommitStack() []git.Commit {
-	var commitLog string
-	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
-	logCommand := fmt.Sprintf("log --format=medium --no-color %s/%s..HEAD",
-		sd.config.Repo.GitHubRemote, targetBranch)
-	sd.mustgit(logCommand, &commitLog)
-	commits, valid := sd.parseLocalCommitStack(commitLog)
-	if !valid {
-		// if not valid - run rebase to add commit ids
-		rewordPath, err := exec.LookPath("spr_reword_helper")
-		check(err)
-		targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
-		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-			sd.config.Repo.GitHubRemote, targetBranch)
-		sd.gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
-
-		sd.mustgit(logCommand, &commitLog)
-		commits, valid = sd.parseLocalCommitStack(commitLog)
-		if !valid {
-			// if still not valid - panic
-			errMsg := "unable to fetch local commits\n"
-			errMsg += " most likely this is an issue with missing commit-id in the commit body\n"
-			panic(errMsg)
-		}
-	}
-	return commits
-}
-
-func (sd *stackediff) parseLocalCommitStack(commitLog string) ([]git.Commit, bool) {
-	var commits []git.Commit
-
-	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
-	commitIDRegex := regexp.MustCompile(`commit-id\:([a-f0-9]{8})`)
-
-	// The list of commits from the command line actually starts at the
-	//  most recent commit. In order to reverse the list we use a
-	//  custom prepend function instead of append
-	prepend := func(l []git.Commit, c git.Commit) []git.Commit {
-		l = append(l, git.Commit{})
-		copy(l[1:], l)
-		l[0] = c
-		return l
-	}
-
-	// commitScanOn is set to true when the commit hash is matched
-	//  and turns false when the commit-id is matched.
-	//  Commit messages always start with a hash and end with a commit-id.
-	//  The commit subject and body are always between the hash the commit-id.
-	commitScanOn := false
-
-	subjectIndex := 0
-	var scannedCommit git.Commit
-
-	lines := strings.Split(commitLog, "\n")
-	log.Debug().Int("lines", len(lines)).Msg("parseLocalCommitStack")
-	for index, line := range lines {
-
-		// match commit hash : start of a new commit
-		matches := commitHashRegex.FindStringSubmatch(line)
-		if matches != nil {
-			log.Debug().Interface("matches", matches).Msg("parseLocalCommitStack :: commitHashMatch")
-			if commitScanOn {
-				// missing the commit-id
-				log.Debug().Msg("parseLocalCommitStack :: missing commit id")
-				return nil, false
-			}
-			commitScanOn = true
-			scannedCommit = git.Commit{
-				CommitHash: matches[1],
-			}
-			subjectIndex = index + 4
-		}
-
-		// match commit id : last thing in the commit
-		matches = commitIDRegex.FindStringSubmatch(line)
-		if matches != nil {
-			log.Debug().Interface("matches", matches).Msg("parseLocalCommitStack :: commitIdMatch")
-			scannedCommit.CommitID = matches[1]
-			scannedCommit.Body = strings.TrimSpace(scannedCommit.Body)
-
-			if strings.HasPrefix(scannedCommit.Subject, "WIP") {
-				scannedCommit.WIP = true
-			}
-
-			commits = prepend(commits, scannedCommit)
-			commitScanOn = false
-		}
-
-		// look for subject and body
-		if commitScanOn {
-			if index == subjectIndex {
-				scannedCommit.Subject = strings.TrimSpace(line)
-			} else if index == (subjectIndex+1) && line != "\n" {
-				scannedCommit.Body += strings.TrimSpace(line) + "\n"
-			} else if index > (subjectIndex + 1) {
-				scannedCommit.Body += strings.TrimSpace(line) + "\n"
-			}
-		}
-
-	}
-
-	// if commitScanOn is true here it means there was a commit without
-	//  a commit-id
-	if commitScanOn {
-		// missing the commit-id
-		log.Debug().Msg("parseLocalCommitStack :: missing last commit id")
-		return nil, false
-	}
-
-	log.Debug().Interface("commits", commits).Msg("parseLocalCommitStack")
-	return commits, true
-}
-
 func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequest) bool {
 	for i := 0; i < len(pullRequests); i++ {
 		if localCommits[i].CommitID != pullRequests[i].Commit.CommitID {
@@ -562,8 +447,8 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
-	sd.mustgit("fetch --tags", nil)
-	targetBranch := githubclient.GetRemoteBranchName(sd.gitcmd, sd.config.Repo)
+	sd.gitcmd.MustGit("fetch --tags", nil)
+	targetBranch := git.GetRemoteBranchName(sd.config.Repo, sd.gitcmd)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
 		sd.config.Repo.GitHubRemote, targetBranch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
@@ -592,13 +477,13 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	commits []git.Commit, info *github.GitHubInfo) bool {
 
 	var output string
-	sd.mustgit("status --porcelain --untracked-files=no", &output)
+	sd.gitcmd.MustGit("status --porcelain --untracked-files=no", &output)
 	if output != "" {
 		err := sd.gitcmd.Git("stash", nil)
 		if err != nil {
 			return false
 		}
-		defer sd.mustgit("stash pop", nil)
+		defer sd.gitcmd.MustGit("stash pop", nil)
 	}
 
 	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
@@ -629,7 +514,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	if len(updatedCommits) > 0 {
 		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
 		pushCommand += strings.Join(refNames, " ")
-		sd.mustgit(pushCommand, nil)
+		sd.gitcmd.MustGit(pushCommand, nil)
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
 	return true
@@ -637,11 +522,6 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 
 func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
 	return "spr/" + info.LocalBranch + "/" + commit.CommitID
-}
-
-func (sd *stackediff) mustgit(argStr string, output *string) {
-	err := sd.gitcmd.Git(argStr, output)
-	check(err)
 }
 
 func check(err error) {
