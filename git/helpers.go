@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// GetLocalBranchName returns the current local git branch
 func GetLocalBranchName(gitcmd GitInterface) string {
 	var output string
 	err := gitcmd.Git("branch --no-color", &output)
@@ -23,6 +24,11 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 	panic("cannot determine local git branch name")
 }
 
+func BranchNameFromCommit(commit Commit) string {
+	return "spr/" + commit.CommitID
+}
+
+// GetRemoteBranchName
 func GetRemoteBranchName(repoConfig *config.RepoConfig, gitcmd GitInterface) string {
 	localBranchName := GetLocalBranchName(gitcmd)
 
@@ -34,7 +40,20 @@ func GetRemoteBranchName(repoConfig *config.RepoConfig, gitcmd GitInterface) str
 	return repoConfig.GitHubBranch
 }
 
-// getLocalCommitStack returns a list of unmerged commits
+// GetLocalTopCommit returns the top unmerged commit in the stack
+//
+// return nil if there are no unmerged commits in the stack
+func GetLocalTopCommit(repoConfig *config.RepoConfig, gitcmd GitInterface) *Commit {
+	commits := GetLocalCommitStack(repoConfig, gitcmd)
+	if len(commits) == 0 {
+		return nil
+	}
+	return &commits[len(commits)-1]
+}
+
+// GetLocalCommitStack returns a list of unmerged commits
+//
+//	the list is ordered with the bottom commit in the stack first
 func GetLocalCommitStack(repoConfig *config.RepoConfig, gitcmd GitInterface) []Commit {
 	var commitLog string
 	targetBranch := GetRemoteBranchName(repoConfig, gitcmd)

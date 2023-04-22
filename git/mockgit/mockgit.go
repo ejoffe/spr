@@ -80,7 +80,7 @@ func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
 
 	var refNames []string
 	for _, c := range commits {
-		branchName := "spr/master/" + c.CommitID
+		branchName := "spr/" + c.CommitID
 		refNames = append(refNames, c.CommitHash+":refs/heads/"+branchName)
 	}
 	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))

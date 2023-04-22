@@ -507,7 +507,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 
 	var refNames []string
 	for _, commit := range updatedCommits {
-		branchName := sd.branchNameFromCommit(info, commit)
+		branchName := git.BranchNameFromCommit(commit)
 		refNames = append(refNames,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}
@@ -518,10 +518,6 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
 	return true
-}
-
-func (sd *stackediff) branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
-	return "spr/" + info.LocalBranch + "/" + commit.CommitID
 }
 
 func check(err error) {
