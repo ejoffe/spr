@@ -35,6 +35,8 @@ type RepoConfig struct {
 	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd,omitempty"`
 
 	MergeCheck string `yaml:"mergeCheck,omitempty"`
+
+	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
 }
 
 type UserConfig struct {

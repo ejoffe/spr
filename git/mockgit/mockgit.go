@@ -65,7 +65,7 @@ type responder interface {
 }
 
 func (m *Mock) ExpectFetch() {
-	m.expect("git fetch --tags")
+	m.expect("git fetch")
 	m.expect("git branch --no-color").respond("* master")
 	m.expect("git rebase origin/master --autostash")
 }

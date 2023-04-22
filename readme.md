@@ -163,6 +163,8 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | prTemplatePath        | str  |            | path to PR template (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md) |
 | prTemplateInsertStart | str  |            | text to search for in PR template that determines body insert start location      |
 | prTemplateInsertEnd   | str  |            | text to search for in PR template that determines body insert end location        |
+| mergeCheck            | str  |            | enforce a pre-merge check using 'git spr check' |
+| forceFetchTags        | bool | false      | also fetch tags when running 'git spr update' |
 
 
 | User Config          | Type | Default | Description                                                       |
