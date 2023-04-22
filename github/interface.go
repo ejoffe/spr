@@ -8,13 +8,28 @@ import (
 )
 
 type GitHubInterface interface {
+	// GetInfo returns the list of pull requests from GitHub which match the local stack of commits
 	GetInfo(ctx context.Context, gitcmd git.GitInterface) *GitHubInfo
+
+	// GetAssignableUsers returns a list of valid GitHub users that can review the pull request
 	GetAssignableUsers(ctx context.Context) []RepoAssignee
+
+	// CreatePullRequest creates a pull request
 	CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, commit git.Commit, prevCommit *git.Commit) *PullRequest
+
+	// UpdatePullRequest updates a pull request with current commit
 	UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
+
+	// AddReviewers adds a reviewer to the given pull request
 	AddReviewers(ctx context.Context, pr *PullRequest, userIDs []string)
+
+	// CommentPullRequest add a comment to the given pull request
 	CommentPullRequest(ctx context.Context, pr *PullRequest, comment string)
+
+	// MergePullRequest merged the given pull request
 	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod genclient.PullRequestMergeMethod)
+
+	// ClosePullRequest closes the given pull request
 	ClosePullRequest(ctx context.Context, pr *PullRequest)
 }
 

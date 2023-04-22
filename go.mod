@@ -10,6 +10,7 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.7.0
+	github.com/tidwall/pretty v1.2.0
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
