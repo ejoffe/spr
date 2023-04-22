@@ -7,25 +7,414 @@ import (
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMatchPullRequestStack(t *testing.T) {
+	tests := []struct {
+		name    string
+		commits []git.Commit
+		prs     genclient.PullRequestsRepositoryPullRequests
+		expect  []*github.PullRequest
+	}{
+		{
+			name:    "Empty",
+			commits: []git.Commit{},
+			prs:     genclient.PullRequestsRepositoryPullRequests{},
+			expect:  []*github.PullRequest{},
+		},
+		{
+			name:    "FirstCommit",
+			commits: []git.Commit{{CommitID: "00000001"}},
+			prs:     genclient.PullRequestsRepositoryPullRequests{},
+			expect:  []*github.PullRequest{},
+		},
+		{
+			name: "SecondCommit",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000002"},
+			},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "1",
+					FromBranch: "spr/00000001",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000001",
+						CommitHash: "1",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
+			name: "ThirdCommit",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000002"},
+				{CommitID: "00000003"},
+			},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "2",
+						HeadRefName: "spr/00000002",
+						BaseRefName: "spr/00000001",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "2",
+					FromBranch: "spr/00000002",
+					ToBranch:   "spr/00000001",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "1",
+					FromBranch: "spr/00000001",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000001",
+						CommitHash: "1",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
+			name:    "RemoveOnlyCommit",
+			commits: []git.Commit{},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{},
+		},
+		{
+			name: "RemoveTopCommit",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000002"},
+			},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "2",
+						HeadRefName: "spr/00000002",
+						BaseRefName: "spr/00000001",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "3",
+						HeadRefName: "spr/00000003",
+						BaseRefName: "spr/00000002",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "2",
+					FromBranch: "spr/00000002",
+					ToBranch:   "spr/00000001",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "1",
+					FromBranch: "spr/00000001",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000001",
+						CommitHash: "1",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
+			name: "RemoveMiddleCommit",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000003"},
+			},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "2",
+						HeadRefName: "spr/00000002",
+						BaseRefName: "spr/00000001",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "3",
+						HeadRefName: "spr/00000003",
+						BaseRefName: "spr/00000002",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "3"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "3",
+					FromBranch: "spr/00000003",
+					ToBranch:   "spr/00000002",
+					Commit: git.Commit{
+						CommitID:   "00000003",
+						CommitHash: "3",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "2",
+					FromBranch: "spr/00000002",
+					ToBranch:   "spr/00000001",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "1",
+					FromBranch: "spr/00000001",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000001",
+						CommitHash: "1",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
+			name: "RemoveBottomCommit",
+			commits: []git.Commit{
+				{CommitID: "00000002"},
+				{CommitID: "00000003"},
+			},
+			prs: genclient.PullRequestsRepositoryPullRequests{
+				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+					{
+						Id:          "1",
+						HeadRefName: "spr/00000001",
+						BaseRefName: "master",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "2",
+						HeadRefName: "spr/00000002",
+						BaseRefName: "spr/00000001",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "3",
+						HeadRefName: "spr/00000003",
+						BaseRefName: "spr/00000002",
+						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "3"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "3",
+					FromBranch: "spr/00000003",
+					ToBranch:   "spr/00000002",
+					Commit: git.Commit{
+						CommitID:   "00000003",
+						CommitHash: "3",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "2",
+					FromBranch: "spr/00000002",
+					ToBranch:   "spr/00000001",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "1",
+					FromBranch: "spr/00000001",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000001",
+						CommitHash: "1",
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := matchPullRequestStack("master", tc.commits, tc.prs)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+}
 
 func TestPullRequestRegex(t *testing.T) {
 	tests := []struct {
 		input  string
-		branch string
 		commit string
 	}{
-		{input: "spr/branchname/deadbeef", branch: "branchname", commit: "deadbeef"},
-		{input: "spr/branch/name/deadbeef", branch: "branch/name", commit: "deadbeef"},
+		{input: "spr/deadbeef", commit: "deadbeef"},
 	}
 
 	for _, tc := range tests {
 		matches := BranchNameRegex.FindStringSubmatch(tc.input)
-		if tc.branch != matches[1] {
-			t.Fatalf("expected: '%v', actual: '%v'", tc.branch, matches[1])
-		}
-		if tc.commit != matches[2] {
-			t.Fatalf("expected: '%v', actual: '%v'", tc.commit, matches[2])
+		if tc.commit != matches[1] {
+			t.Fatalf("expected: '%v', actual: '%v'", tc.commit, matches[1])
 		}
 	}
 }

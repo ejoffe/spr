@@ -174,7 +174,7 @@ type client struct {
 	api    genclient.Client
 }
 
-var BranchNameRegex = regexp.MustCompile(`spr/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
+var BranchNameRegex = regexp.MustCompile(`spr/([a-f0-9]{8})$`)
 
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	if c.config.User.LogGitHubCalls {
@@ -185,13 +185,32 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		c.config.Repo.GitHubRepoName)
 	check(err)
 
-	branchname := git.GetLocalBranchName(gitcmd)
+	targetBranch := git.GetRemoteBranchName(c.config.Repo, gitcmd)
+	localCommitStack := git.GetLocalCommitStack(c.config.Repo, gitcmd)
 
-	var requests []*github.PullRequest
-	for _, node := range *resp.Repository.PullRequests.Nodes {
-		if resp.Repository.Id != node.Repository.Id {
-			continue
-		}
+	info := &github.GitHubInfo{
+		UserName:     resp.Viewer.Login,
+		RepositoryID: resp.Repository.Id,
+		LocalBranch:  git.GetLocalBranchName(gitcmd),
+		PullRequests: matchPullRequestStack(targetBranch, localCommitStack, resp.Repository.PullRequests),
+	}
+
+	log.Debug().Interface("Info", info).Msg("GetInfo")
+	return info
+}
+
+func matchPullRequestStack(
+	targetBranch string,
+	localCommitStack []git.Commit,
+	allPullRequests genclient.PullRequestsRepositoryPullRequests) []*github.PullRequest {
+
+	if len(localCommitStack) == 0 || allPullRequests.Nodes == nil {
+		return []*github.PullRequest{}
+	}
+
+	// pullRequestMap is a map from commit-id to pull request
+	pullRequestMap := make(map[string]*github.PullRequest)
+	for _, node := range *allPullRequests.Nodes {
 		pullRequest := &github.PullRequest{
 			ID:         node.Id,
 			Number:     node.Number,
@@ -202,10 +221,10 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		}
 
 		matches := BranchNameRegex.FindStringSubmatch(node.HeadRefName)
-		if matches != nil && matches[1] == branchname {
+		if matches != nil {
 			commit := (*node.Commits.Nodes)[0].Commit
 			pullRequest.Commit = git.Commit{
-				CommitID:   matches[2],
+				CommitID:   matches[1],
 				CommitHash: commit.Oid,
 				Subject:    commit.MessageHeadline,
 				Body:       commit.MessageBody,
@@ -227,23 +246,39 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 				NoConflicts:    node.Mergeable == "MERGEABLE",
 			}
 
-			requests = append(requests, pullRequest)
+			pullRequestMap[pullRequest.Commit.CommitID] = pullRequest
 		}
 	}
 
-	targetBranch := git.GetRemoteBranchName(c.config.Repo, gitcmd)
-	requests = sortPullRequests(requests, c.config, targetBranch)
+	var pullRequests []*github.PullRequest
 
-	info := &github.GitHubInfo{
-		UserName:     resp.Viewer.Login,
-		RepositoryID: resp.Repository.Id,
-		LocalBranch:  branchname,
-		PullRequests: requests,
+	// find top pr
+	var currpr *github.PullRequest
+	var found bool
+	for i := len(localCommitStack) - 1; i >= 0; i-- {
+		currpr, found = pullRequestMap[localCommitStack[i].CommitID]
+		if found {
+			break
+		}
 	}
 
-	log.Debug().Interface("Info", info).Msg("GetInfo")
+	// build pr stack
+	for currpr != nil {
+		pullRequests = append(pullRequests, currpr)
+		if currpr.ToBranch == targetBranch {
+			break
+		}
 
-	return info
+		matches := BranchNameRegex.FindStringSubmatch(currpr.ToBranch)
+		if matches == nil {
+			panic(fmt.Errorf("invalid base branch for pull request:%s", currpr.ToBranch))
+		}
+		nextCommitID := matches[1]
+
+		currpr = pullRequestMap[nextCommitID]
+	}
+
+	return pullRequests
 }
 
 // GetAssignableUsers is taken from github.com/cli/cli/api and is the approach used by the official gh
@@ -288,9 +323,9 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
-		baseRefName = branchNameFromCommit(info, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(*prevCommit)
 	}
-	headRefName := branchNameFromCommit(info, commit)
+	headRefName := git.BranchNameFromCommit(commit)
 
 	log.Debug().Interface("Commit", commit).
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
@@ -447,7 +482,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
-		baseRefName = branchNameFromCommit(info, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(*prevCommit)
 	}
 
 	log.Debug().Interface("Commit", commit).
@@ -578,10 +613,6 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github close %d : %s\n", pr.Number, pr.Title)
 	}
-}
-
-func branchNameFromCommit(info *github.GitHubInfo, commit git.Commit) string {
-	return "spr/" + info.LocalBranch + "/" + commit.CommitID
 }
 
 // sortPullRequests sorts the pull requests so that the one that is on top of
