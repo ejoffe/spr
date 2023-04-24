@@ -221,10 +221,12 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	wg := new(sync.WaitGroup)
 	wg.Add(len(updateQueue))
 
+	// Sort the PR stack by the local commit order, in case some commits were reordered
+	sortedPullRequests := sortPullRequestsByLocalCommitOrder(githubInfo.PullRequests, localCommits)
 	for i := range updateQueue {
 		go func(i int) {
 			pr := updateQueue[i]
-			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo.PullRequests, pr.pr, pr.commit, pr.prevCommit)
+			sd.github.UpdatePullRequest(ctx, sd.gitcmd, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
 			wg.Done()
 		}(i)
 	}
@@ -444,6 +446,19 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 		}
 	}
 	return false
+}
+
+func sortPullRequestsByLocalCommitOrder(pullRequests []*github.PullRequest, localCommits []git.Commit) []*github.PullRequest {
+	pullRequestMap := map[string]*github.PullRequest{}
+	for _, pullRequest := range pullRequests {
+		pullRequestMap[pullRequest.Commit.CommitID] = pullRequest
+	}
+
+	var sortedPullRequests []*github.PullRequest
+	for _, commit := range localCommits {
+		sortedPullRequests = append(sortedPullRequests, pullRequestMap[commit.CommitID])
+	}
+	return sortedPullRequests
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {

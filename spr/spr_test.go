@@ -347,6 +347,11 @@ func TestSPRReorderCommit(t *testing.T) {
 		CommitHash: "c400000000000000000000000000000000000000",
 		Subject:    "test commit 4",
 	}
+	c5 := git.Commit{
+		CommitID:   "00000005",
+		CommitHash: "c500000000000000000000000000000000000000",
+		Subject:    "test commit 5",
+	}
 
 	// 'git spr status' :: StatusPullRequest
 	githubmock.ExpectGetInfo()
@@ -404,6 +409,38 @@ func TestSPRReorderCommit(t *testing.T) {
 	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
 	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[2])
 	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
+	output.Reset()
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c5, c1, c2, c3, c4]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1, &c2, &c3, &c4, &c5})
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c2, nil)
+	githubmock.ExpectUpdatePullRequest(c3, nil)
+	githubmock.ExpectUpdatePullRequest(c4, nil)
+	// reorder commits
+	c1.CommitHash = "c102000000000000000000000000000000000000"
+	c2.CommitHash = "c202000000000000000000000000000000000000"
+	c3.CommitHash = "c302000000000000000000000000000000000000"
+	c4.CommitHash = "c402000000000000000000000000000000000000"
+	gitmock.ExpectPushCommits([]*git.Commit{&c5, &c4, &c3, &c2, &c1})
+	githubmock.ExpectCreatePullRequest(c5, nil)
+	githubmock.ExpectUpdatePullRequest(c5, nil)
+	githubmock.ExpectUpdatePullRequest(c4, &c5)
+	githubmock.ExpectUpdatePullRequest(c3, &c4)
+	githubmock.ExpectUpdatePullRequest(c2, &c3)
+	githubmock.ExpectUpdatePullRequest(c1, &c2)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, nil, nil)
+	fmt.Printf("OUT: %s\n", output.String())
+	// TODO : Need to update pull requests in GetInfo expect to get this check to work
+	// lines = strings.Split(output.String(), "\n")
+	//assert.Equal("[✔✔✔✔]   1 : test commit 5", lines[0])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[1])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[2])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
+	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[4])
 	output.Reset()
 
 	// TODO : add a call to merge and check merge order
