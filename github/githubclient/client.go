@@ -492,8 +492,7 @@ func addManualMergeNotice(body string) string {
 		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
-func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
-	info *github.GitHubInfo, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
+func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, pullRequests []*github.PullRequest, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
@@ -508,7 +507,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Str("FromBranch", pr.FromBranch).Str("ToBranch", baseRefName).
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
-	body := formatBody(commit, info.PullRequests)
+	body := formatBody(commit, pullRequests)
 	if c.config.Repo.PRTemplatePath != "" {
 		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
 		if err != nil {
