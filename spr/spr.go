@@ -453,7 +453,9 @@ func sortPullRequestsByLocalCommitOrder(pullRequests []*github.PullRequest, loca
 
 	var sortedPullRequests []*github.PullRequest
 	for _, commit := range localCommits {
-		sortedPullRequests = append(sortedPullRequests, pullRequestMap[commit.CommitID])
+		if !commit.WIP {
+			sortedPullRequests = append(sortedPullRequests, pullRequestMap[commit.CommitID])
+		}
 	}
 	return sortedPullRequests
 }
