@@ -116,7 +116,6 @@ VERSION: {{.Version}}
 				cfg.User.LogGitCommands = true
 				cfg.User.LogGitHubCalls = true
 			}
-			client.MaybeStar(ctx, cfg)
 			return nil
 		},
 		Commands: []*cli.Command{
