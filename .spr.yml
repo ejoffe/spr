@@ -9,3 +9,4 @@ remoteBranches: []
 mergeMethod: rebase
 mergeQueue: false
 forceFetchTags: false
+branchNameIncludeTarget: false
