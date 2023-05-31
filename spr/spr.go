@@ -20,7 +20,6 @@ import (
 	"github.com/ejoffe/spr/config/config_parser"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
-	"github.com/ejoffe/spr/github/githubclient"
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
@@ -475,7 +474,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 		return nil
 	}
 	info := sd.github.GetInfo(ctx, sd.gitcmd)
-	if githubclient.BranchNameRegex.FindString(info.LocalBranch) != "" {
+	branchNameRegex := git.BranchNameRegex(sd.config.Repo)
+	if branchNameRegex.FindString(info.LocalBranch) != "" {
 		fmt.Printf("error: don't run spr in a remote pr branch\n")
 		fmt.Printf(" this could lead to weird duplicate pull requests getting created\n")
 		fmt.Printf(" in general there is no need to checkout remote branches used for prs\n")
@@ -526,7 +526,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 
 	var refNames []string
 	for _, commit := range updatedCommits {
-		branchName := git.BranchNameFromCommit(commit)
+		branchName := git.BranchNameFromCommit(sd.config.Repo, sd.gitcmd, commit)
 		refNames = append(refNames,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}

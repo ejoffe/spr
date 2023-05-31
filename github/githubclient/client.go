@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -174,8 +173,6 @@ type client struct {
 	api    genclient.Client
 }
 
-var BranchNameRegex = regexp.MustCompile(`spr/([a-f0-9]{8})$`)
-
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
@@ -188,7 +185,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	targetBranch := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	localCommitStack := git.GetLocalCommitStack(c.config.Repo, gitcmd)
 
-	pullRequests := matchPullRequestStack(targetBranch, localCommitStack, resp.Repository.PullRequests)
+	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Repository.PullRequests)
 	for _, pr := range pullRequests {
 		if pr.Ready(c.config) {
 			pr.MergeStatus.Stacked = true
@@ -209,6 +206,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 }
 
 func matchPullRequestStack(
+	repoConfig *config.RepoConfig,
 	targetBranch string,
 	localCommitStack []git.Commit,
 	allPullRequests genclient.PullRequestsRepositoryPullRequests) []*github.PullRequest {
@@ -216,6 +214,8 @@ func matchPullRequestStack(
 	if len(localCommitStack) == 0 || allPullRequests.Nodes == nil {
 		return []*github.PullRequest{}
 	}
+
+	branchNameRegex := git.BranchNameRegex(repoConfig)
 
 	// pullRequestMap is a map from commit-id to pull request
 	pullRequestMap := make(map[string]*github.PullRequest)
@@ -229,7 +229,7 @@ func matchPullRequestStack(
 			ToBranch:   node.BaseRefName,
 		}
 
-		matches := BranchNameRegex.FindStringSubmatch(node.HeadRefName)
+		matches := branchNameRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil {
 			commit := (*node.Commits.Nodes)[0].Commit
 			pullRequest.Commit = git.Commit{
@@ -288,7 +288,7 @@ func matchPullRequestStack(
 			break
 		}
 
-		matches := BranchNameRegex.FindStringSubmatch(currpr.ToBranch)
+		matches := branchNameRegex.FindStringSubmatch(currpr.ToBranch)
 		if matches == nil {
 			panic(fmt.Errorf("invalid base branch for pull request:%s", currpr.ToBranch))
 		}
@@ -342,9 +342,9 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(*prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config.Repo, gitcmd, *prevCommit)
 	}
-	headRefName := git.BranchNameFromCommit(commit)
+	headRefName := git.BranchNameFromCommit(c.config.Repo, gitcmd, commit)
 
 	log.Debug().Interface("Commit", commit).
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
@@ -500,7 +500,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(*prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config.Repo, gitcmd, *prevCommit)
 	}
 
 	log.Debug().Interface("Commit", commit).

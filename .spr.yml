@@ -2,8 +2,10 @@ githubRepoOwner: ejoffe
 githubRepoName: spr
 githubHost: github.com
 requireChecks: true
-requireApproval: true
+requireApproval: false
 githubRemote: origin
 githubBranch: master
 remoteBranches: []
 mergeMethod: rebase
+mergeQueue: false
+forceFetchTags: false
