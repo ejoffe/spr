@@ -265,7 +265,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
-			checkedCommit, found := sd.config.Internal.MergeCheckCommit[githubInfo.Key()]
+			checkedCommit, found := sd.config.State.MergeCheckCommit[githubInfo.Key()]
 
 			if !found {
 				check(errors.New("need to run merge check 'spr check' before merging"))
@@ -413,16 +413,16 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 	err = cmd.Wait()
 
 	if err != nil {
-		sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = ""
-		rake.LoadSources(sd.config.Internal,
+		sd.config.State.MergeCheckCommit[githubInfo.Key()] = ""
+		rake.LoadSources(sd.config.State,
 			rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 		fmt.Printf("MergeCheck FAILED: %s\n", err)
 		return
 	}
 
 	lastCommit := localCommits[len(localCommits)-1]
-	sd.config.Internal.MergeCheckCommit[githubInfo.Key()] = lastCommit.CommitHash
-	rake.LoadSources(sd.config.Internal,
+	sd.config.State.MergeCheckCommit[githubInfo.Key()] = lastCommit.CommitHash
+	rake.LoadSources(sd.config.State,
 		rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 	fmt.Println("MergeCheck PASSED")
 }

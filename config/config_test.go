@@ -11,7 +11,7 @@ func TestEmptyConfig(t *testing.T) {
 	expect := &Config{
 		Repo: &RepoConfig{},
 		User: &UserConfig{},
-		Internal: &InternalConfig{
+		State: &InternalState{
 			MergeCheckCommit: map[string]string{},
 		},
 	}
@@ -41,7 +41,7 @@ func TestDefaultConfig(t *testing.T) {
 			StatusBitsHeader: true,
 			StatusBitsEmojis: true,
 		},
-		Internal: &InternalConfig{
+		State: &InternalState{
 			MergeCheckCommit: map[string]string{},
 		},
 	}

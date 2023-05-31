@@ -21,11 +21,11 @@ const (
 )
 
 func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
-	if !cfg.Internal.Stargazer && cfg.Internal.RunCount%promptCycle == 0 {
+	if !cfg.State.Stargazer && cfg.State.RunCount%promptCycle == 0 {
 		if c.isStar(ctx) {
 			log.Debug().Bool("stargazer", true).Msg("MaybeStar")
-			cfg.Internal.Stargazer = true
-			rake.LoadSources(cfg.Internal,
+			cfg.State.Stargazer = true
+			rake.LoadSources(cfg.State,
 				rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 		} else {
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar")
@@ -36,8 +36,8 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 			if line != "n" {
 				log.Debug().Msg("MaybeStar : adding star")
 				c.addStar(ctx)
-				cfg.Internal.Stargazer = true
-				rake.LoadSources(cfg.Internal,
+				cfg.State.Stargazer = true
+				rake.LoadSources(cfg.State,
 					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 				fmt.Println("Thank you! Happy Coding!")
 			}
