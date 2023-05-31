@@ -182,8 +182,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		c.config.Repo.GitHubRepoName)
 	check(err)
 
-	targetBranch := git.GetRemoteBranchName(c.config.Repo, gitcmd)
-	localCommitStack := git.GetLocalCommitStack(c.config.Repo, gitcmd)
+	targetBranch := c.config.Internal.GitHubBranch
+	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
 	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Repository.PullRequests)
 	for _, pr := range pullRequests {
@@ -340,11 +340,11 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
+	baseRefName := c.config.Internal.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config.Repo, gitcmd, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config, gitcmd, *prevCommit)
 	}
-	headRefName := git.BranchNameFromCommit(c.config.Repo, gitcmd, commit)
+	headRefName := git.BranchNameFromCommit(c.config, gitcmd, commit)
 
 	log.Debug().Interface("Commit", commit).
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
@@ -498,9 +498,9 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := git.GetRemoteBranchName(c.config.Repo, gitcmd)
+	baseRefName := c.config.Internal.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config.Repo, gitcmd, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config, gitcmd, *prevCommit)
 	}
 
 	log.Debug().Interface("Commit", commit).
