@@ -66,12 +66,10 @@ type responder interface {
 
 func (m *Mock) ExpectFetch() {
 	m.expect("git fetch")
-	m.expect("git branch --no-color").respond("* master")
 	m.expect("git rebase origin/master --autostash")
 }
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
-	m.expect("git branch --no-color").respond("* master")
 	m.expect("git log --format=medium --no-color origin/master..HEAD").commitRespond(commits)
 }
 
@@ -94,7 +92,6 @@ func (m *Mock) ExpectRemote(remote string) {
 
 func (m *Mock) ExpectFixup(commitHash string) {
 	m.expect("git commit --fixup " + commitHash)
-	m.expect("git branch --no-color").respond("* master")
 	m.expect("git rebase -i --autosquash --autostash origin/master")
 }
 

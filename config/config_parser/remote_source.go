@@ -14,6 +14,13 @@ type remoteSource struct {
 	config *config.Config
 }
 
+func NewGitHubRemoteSource(config *config.Config, gitcmd git.GitInterface) *remoteSource {
+	return &remoteSource{
+		gitcmd: gitcmd,
+		config: config,
+	}
+}
+
 func (s *remoteSource) Load(_ interface{}) {
 	var output string
 	err := s.gitcmd.Git("remote -v", &output)

@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Repo  *RepoConfig
-	User  *UserConfig
-	State *InternalState
+	Repo     *RepoConfig
+	User     *UserConfig
+	Internal *InternalConfig
+	State    *InternalState
 }
 
 // Config object to hold spr configuration
@@ -22,10 +23,6 @@ type RepoConfig struct {
 
 	RequireChecks   bool `default:"true" yaml:"requireChecks"`
 	RequireApproval bool `default:"true" yaml:"requireApproval"`
-
-	GitHubRemote   string   `default:"origin" yaml:"githubRemote"`
-	GitHubBranch   string   `default:"master" yaml:"githubBranch"`
-	RemoteBranches []string `yaml:"remoteBranches"`
 
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
 	MergeQueue  bool   `default:"false" yaml:"mergeQueue"`
@@ -39,6 +36,11 @@ type RepoConfig struct {
 	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
 
 	BranchNameIncludeTarget bool `default:"false" yaml:"branchNameIncludeTarget"`
+}
+
+type InternalConfig struct {
+	GitHubRemote string `default:"origin" yaml:"githubRemote"`
+	GitHubBranch string `default:"main" yaml:"githubBranch"`
 }
 
 type UserConfig struct {
@@ -62,8 +64,9 @@ type InternalState struct {
 
 func EmptyConfig() *Config {
 	return &Config{
-		Repo: &RepoConfig{},
-		User: &UserConfig{},
+		Repo:     &RepoConfig{},
+		User:     &UserConfig{},
+		Internal: &InternalConfig{},
 		State: &InternalState{
 			MergeCheckCommit: map[string]string{},
 		},
@@ -76,6 +79,9 @@ func DefaultConfig() *Config {
 		rake.DefaultSource(),
 	)
 	rake.LoadSources(cfg.User,
+		rake.DefaultSource(),
+	)
+	rake.LoadSources(cfg.Internal,
 		rake.DefaultSource(),
 	)
 
@@ -101,10 +107,4 @@ func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
 		)
 	}
 	return mergeMethod, err
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
