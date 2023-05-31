@@ -39,7 +39,7 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		rake.YamlFileSource(UserConfigFilePath()),
 	)
 
-	rake.LoadSources(cfg.Internal,
+	rake.LoadSources(cfg.State,
 		rake.DefaultSource(),
 		rake.YamlFileSource(InternalConfigFilePath()),
 	)
@@ -47,9 +47,9 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 	rake.LoadSources(cfg.User,
 		rake.YamlFileWriter(UserConfigFilePath()))
 
-	cfg.Internal.RunCount = cfg.Internal.RunCount + 1
+	cfg.State.RunCount = cfg.State.RunCount + 1
 
-	rake.LoadSources(cfg.Internal,
+	rake.LoadSources(cfg.State,
 		rake.YamlFileWriter(InternalConfigFilePath()))
 
 	return cfg

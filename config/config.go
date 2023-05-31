@@ -9,9 +9,9 @@ import (
 )
 
 type Config struct {
-	Repo     *RepoConfig
-	User     *UserConfig
-	Internal *InternalConfig
+	Repo  *RepoConfig
+	User  *UserConfig
+	State *InternalState
 }
 
 // Config object to hold spr configuration
@@ -53,7 +53,7 @@ type UserConfig struct {
 	NoRebase             bool `default:"false" yaml:"noRebase"`
 }
 
-type InternalConfig struct {
+type InternalState struct {
 	MergeCheckCommit map[string]string `yaml:"mergeCheckCommit"`
 
 	Stargazer bool `default:"false" yaml:"stargazer"`
@@ -64,7 +64,7 @@ func EmptyConfig() *Config {
 	return &Config{
 		Repo: &RepoConfig{},
 		User: &UserConfig{},
-		Internal: &InternalConfig{
+		State: &InternalState{
 			MergeCheckCommit: map[string]string{},
 		},
 	}
