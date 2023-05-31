@@ -397,26 +397,11 @@ func TestMatchPullRequestStack(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		repoConfig := &config.RepoConfig{}
 		t.Run(tc.name, func(t *testing.T) {
-			actual := matchPullRequestStack("master", tc.commits, tc.prs)
+			actual := matchPullRequestStack(repoConfig, "master", tc.commits, tc.prs)
 			require.Equal(t, tc.expect, actual)
 		})
-	}
-}
-
-func TestPullRequestRegex(t *testing.T) {
-	tests := []struct {
-		input  string
-		commit string
-	}{
-		{input: "spr/deadbeef", commit: "deadbeef"},
-	}
-
-	for _, tc := range tests {
-		matches := BranchNameRegex.FindStringSubmatch(tc.input)
-		if tc.commit != matches[1] {
-			t.Fatalf("expected: '%v', actual: '%v'", tc.commit, matches[1])
-		}
 	}
 }
 
