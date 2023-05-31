@@ -9,8 +9,9 @@ import (
 
 func TestEmptyConfig(t *testing.T) {
 	expect := &Config{
-		Repo: &RepoConfig{},
-		User: &UserConfig{},
+		Repo:     &RepoConfig{},
+		User:     &UserConfig{},
+		Internal: &InternalConfig{},
 		State: &InternalState{
 			MergeCheckCommit: map[string]string{},
 		},
@@ -27,8 +28,6 @@ func TestDefaultConfig(t *testing.T) {
 			GitHubHost:            "github.com",
 			RequireChecks:         true,
 			RequireApproval:       true,
-			GitHubRemote:          "origin",
-			GitHubBranch:          "master",
 			MergeMethod:           "rebase",
 			PRTemplatePath:        "",
 			PRTemplateInsertStart: "",
@@ -40,6 +39,10 @@ func TestDefaultConfig(t *testing.T) {
 			LogGitHubCalls:   false,
 			StatusBitsHeader: true,
 			StatusBitsEmojis: true,
+		},
+		Internal: &InternalConfig{
+			GitHubRemote: "origin",
+			GitHubBranch: "main",
 		},
 		State: &InternalState{
 			MergeCheckCommit: map[string]string{},

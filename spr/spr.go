@@ -51,7 +51,7 @@ type stackediff struct {
 //
 //	of commits. A list of commits is printed and one can be chosen to be amended.
 func (sd *stackediff) AmendCommit(ctx context.Context) {
-	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
+	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 	if len(localCommits) == 0 {
 		fmt.Fprintf(sd.output, "No commits to amend\n")
 		return
@@ -80,9 +80,8 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	check(err)
 	sd.gitcmd.MustGit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
-	targetBranch := git.GetRemoteBranchName(sd.config.Repo, sd.gitcmd)
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
-		sd.config.Repo.GitHubRemote, targetBranch)
+		sd.config.Internal.GitHubRemote, sd.config.Internal.GitHubBranch)
 	sd.gitcmd.MustGit(rebaseCmd, nil)
 }
 
@@ -120,7 +119,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		return
 	}
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
-	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
+	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
 
 	// close prs for deleted commits
@@ -262,7 +261,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 
 	// MergeCheck
 	if sd.config.Repo.MergeCheck != "" {
-		localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
+		localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.State.MergeCheckCommit[githubInfo.Key()]
@@ -375,7 +374,7 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 		return
 	}
 
-	localCommits := git.GetLocalCommitStack(sd.config.Repo, sd.gitcmd)
+	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 	if len(localCommits) == 0 {
 		fmt.Println("no local commits - nothing to check")
 		return
@@ -466,9 +465,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 	} else {
 		sd.gitcmd.MustGit("fetch", nil)
 	}
-	targetBranch := git.GetRemoteBranchName(sd.config.Repo, sd.gitcmd)
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-		sd.config.Repo.GitHubRemote, targetBranch)
+		sd.config.Internal.GitHubRemote, sd.config.Internal.GitHubBranch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil
@@ -526,12 +524,12 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 
 	var refNames []string
 	for _, commit := range updatedCommits {
-		branchName := git.BranchNameFromCommit(sd.config.Repo, sd.gitcmd, commit)
+		branchName := git.BranchNameFromCommit(sd.config, sd.gitcmd, commit)
 		refNames = append(refNames,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}
 	if len(updatedCommits) > 0 {
-		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
+		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Internal.GitHubRemote)
 		pushCommand += strings.Join(refNames, " ")
 		sd.gitcmd.MustGit(pushCommand, nil)
 	}

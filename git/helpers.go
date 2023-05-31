@@ -24,9 +24,9 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 	panic("cannot determine local git branch name")
 }
 
-func BranchNameFromCommit(repoConfig *config.RepoConfig, gitcmd GitInterface, commit Commit) string {
-	if repoConfig.BranchNameIncludeTarget {
-		remoteBranchName := GetRemoteBranchName(repoConfig, gitcmd)
+func BranchNameFromCommit(cfg *config.Config, gitcmd GitInterface, commit Commit) string {
+	if cfg.Repo.BranchNameIncludeTarget {
+		remoteBranchName := cfg.Internal.GitHubBranch
 		return "spr/" + remoteBranchName + "/" + commit.CommitID
 	}
 
@@ -44,23 +44,11 @@ func BranchNameRegex(repoConfig *config.RepoConfig) *regexp.Regexp {
 	return _branchNameRegex
 }
 
-// GetRemoteBranchName
-func GetRemoteBranchName(repoConfig *config.RepoConfig, gitcmd GitInterface) string {
-	localBranchName := GetLocalBranchName(gitcmd)
-
-	for _, remoteBranchName := range repoConfig.RemoteBranches {
-		if localBranchName == remoteBranchName {
-			return remoteBranchName
-		}
-	}
-	return repoConfig.GitHubBranch
-}
-
 // GetLocalTopCommit returns the top unmerged commit in the stack
 //
 // return nil if there are no unmerged commits in the stack
-func GetLocalTopCommit(repoConfig *config.RepoConfig, gitcmd GitInterface) *Commit {
-	commits := GetLocalCommitStack(repoConfig, gitcmd)
+func GetLocalTopCommit(cfg *config.Config, gitcmd GitInterface) *Commit {
+	commits := GetLocalCommitStack(cfg, gitcmd)
 	if len(commits) == 0 {
 		return nil
 	}
@@ -70,11 +58,10 @@ func GetLocalTopCommit(repoConfig *config.RepoConfig, gitcmd GitInterface) *Comm
 // GetLocalCommitStack returns a list of unmerged commits
 //
 //	the list is ordered with the bottom commit in the stack first
-func GetLocalCommitStack(repoConfig *config.RepoConfig, gitcmd GitInterface) []Commit {
+func GetLocalCommitStack(cfg *config.Config, gitcmd GitInterface) []Commit {
 	var commitLog string
-	targetBranch := GetRemoteBranchName(repoConfig, gitcmd)
 	logCommand := fmt.Sprintf("log --format=medium --no-color %s/%s..HEAD",
-		repoConfig.GitHubRemote, targetBranch)
+		cfg.Internal.GitHubRemote, cfg.Internal.GitHubBranch)
 	gitcmd.MustGit(logCommand, &commitLog)
 	commits, valid := parseLocalCommitStack(commitLog)
 	if !valid {
@@ -82,7 +69,7 @@ func GetLocalCommitStack(repoConfig *config.RepoConfig, gitcmd GitInterface) []C
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
 		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-			repoConfig.GitHubRemote, targetBranch)
+			cfg.Internal.GitHubRemote, cfg.Internal.GitHubBranch)
 		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 
 		gitcmd.MustGit(logCommand, &commitLog)

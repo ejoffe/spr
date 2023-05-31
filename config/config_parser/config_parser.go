@@ -16,7 +16,7 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 
 	rake.LoadSources(cfg.Repo,
 		rake.DefaultSource(),
-		GitHubRemoteSource(cfg, gitcmd),
+		NewGitHubRemoteSource(cfg, gitcmd),
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
 		rake.YamlFileWriter(RepoConfigFilePath(gitcmd)),
 	)
@@ -37,6 +37,11 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 	rake.LoadSources(cfg.User,
 		rake.DefaultSource(),
 		rake.YamlFileSource(UserConfigFilePath()),
+	)
+
+	rake.LoadSources(cfg.Internal,
+		rake.DefaultSource(),
+		NewRemoteBranchSource(gitcmd),
 	)
 
 	rake.LoadSources(cfg.State,
@@ -73,11 +78,4 @@ func InternalConfigFilePath() string {
 	check(err)
 	filepath := filepath.Clean(path.Join(rootdir, ".spr.state"))
 	return filepath
-}
-
-func GitHubRemoteSource(config *config.Config, gitcmd git.GitInterface) *remoteSource {
-	return &remoteSource{
-		gitcmd: gitcmd,
-		config: config,
-	}
 }

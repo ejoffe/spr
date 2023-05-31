@@ -65,8 +65,6 @@ func TestGitHubRemoteSource(t *testing.T) {
 			GitHubHost:      "github.com",
 			RequireChecks:   false,
 			RequireApproval: false,
-			GitHubRemote:    "",
-			GitHubBranch:    "",
 			MergeMethod:     "",
 		},
 		User: &config.UserConfig{
@@ -81,7 +79,7 @@ func TestGitHubRemoteSource(t *testing.T) {
 		Repo: &config.RepoConfig{},
 		User: &config.UserConfig{},
 	}
-	source := GitHubRemoteSource(&actual, mock)
+	source := NewGitHubRemoteSource(&actual, mock)
 	source.Load(nil)
 	assert.Equal(t, expect, actual)
 }
