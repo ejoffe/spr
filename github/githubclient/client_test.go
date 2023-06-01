@@ -40,7 +40,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -55,7 +55,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 			expect: []*github.PullRequest{
 				{
 					ID:         "1",
-					FromBranch: "spr/00000001",
+					FromBranch: "spr/master/00000001",
 					ToBranch:   "master",
 					Commit: git.Commit{
 						CommitID:   "00000001",
@@ -78,7 +78,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -90,8 +90,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "2",
-						HeadRefName: "spr/00000002",
-						BaseRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000002",
+						BaseRefName: "spr/master/00000001",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -105,7 +105,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 			expect: []*github.PullRequest{
 				{
 					ID:         "1",
-					FromBranch: "spr/00000001",
+					FromBranch: "spr/master/00000001",
 					ToBranch:   "master",
 					Commit: git.Commit{
 						CommitID:   "00000001",
@@ -117,8 +117,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 				},
 				{
 					ID:         "2",
-					FromBranch: "spr/00000002",
-					ToBranch:   "spr/00000001",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "spr/master/00000001",
 					Commit: git.Commit{
 						CommitID:   "00000002",
 						CommitHash: "2",
@@ -136,7 +136,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -160,7 +160,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -172,8 +172,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "3",
-						HeadRefName: "spr/00000003",
-						BaseRefName: "spr/00000002",
+						HeadRefName: "spr/master/00000003",
+						BaseRefName: "spr/master/00000002",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -184,8 +184,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "2",
-						HeadRefName: "spr/00000002",
-						BaseRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000002",
+						BaseRefName: "spr/master/00000001",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -199,7 +199,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 			expect: []*github.PullRequest{
 				{
 					ID:         "1",
-					FromBranch: "spr/00000001",
+					FromBranch: "spr/master/00000001",
 					ToBranch:   "master",
 					Commit: git.Commit{
 						CommitID:   "00000001",
@@ -211,8 +211,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 				},
 				{
 					ID:         "2",
-					FromBranch: "spr/00000002",
-					ToBranch:   "spr/00000001",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "spr/master/00000001",
 					Commit: git.Commit{
 						CommitID:   "00000002",
 						CommitHash: "2",
@@ -233,7 +233,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -245,8 +245,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "2",
-						HeadRefName: "spr/00000002",
-						BaseRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000002",
+						BaseRefName: "spr/master/00000001",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -257,8 +257,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "3",
-						HeadRefName: "spr/00000003",
-						BaseRefName: "spr/00000002",
+						HeadRefName: "spr/master/00000003",
+						BaseRefName: "spr/master/00000002",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -272,7 +272,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 			expect: []*github.PullRequest{
 				{
 					ID:         "1",
-					FromBranch: "spr/00000001",
+					FromBranch: "spr/master/00000001",
 					ToBranch:   "master",
 					Commit: git.Commit{
 						CommitID:   "00000001",
@@ -284,8 +284,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 				},
 				{
 					ID:         "2",
-					FromBranch: "spr/00000002",
-					ToBranch:   "spr/00000001",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "spr/master/00000001",
 					Commit: git.Commit{
 						CommitID:   "00000002",
 						CommitHash: "2",
@@ -296,8 +296,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 				},
 				{
 					ID:         "3",
-					FromBranch: "spr/00000003",
-					ToBranch:   "spr/00000002",
+					FromBranch: "spr/master/00000003",
+					ToBranch:   "spr/master/00000002",
 					Commit: git.Commit{
 						CommitID:   "00000003",
 						CommitHash: "3",
@@ -318,7 +318,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
 					{
 						Id:          "1",
-						HeadRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
@@ -330,8 +330,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "2",
-						HeadRefName: "spr/00000002",
-						BaseRefName: "spr/00000001",
+						HeadRefName: "spr/master/00000002",
+						BaseRefName: "spr/master/00000001",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -342,8 +342,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 					},
 					{
 						Id:          "3",
-						HeadRefName: "spr/00000003",
-						BaseRefName: "spr/00000002",
+						HeadRefName: "spr/master/00000003",
+						BaseRefName: "spr/master/00000002",
 						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
 							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
 								{
@@ -357,7 +357,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 			expect: []*github.PullRequest{
 				{
 					ID:         "1",
-					FromBranch: "spr/00000001",
+					FromBranch: "spr/master/00000001",
 					ToBranch:   "master",
 					Commit: git.Commit{
 						CommitID:   "00000001",
@@ -370,8 +370,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 
 				{
 					ID:         "2",
-					FromBranch: "spr/00000002",
-					ToBranch:   "spr/00000001",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "spr/master/00000001",
 					Commit: git.Commit{
 						CommitID:   "00000002",
 						CommitHash: "2",
@@ -382,8 +382,8 @@ func TestMatchPullRequestStack(t *testing.T) {
 				},
 				{
 					ID:         "3",
-					FromBranch: "spr/00000003",
-					ToBranch:   "spr/00000002",
+					FromBranch: "spr/master/00000003",
+					ToBranch:   "spr/master/00000002",
 					Commit: git.Commit{
 						CommitID:   "00000003",
 						CommitHash: "3",

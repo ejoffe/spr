@@ -24,25 +24,12 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 	panic("cannot determine local git branch name")
 }
 
-func BranchNameFromCommit(cfg *config.Config, gitcmd GitInterface, commit Commit) string {
-	if cfg.Repo.BranchNameIncludeTarget {
-		remoteBranchName := cfg.Internal.GitHubBranch
-		return "spr/" + remoteBranchName + "/" + commit.CommitID
-	}
-
-	return "spr/" + commit.CommitID
+func BranchNameFromCommit(cfg *config.Config, commit Commit) string {
+	remoteBranchName := cfg.Internal.GitHubBranch
+	return "spr/" + remoteBranchName + "/" + commit.CommitID
 }
 
-var _branchNameRegex = regexp.MustCompile(`spr/([a-f0-9]{8})$`)
-var _branchNameWithTargetRegex = regexp.MustCompile(`spr/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
-
-func BranchNameRegex(repoConfig *config.RepoConfig) *regexp.Regexp {
-	if repoConfig.BranchNameIncludeTarget {
-		return _branchNameWithTargetRegex
-	}
-
-	return _branchNameRegex
-}
+var BranchNameRegex = regexp.MustCompile(`spr/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
 
 // GetLocalTopCommit returns the top unmerged commit in the stack
 //
