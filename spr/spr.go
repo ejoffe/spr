@@ -403,7 +403,6 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 	go func() {
 		_, ok := <-sigch
 		if ok {
-			fmt.Println("INTERRUPT")
 			err := cmd.Process.Signal(syscall.SIGKILL)
 			check(err)
 		}
@@ -472,8 +471,7 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 		return nil
 	}
 	info := sd.github.GetInfo(ctx, sd.gitcmd)
-	branchNameRegex := git.BranchNameRegex(sd.config.Repo)
-	if branchNameRegex.FindString(info.LocalBranch) != "" {
+	if git.BranchNameRegex.FindString(info.LocalBranch) != "" {
 		fmt.Printf("error: don't run spr in a remote pr branch\n")
 		fmt.Printf(" this could lead to weird duplicate pull requests getting created\n")
 		fmt.Printf(" in general there is no need to checkout remote branches used for prs\n")
@@ -524,7 +522,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 
 	var refNames []string
 	for _, commit := range updatedCommits {
-		branchName := git.BranchNameFromCommit(sd.config, sd.gitcmd, commit)
+		branchName := git.BranchNameFromCommit(sd.config, commit)
 		refNames = append(refNames,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}

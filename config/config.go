@@ -34,8 +34,6 @@ type RepoConfig struct {
 	MergeCheck string `yaml:"mergeCheck,omitempty"`
 
 	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
-
-	BranchNameIncludeTarget bool `default:"false" yaml:"branchNameIncludeTarget"`
 }
 
 type InternalConfig struct {

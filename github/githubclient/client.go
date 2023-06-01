@@ -215,8 +215,6 @@ func matchPullRequestStack(
 		return []*github.PullRequest{}
 	}
 
-	branchNameRegex := git.BranchNameRegex(repoConfig)
-
 	// pullRequestMap is a map from commit-id to pull request
 	pullRequestMap := make(map[string]*github.PullRequest)
 	for _, node := range *allPullRequests.Nodes {
@@ -229,11 +227,11 @@ func matchPullRequestStack(
 			ToBranch:   node.BaseRefName,
 		}
 
-		matches := branchNameRegex.FindStringSubmatch(node.HeadRefName)
+		matches := git.BranchNameRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil {
 			commit := (*node.Commits.Nodes)[0].Commit
 			pullRequest.Commit = git.Commit{
-				CommitID:   matches[1],
+				CommitID:   matches[2],
 				CommitHash: commit.Oid,
 				Subject:    commit.MessageHeadline,
 				Body:       commit.MessageBody,
@@ -288,11 +286,11 @@ func matchPullRequestStack(
 			break
 		}
 
-		matches := branchNameRegex.FindStringSubmatch(currpr.ToBranch)
+		matches := git.BranchNameRegex.FindStringSubmatch(currpr.ToBranch)
 		if matches == nil {
 			panic(fmt.Errorf("invalid base branch for pull request:%s", currpr.ToBranch))
 		}
-		nextCommitID := matches[1]
+		nextCommitID := matches[2]
 
 		currpr = pullRequestMap[nextCommitID]
 	}
@@ -342,9 +340,9 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := c.config.Internal.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config, gitcmd, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
-	headRefName := git.BranchNameFromCommit(c.config, gitcmd, commit)
+	headRefName := git.BranchNameFromCommit(c.config, commit)
 
 	log.Debug().Interface("Commit", commit).
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
@@ -500,7 +498,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := c.config.Internal.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config, gitcmd, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
 
 	log.Debug().Interface("Commit", commit).
