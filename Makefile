@@ -1,4 +1,4 @@
 
 bin:
-	goreleaser --snapshot --skip-publish --rm-dist
+	goreleaser --snapshot --skip-publish --clean
 
