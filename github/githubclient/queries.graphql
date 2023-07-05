@@ -4,9 +4,6 @@ query PullRequests(
 ){
 	viewer {
 		login
-	}
-	repository(owner:$repo_owner, name:$repo_name) {
-		id
 		pullRequests(first:100, states:[OPEN]) {
 			nodes {
 				id
@@ -34,6 +31,9 @@ query PullRequests(
 				}
 			}
 		}
+	}
+	repository(owner:$repo_owner, name:$repo_name) {
+		id
 	}
 }
 

@@ -185,7 +185,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	targetBranch := c.config.Internal.GitHubBranch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
-	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Repository.PullRequests)
+	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Viewer.PullRequests)
 	for _, pr := range pullRequests {
 		if pr.Ready(c.config) {
 			pr.MergeStatus.Stacked = true
@@ -209,7 +209,7 @@ func matchPullRequestStack(
 	repoConfig *config.RepoConfig,
 	targetBranch string,
 	localCommitStack []git.Commit,
-	allPullRequests genclient.PullRequestsRepositoryPullRequests) []*github.PullRequest {
+	allPullRequests genclient.PullRequestsViewerPullRequests) []*github.PullRequest {
 
 	if len(localCommitStack) == 0 || allPullRequests.Nodes == nil {
 		return []*github.PullRequest{}

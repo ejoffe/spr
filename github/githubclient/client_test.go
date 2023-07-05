@@ -15,19 +15,19 @@ func TestMatchPullRequestStack(t *testing.T) {
 	tests := []struct {
 		name    string
 		commits []git.Commit
-		prs     genclient.PullRequestsRepositoryPullRequests
+		prs     genclient.PullRequestsViewerPullRequests
 		expect  []*github.PullRequest
 	}{
 		{
 			name:    "Empty",
 			commits: []git.Commit{},
-			prs:     genclient.PullRequestsRepositoryPullRequests{},
+			prs:     genclient.PullRequestsViewerPullRequests{},
 			expect:  []*github.PullRequest{},
 		},
 		{
 			name:    "FirstCommit",
 			commits: []git.Commit{{CommitID: "00000001"}},
-			prs:     genclient.PullRequestsRepositoryPullRequests{},
+			prs:     genclient.PullRequestsViewerPullRequests{},
 			expect:  []*github.PullRequest{},
 		},
 		{
@@ -36,16 +36,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 				{CommitID: "00000001"},
 				{CommitID: "00000002"},
 			},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -74,16 +74,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 				{CommitID: "00000002"},
 				{CommitID: "00000003"},
 			},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -92,10 +92,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "2",
 						HeadRefName: "spr/master/00000002",
 						BaseRefName: "spr/master/00000001",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2"},
 								},
 							},
 						},
@@ -132,16 +132,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 		{
 			name:    "RemoveOnlyCommit",
 			commits: []git.Commit{},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -156,16 +156,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 				{CommitID: "00000001"},
 				{CommitID: "00000002"},
 			},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -174,10 +174,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "3",
 						HeadRefName: "spr/master/00000003",
 						BaseRefName: "spr/master/00000002",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2"},
 								},
 							},
 						},
@@ -186,10 +186,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "2",
 						HeadRefName: "spr/master/00000002",
 						BaseRefName: "spr/master/00000001",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2"},
 								},
 							},
 						},
@@ -229,16 +229,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 				{CommitID: "00000001"},
 				{CommitID: "00000003"},
 			},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -247,10 +247,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "2",
 						HeadRefName: "spr/master/00000002",
 						BaseRefName: "spr/master/00000001",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2"},
 								},
 							},
 						},
@@ -259,10 +259,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "3",
 						HeadRefName: "spr/master/00000003",
 						BaseRefName: "spr/master/00000002",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "3"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "3"},
 								},
 							},
 						},
@@ -314,16 +314,16 @@ func TestMatchPullRequestStack(t *testing.T) {
 				{CommitID: "00000002"},
 				{CommitID: "00000003"},
 			},
-			prs: genclient.PullRequestsRepositoryPullRequests{
-				Nodes: &genclient.PullRequestsRepositoryPullRequestsNodes{
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
 					{
 						Id:          "1",
 						HeadRefName: "spr/master/00000001",
 						BaseRefName: "master",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "1"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1"},
 								},
 							},
 						},
@@ -332,10 +332,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "2",
 						HeadRefName: "spr/master/00000002",
 						BaseRefName: "spr/master/00000001",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "2"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2"},
 								},
 							},
 						},
@@ -344,10 +344,10 @@ func TestMatchPullRequestStack(t *testing.T) {
 						Id:          "3",
 						HeadRefName: "spr/master/00000003",
 						BaseRefName: "spr/master/00000002",
-						Commits: genclient.PullRequestsRepositoryPullRequestsNodesCommits{
-							Nodes: &genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodes{
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
 								{
-									genclient.PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit{Oid: "3"},
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "3"},
 								},
 							},
 						},
