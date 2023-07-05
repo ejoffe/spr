@@ -9,19 +9,15 @@ import (
 )
 
 type PullRequestsViewer struct {
-	Login string
+	Login        string
+	PullRequests PullRequestsViewerPullRequests
 }
 
-type PullRequestsRepository struct {
-	Id           string
-	PullRequests PullRequestsRepositoryPullRequests
+type PullRequestsViewerPullRequests struct {
+	Nodes *PullRequestsViewerPullRequestsNodes
 }
 
-type PullRequestsRepositoryPullRequests struct {
-	Nodes *PullRequestsRepositoryPullRequestsNodes
-}
-
-type PullRequestsRepositoryPullRequestsNodes []*struct {
+type PullRequestsViewerPullRequestsNodes []*struct {
 	Id             string
 	Number         int
 	Title          string
@@ -30,31 +26,35 @@ type PullRequestsRepositoryPullRequestsNodes []*struct {
 	HeadRefName    string
 	Mergeable      MergeableState
 	ReviewDecision *PullRequestReviewDecision
-	Repository     PullRequestsRepositoryPullRequestsNodesRepository
-	Commits        PullRequestsRepositoryPullRequestsNodesCommits
+	Repository     PullRequestsViewerPullRequestsNodesRepository
+	Commits        PullRequestsViewerPullRequestsNodesCommits
 }
 
-type PullRequestsRepositoryPullRequestsNodesRepository struct {
+type PullRequestsViewerPullRequestsNodesRepository struct {
 	Id string
 }
 
-type PullRequestsRepositoryPullRequestsNodesCommits struct {
-	Nodes *PullRequestsRepositoryPullRequestsNodesCommitsNodes
+type PullRequestsViewerPullRequestsNodesCommits struct {
+	Nodes *PullRequestsViewerPullRequestsNodesCommitsNodes
 }
 
-type PullRequestsRepositoryPullRequestsNodesCommitsNodes []*struct {
-	Commit PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit
+type PullRequestsViewerPullRequestsNodesCommitsNodes []*struct {
+	Commit PullRequestsViewerPullRequestsNodesCommitsNodesCommit
 }
 
-type PullRequestsRepositoryPullRequestsNodesCommitsNodesCommit struct {
+type PullRequestsViewerPullRequestsNodesCommitsNodesCommit struct {
 	Oid               string
 	MessageHeadline   string
 	MessageBody       string
-	StatusCheckRollup *PullRequestsRepositoryPullRequestsNodesCommitsNodesCommitStatusCheckRollup
+	StatusCheckRollup *PullRequestsViewerPullRequestsNodesCommitsNodesCommitStatusCheckRollup
 }
 
-type PullRequestsRepositoryPullRequestsNodesCommitsNodesCommitStatusCheckRollup struct {
+type PullRequestsViewerPullRequestsNodesCommitsNodesCommitStatusCheckRollup struct {
 	State StatusState
+}
+
+type PullRequestsRepository struct {
+	Id string
 }
 
 // PullRequestsResponse response type for PullRequests
@@ -73,9 +73,6 @@ func (c *gqlclient) PullRequests(ctx context.Context,
 	query PullRequests($repo_owner : String!, $repo_name : String!) {
 		viewer {
 			login
-		}
-		repository(owner: $repo_owner, name: $repo_name) {
-			id
 			pullRequests(first: 100, states: [OPEN]) {
 				nodes {
 					id
@@ -103,6 +100,9 @@ func (c *gqlclient) PullRequests(ctx context.Context,
 					}
 				}
 			}
+		}
+		repository(owner: $repo_owner, name: $repo_name) {
+			id
 		}
 	}`
 
