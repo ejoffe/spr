@@ -22,7 +22,13 @@ jobs:
     - name: Test
       working-directory: ./
       run: go test -race -coverprofile=./coverage.txt -covermode=atomic ./...
-    
+
+    - name: Check goreleaser file
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        version: latest
+        args: check
+
     #- name: Upload coverage
     #  uses: codecov/codecov-action@v2
     #  with:
