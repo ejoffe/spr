@@ -32,14 +32,7 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
 archives:
-  - name_template: >-
-      {{ .ProjectName }}_
-      {{- if eq .Os "Darwin" }}macos_
-      {{- else }}{{- tolower .Os }}_{{end}}
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{ if .Arm }}v{{ .Arm }}{{ end }}
+  - name_template: '{{ .ProjectName }}_{{- if eq .Os "Darwin" }}macos_{{- else }}{{- tolower .Os }}_{{end}}{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format_overrides:
     - goos: windows
       format: zip
