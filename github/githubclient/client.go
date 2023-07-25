@@ -218,6 +218,20 @@ func matchPullRequestStack(
 	// pullRequestMap is a map from commit-id to pull request
 	pullRequestMap := make(map[string]*github.PullRequest)
 	for _, node := range *allPullRequests.Nodes {
+		var commits []git.Commit
+		for _, v := range *node.Commits.Nodes {
+			for _, line := range strings.Split(v.Commit.MessageBody, "\n") {
+				if strings.HasPrefix(line, "commit-id:") {
+					commits = append(commits, git.Commit{
+						CommitID:   strings.Split(line, ":")[1],
+						CommitHash: v.Commit.Oid,
+						Subject:    v.Commit.MessageHeadline,
+						Body:       v.Commit.MessageBody,
+					})
+				}
+			}
+		}
+
 		pullRequest := &github.PullRequest{
 			ID:         node.Id,
 			Number:     node.Number,
@@ -225,11 +239,13 @@ func matchPullRequestStack(
 			Body:       node.Body,
 			FromBranch: node.HeadRefName,
 			ToBranch:   node.BaseRefName,
+			Commits:    commits,
+			InQueue:    node.MergeQueueEntry != nil,
 		}
 
 		matches := git.BranchNameRegex.FindStringSubmatch(node.HeadRefName)
 		if matches != nil {
-			commit := (*node.Commits.Nodes)[0].Commit
+			commit := (*node.Commits.Nodes)[len(*node.Commits.Nodes)-1].Commit
 			pullRequest.Commit = git.Commit{
 				CommitID:   matches[2],
 				CommitHash: commit.Oid,
@@ -520,9 +536,12 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
-		BaseRefName:   &baseRefName,
 		Title:         title,
 		Body:          &body,
+	}
+
+	if !pr.InQueue {
+		input.BaseRefName = &baseRefName
 	}
 
 	if c.config.User.PreserveTitleAndBody {

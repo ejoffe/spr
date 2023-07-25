@@ -104,6 +104,26 @@ func (sd *stackediff) addReviewers(ctx context.Context,
 	sd.github.AddReviewers(ctx, pr, userIDs)
 }
 
+func alignLocalCommits(commits []git.Commit, prs []*github.PullRequest) []git.Commit {
+	var remoteCommits = map[string]bool{}
+	for _, pr := range prs {
+		for _, c := range pr.Commits {
+			remoteCommits[c.CommitID] = c.CommitID == pr.Commit.CommitID
+		}
+	}
+
+	var result []git.Commit
+	for _, commit := range commits {
+		if head, ok := remoteCommits[commit.CommitID]; ok && !head {
+			continue
+		}
+
+		result = append(result, commit)
+	}
+
+	return result
+}
+
 // UpdatePullRequests implements a stacked diff workflow on top of github.
 //
 //	Each time it's called it compares the local branch unmerged commits
@@ -119,7 +139,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		return
 	}
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
-	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
+	localCommits := alignLocalCommits(git.GetLocalCommitStack(sd.config, sd.gitcmd), githubInfo.PullRequests)
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
 
 	// close prs for deleted commits
@@ -172,6 +192,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	var assignable []github.RepoAssignee
 
 	// iterate through local_commits and update pull_requests
+	var prevCommit *git.Commit
 	for commitIndex, c := range localCommits {
 		if c.WIP {
 			break
@@ -180,25 +201,18 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		for _, pr := range githubInfo.PullRequests {
 			if c.CommitID == pr.Commit.CommitID {
 				prFound = true
-				var prevCommit *git.Commit
-				if commitIndex > 0 {
-					prevCommit = &localCommits[commitIndex-1]
-				}
 				updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 				pr.Commit = c
 				if len(reviewers) != 0 {
 					fmt.Fprintf(sd.output, "warning: not updating reviewers for PR #%d\n", pr.Number)
 				}
+				prevCommit = &localCommits[commitIndex]
 				break
 			}
 		}
 		if !prFound {
 			// if pull request is not found for this commit_id it means the commit
 			//  is new and we need to create a new pull request
-			var prevCommit *git.Commit
-			if commitIndex > 0 {
-				prevCommit = &localCommits[commitIndex-1]
-			}
 			pr := sd.github.CreatePullRequest(ctx, sd.gitcmd, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
@@ -208,6 +222,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 				}
 				sd.addReviewers(ctx, pr, reviewers, assignable)
 			}
+			prevCommit = &localCommits[commitIndex]
 		}
 
 		if count != nil && (commitIndex+1) == int(*count) {

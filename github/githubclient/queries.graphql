@@ -17,6 +17,9 @@ query PullRequests(
 				repository {
 					id
 				}
+				mergeQueueEntry {
+					id
+				}
 				commits(first:100) {
 					nodes {
 						commit {

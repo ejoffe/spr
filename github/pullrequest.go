@@ -21,6 +21,8 @@ type PullRequest struct {
 
 	MergeStatus PullRequestMergeStatus
 	Merged      bool
+	Commits     []git.Commit
+	InQueue     bool
 }
 
 type checkStatus int
@@ -101,6 +103,7 @@ const (
 	asciiPending   = "·"
 	asciiQuerymark = "?"
 	asciiEmpty     = "-"
+	asciiWarning   = "!"
 
 	// emoji status bits
 	emojiCheckmark    = "✅"
@@ -108,6 +111,7 @@ const (
 	emojiPending      = "⌛"
 	emojiQuestionmark = "❓"
 	emojiEmpty        = "➖"
+	emojiWarning      = "⚠️"
 )
 
 func statusBitIcons(config *config.Config) map[string]string {
@@ -118,6 +122,7 @@ func statusBitIcons(config *config.Config) map[string]string {
 			"pending":      emojiPending,
 			"questionmark": emojiQuestionmark,
 			"empty":        emojiEmpty,
+			"warning":      emojiWarning,
 		}
 	} else {
 		return map[string]string{
@@ -126,6 +131,7 @@ func statusBitIcons(config *config.Config) map[string]string {
 			"pending":      asciiPending,
 			"questionmark": asciiQuerymark,
 			"empty":        asciiEmpty,
+			"warning":      asciiWarning,
 		}
 	}
 }
@@ -175,7 +181,20 @@ func (pr *PullRequest) String(config *config.Config) string {
 			config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
 	}
 
-	line := fmt.Sprintf("%s %s : %s", prStatus, prInfo, pr.Title)
+	var mq string
+	if len(pr.Commits) > 1 {
+		mq = statusBitIcons(config)["warning"]
+	}
+
+	if pr.InQueue {
+		mq = statusBitIcons(config)["pending"]
+	}
+
+	if mq != "" {
+		mq += " "
+	}
+
+	line := fmt.Sprintf("%s %s%s : %s", prStatus, mq, prInfo, pr.Title)
 
 	// trim line to terminal width
 	terminalWidth, err := terminal.Width()

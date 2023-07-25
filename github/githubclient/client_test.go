@@ -19,6 +19,131 @@ func TestMatchPullRequestStack(t *testing.T) {
 		expect  []*github.PullRequest
 	}{
 		{
+			name: "ThirdCommitQueue",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000002"},
+				{CommitID: "00000003"},
+			},
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
+					{
+						Id:              "2",
+						HeadRefName:     "spr/master/00000002",
+						BaseRefName:     "master",
+						MergeQueueEntry: &genclient.PullRequestsViewerPullRequestsNodesMergeQueueEntry{Id: "020"},
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1", MessageBody: "commit-id:1"},
+								},
+								{
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2", MessageBody: "commit-id:2"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "2",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+						Body:       "commit-id:2",
+					},
+					InQueue: true,
+					Commits: []git.Commit{
+						{CommitID: "1", CommitHash: "1", Body: "commit-id:1"},
+						{CommitID: "2", CommitHash: "2", Body: "commit-id:2"},
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
+			name: "FourthCommitQueue",
+			commits: []git.Commit{
+				{CommitID: "00000001"},
+				{CommitID: "00000002"},
+				{CommitID: "00000003"},
+				{CommitID: "00000004"},
+			},
+			prs: genclient.PullRequestsViewerPullRequests{
+				Nodes: &genclient.PullRequestsViewerPullRequestsNodes{
+					{
+						Id:              "2",
+						HeadRefName:     "spr/master/00000002",
+						BaseRefName:     "master",
+						MergeQueueEntry: &genclient.PullRequestsViewerPullRequestsNodesMergeQueueEntry{Id: "020"},
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "1", MessageBody: "commit-id:1"},
+								},
+								{
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "2", MessageBody: "commit-id:2"},
+								},
+							},
+						},
+					},
+					{
+						Id:          "3",
+						HeadRefName: "spr/master/00000003",
+						BaseRefName: "spr/master/00000002",
+						Commits: genclient.PullRequestsViewerPullRequestsNodesCommits{
+							Nodes: &genclient.PullRequestsViewerPullRequestsNodesCommitsNodes{
+								{
+									genclient.PullRequestsViewerPullRequestsNodesCommitsNodesCommit{Oid: "3", MessageBody: "commit-id:3"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: []*github.PullRequest{
+				{
+					ID:         "2",
+					FromBranch: "spr/master/00000002",
+					ToBranch:   "master",
+					Commit: git.Commit{
+						CommitID:   "00000002",
+						CommitHash: "2",
+						Body:       "commit-id:2",
+					},
+					InQueue: true,
+					Commits: []git.Commit{
+						{CommitID: "1", CommitHash: "1", Body: "commit-id:1"},
+						{CommitID: "2", CommitHash: "2", Body: "commit-id:2"},
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+				{
+					ID:         "3",
+					FromBranch: "spr/master/00000003",
+					ToBranch:   "spr/master/00000002",
+					Commit: git.Commit{
+						CommitID:   "00000003",
+						CommitHash: "3",
+						Body:       "commit-id:3",
+					},
+					Commits: []git.Commit{
+						{CommitID: "3", CommitHash: "3", Body: "commit-id:3"},
+					},
+					MergeStatus: github.PullRequestMergeStatus{
+						ChecksPass: github.CheckStatusFail,
+					},
+				},
+			},
+		},
+		{
 			name:    "Empty",
 			commits: []git.Commit{},
 			prs:     genclient.PullRequestsViewerPullRequests{},

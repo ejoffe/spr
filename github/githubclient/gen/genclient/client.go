@@ -16,60 +16,60 @@ type Client interface {
 		repoName string,
 	) (*PullRequestsResponse, error)
 
-	// AssignableUsers from github/githubclient/queries.graphql:40
+	// AssignableUsers from github/githubclient/queries.graphql:43
 	AssignableUsers(ctx context.Context,
 		repoOwner string,
 		repoName string,
 		endCursor *string,
 	) (*AssignableUsersResponse, error)
 
-	// CreatePullRequest from github/githubclient/queries.graphql:60
+	// CreatePullRequest from github/githubclient/queries.graphql:63
 	CreatePullRequest(ctx context.Context,
 		input CreatePullRequestInput,
 	) (*CreatePullRequestResponse, error)
 
-	// UpdatePullRequest from github/githubclient/queries.graphql:73
+	// UpdatePullRequest from github/githubclient/queries.graphql:76
 	UpdatePullRequest(ctx context.Context,
 		input UpdatePullRequestInput,
 	) (*UpdatePullRequestResponse, error)
 
-	// AddReviewers from github/githubclient/queries.graphql:85
+	// AddReviewers from github/githubclient/queries.graphql:88
 	AddReviewers(ctx context.Context,
 		input RequestReviewsInput,
 	) (*AddReviewersResponse, error)
 
-	// CommentPullRequest from github/githubclient/queries.graphql:97
+	// CommentPullRequest from github/githubclient/queries.graphql:100
 	CommentPullRequest(ctx context.Context,
 		input AddCommentInput,
 	) (*CommentPullRequestResponse, error)
 
-	// MergePullRequest from github/githubclient/queries.graphql:107
+	// MergePullRequest from github/githubclient/queries.graphql:110
 	MergePullRequest(ctx context.Context,
 		input MergePullRequestInput,
 	) (*MergePullRequestResponse, error)
 
-	// AutoMergePullRequest from github/githubclient/queries.graphql:119
+	// AutoMergePullRequest from github/githubclient/queries.graphql:122
 	AutoMergePullRequest(ctx context.Context,
 		input EnablePullRequestAutoMergeInput,
 	) (*AutoMergePullRequestResponse, error)
 
-	// ClosePullRequest from github/githubclient/queries.graphql:131
+	// ClosePullRequest from github/githubclient/queries.graphql:134
 	ClosePullRequest(ctx context.Context,
 		input ClosePullRequestInput,
 	) (*ClosePullRequestResponse, error)
 
-	// StarCheck from github/githubclient/queries.graphql:143
+	// StarCheck from github/githubclient/queries.graphql:146
 	StarCheck(ctx context.Context,
 		after *string,
 	) (*StarCheckResponse, error)
 
-	// StarGetRepo from github/githubclient/queries.graphql:159
+	// StarGetRepo from github/githubclient/queries.graphql:162
 	StarGetRepo(ctx context.Context,
 		owner string,
 		name string,
 	) (*StarGetRepoResponse, error)
 
-	// StarAdd from github/githubclient/queries.graphql:168
+	// StarAdd from github/githubclient/queries.graphql:171
 	StarAdd(ctx context.Context,
 		input AddStarInput,
 	) (*StarAddResponse, error)
