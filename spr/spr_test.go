@@ -40,6 +40,165 @@ func makeTestObjects(t *testing.T) (
 	return
 }
 
+func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	c2 := git.Commit{
+		CommitID:   "00000002",
+		CommitHash: "c200000000000000000000000000000000000000",
+		Subject:    "test commit 2",
+	}
+	c3 := git.Commit{
+		CommitID:   "00000003",
+		CommitHash: "c300000000000000000000000000000000000000",
+		Subject:    "test commit 3",
+	}
+	c4 := git.Commit{
+		CommitID:   "00000004",
+		CommitHash: "c400000000000000000000000000000000000000",
+		Subject:    "test commit 4",
+	}
+
+	// 'git spr status' :: StatusPullRequest
+	githubmock.ExpectGetInfo()
+	s.StatusPullRequests(ctx)
+	assert.Equal("pull request stack is empty\n", output.String())
+	output.Reset()
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c1]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c1})
+	githubmock.ExpectCreatePullRequest(c1, nil)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal("[✔✔✔✔]   1 : test commit 1\n", output.String())
+	output.Reset()
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c2, &c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c2})
+	githubmock.ExpectCreatePullRequest(c2, &c1)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c2, &c1)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	lines := strings.Split(output.String(), "\n")
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal("warning: not updating reviewers for PR #1", lines[0])
+	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[1])
+	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[2])
+	output.Reset()
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2, c3, c4]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c4, &c3, &c2, &c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c3, &c4})
+
+	// For the first "create" call we should call GetAssignableUsers
+	githubmock.ExpectCreatePullRequest(c3, &c2)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+
+	// For the first "create" call we should *not* call GetAssignableUsers
+	githubmock.ExpectCreatePullRequest(c4, &c3)
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c2, &c1)
+	githubmock.ExpectUpdatePullRequest(c3, &c2)
+	githubmock.ExpectUpdatePullRequest(c4, &c3)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	lines = strings.Split(output.String(), "\n")
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal([]string{
+		"warning: not updating reviewers for PR #1",
+		"warning: not updating reviewers for PR #1",
+		"[✔✔✔✔]   1 : test commit 4",
+		"[✔✔✔✔]   1 : test commit 3",
+		"[✔✔✔✔]   1 : test commit 2",
+		"[✔✔✔✔]   1 : test commit 1",
+	}, lines[:6])
+	output.Reset()
+
+	// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
+	githubmock.ExpectGetInfo()
+	githubmock.ExpectUpdatePullRequest(c2, nil)
+	githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+	githubmock.ExpectCommentPullRequest(c1)
+	githubmock.ExpectClosePullRequest(c1)
+	githubmock.ExpectCommentPullRequest(c2)
+	githubmock.ExpectClosePullRequest(c2)
+	count := uint(2)
+	s.MergePullRequests(ctx, &count)
+	lines = strings.Split(output.String(), "\n")
+	assert.Equal("MERGED   1 : test commit 1", lines[0])
+	assert.Equal("MERGED   1 : test commit 2", lines[1])
+	fmt.Printf("OUT: %s\n", output.String())
+	output.Reset()
+
+	githubmock.Info.PullRequests = githubmock.Info.PullRequests[1:]
+	githubmock.Info.PullRequests[0].Merged = false
+	githubmock.Info.PullRequests[0].Commits = append(githubmock.Info.PullRequests[0].Commits, c1, c2)
+
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c4, &c3, &c2, &c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c2, &c3, &c4})
+
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	lines = strings.Split(output.String(), "\n")
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal([]string{
+		"warning: not updating reviewers for PR #1",
+		"warning: not updating reviewers for PR #1",
+		"warning: not updating reviewers for PR #1",
+		"[✔✔✔✔]   1 : test commit 4",
+		"[✔✔✔✔]   1 : test commit 3",
+		"[✔✔✔✔] !   1 : test commit 2",
+	}, lines[:6])
+	output.Reset()
+
+	// 'git spr merge' :: MergePullRequest :: commits=[a2, a3, a4]
+	gitmock.ExpectLocalBranch("master")
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectLocalBranch("master")
+	githubmock.ExpectUpdatePullRequest(c4, nil)
+	githubmock.ExpectMergePullRequest(c4, genclient.PullRequestMergeMethod_REBASE)
+
+	githubmock.ExpectCommentPullRequest(c2)
+	githubmock.ExpectClosePullRequest(c2)
+	githubmock.ExpectCommentPullRequest(c3)
+	githubmock.ExpectClosePullRequest(c3)
+
+	githubmock.Info.PullRequests[0].InQueue = true
+
+	s.MergePullRequests(ctx, nil)
+	lines = strings.Split(output.String(), "\n")
+	assert.Equal("MERGED ·   1 : test commit 2", lines[0])
+	assert.Equal("MERGED   1 : test commit 3", lines[1])
+	assert.Equal("MERGED   1 : test commit 4", lines[2])
+	fmt.Printf("OUT: %s\n", output.String())
+	output.Reset()
+}
+
 func TestSPRBasicFlowFourCommits(t *testing.T) {
 	s, gitmock, githubmock, _, output := makeTestObjects(t)
 	assert := require.New(t)

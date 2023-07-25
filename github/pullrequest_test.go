@@ -143,3 +143,39 @@ func TestStatusString(t *testing.T) {
 		assert.Equal(t, test.expect, test.pr.StatusString(test.cfg), fmt.Sprintf("case %d failed", i))
 	}
 }
+
+func TestString(t *testing.T) {
+	type testcase struct {
+		pr     *PullRequest
+		cfg    *config.Config
+		expect string
+	}
+
+	cfg := &config.Config{
+		Repo: &config.RepoConfig{
+			RequireChecks:   true,
+			RequireApproval: true,
+		},
+		User: &config.UserConfig{
+			StatusBitsEmojis: false,
+		},
+	}
+
+	pr := func(inQueue bool, commits int) *PullRequest {
+		return &PullRequest{
+			InQueue:     inQueue,
+			Commits:     make([]git.Commit, commits),
+			Title:       "Title",
+			MergeStatus: PullRequestMergeStatus{},
+		}
+	}
+
+	tests := []testcase{
+		{expect: "[?✗✗✗] ·   0 : Title", pr: pr(true, 1), cfg: cfg},
+		{expect: "[?✗✗✗] ·   0 : Title", pr: pr(true, 2), cfg: cfg},
+		{expect: "[?✗✗✗] !   0 : Title", pr: pr(false, 2), cfg: cfg},
+	}
+	for i, test := range tests {
+		assert.Equal(t, test.expect, test.pr.String(test.cfg), fmt.Sprintf("case %d failed", i))
+	}
+}
