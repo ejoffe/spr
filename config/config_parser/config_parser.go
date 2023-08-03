@@ -18,7 +18,6 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		rake.DefaultSource(),
 		NewGitHubRemoteSource(cfg, gitcmd),
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
-		rake.YamlFileWriter(RepoConfigFilePath(gitcmd)),
 	)
 	if cfg.Repo.GitHubHost == "" {
 		fmt.Println("unable to auto configure repository host - must be set manually in .spr.yml")
@@ -48,9 +47,6 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		rake.DefaultSource(),
 		rake.YamlFileSource(InternalConfigFilePath()),
 	)
-
-	rake.LoadSources(cfg.User,
-		rake.YamlFileWriter(UserConfigFilePath()))
 
 	cfg.State.RunCount = cfg.State.RunCount + 1
 
