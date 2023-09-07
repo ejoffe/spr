@@ -1,7 +1,6 @@
 package config_parser
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/ejoffe/spr/config"
@@ -27,12 +26,11 @@ func (s *remoteBranch) Load(cfg interface{}) {
 
 	matches := _remoteBranchRegex.FindStringSubmatch(output)
 	if matches == nil {
-		fmt.Printf("error: unable to fetch remote branch info, using defaults")
 		return
 	}
 
-	internalCfg := cfg.(*config.InternalConfig)
+	repoCfg := cfg.(*config.RepoConfig)
 
-	internalCfg.GitHubRemote = matches[2]
-	internalCfg.GitHubBranch = matches[3]
+	repoCfg.GitHubRemote = matches[2]
+	repoCfg.GitHubBranch = matches[3]
 }

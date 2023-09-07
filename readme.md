@@ -151,31 +151,33 @@ User specific configuration is saved to .spr.yml in the user home directory.
 
 | Repository Config       | Type | Default    | Description                                                                       |
 |-------------------------| ---- |------------|-----------------------------------------------------------------------------------|
-| requireChecks           | bool | true       | require checks to pass in order to merge                                          |
-| requireApproval         | bool | true       | require pull request approval in order to merge                                   |
-| githubRepoOwner         | str  |            | name of the github owner (fetched from git remote config)                         |
-| githubRepoName          | str  |            | name of the github repository (fetched from git remote config)                    |
-| githubHost              | str  | github.com | github host, can be updated for github enterprise use case                        |
-| mergeMethod             | str  | rebase     | merge method, valid values: [rebase, squash, merge]                               |
+| requireChecks           | bool | true       | require checks to pass in order to merge |
+| requireApproval         | bool | true       | require pull request approval in order to merge |
+| githubRepoOwner         | str  |            | name of the github owner (fetched from git remote config) |
+| githubRepoName          | str  |            | name of the github repository (fetched from git remote config) |
+| githubRemote            | str  | origin     | github remote name to use |
+| githubBranch            | str  | master     | github branch for pull request target |
+| githubHost              | str  | github.com | github host, can be updated for github enterprise use case |
+| mergeMethod             | str  | rebase     | merge method, valid values: [rebase, squash, merge] |
 | mergeQueue              | bool | false      | use GitHub merge queue to merge pull requests |
 | prTemplatePath          | str  |            | path to PR template (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md) |
-| prTemplateInsertStart   | str  |            | text to search for in PR template that determines body insert start location      |
-| prTemplateInsertEnd     | str  |            | text to search for in PR template that determines body insert end location        |
+| prTemplateInsertStart   | str  |            | text to search for in PR template that determines body insert start location |
+| prTemplateInsertEnd     | str  |            | text to search for in PR template that determines body insert end location |
 | mergeCheck              | str  |            | enforce a pre-merge check using 'git spr check' |
 | forceFetchTags          | bool | false      | also fetch tags when running 'git spr update' |
 | branchNameIncludeTarget | bool | false      | include target branch name in pull request branch name |
 
 
-| User Config          | Type | Default | Description                                                       |
-| -------------------- | ---- | ------- | ----------------------------------------------------------------- |
-| showPRLink           | bool | true    | show full pull request http link                                  |
-| logGitCommands       | bool | true    | logs all git commands to stdout                                   |
-| logGitHubCalls       | bool | true    | logs all github api calls to stdout                               |
-| statusBitsHeader     | bool | true    | show status bits type headers                                     |
-| statusBitsEmojis     | bool | true    | show status bits using fancy emojis                               |
-| createDraftPRs       | bool | false   | new pull requests are created as draft                            |
-| preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body   |
-| noRebase             | bool | false   | when true spr update will not rebase on top of origin             |
+| User Config          | Type | Default | Description                                                     |
+| -------------------- | ---- | ------- | --------------------------------------------------------------- |
+| showPRLink           | bool | true    | show full pull request http link |
+| logGitCommands       | bool | true    | logs all git commands to stdout |
+| logGitHubCalls       | bool | true    | logs all github api calls to stdout |
+| statusBitsHeader     | bool | true    | show status bits type headers |
+| statusBitsEmojis     | bool | true    | show status bits using fancy emojis |
+| createDraftPRs       | bool | false   | new pull requests are created as draft |
+| preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body |
+| noRebase             | bool | false   | when true spr update will not rebase on top of origin |
 
 Happy Coding!
 -------------

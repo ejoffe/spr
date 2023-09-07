@@ -81,7 +81,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	sd.gitcmd.MustGit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
-		sd.config.Internal.GitHubRemote, sd.config.Internal.GitHubBranch)
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
 	sd.gitcmd.MustGit(rebaseCmd, nil)
 }
 
@@ -482,7 +482,7 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 		sd.gitcmd.MustGit("fetch", nil)
 	}
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-		sd.config.Internal.GitHubRemote, sd.config.Internal.GitHubBranch)
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil
@@ -544,7 +544,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 			commit.CommitHash+":refs/heads/"+branchName)
 	}
 	if len(updatedCommits) > 0 {
-		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Internal.GitHubRemote)
+		pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
 		pushCommand += strings.Join(refNames, " ")
 		sd.gitcmd.MustGit(pushCommand, nil)
 	}
