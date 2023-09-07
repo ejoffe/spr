@@ -182,7 +182,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		c.config.Repo.GitHubRepoName)
 	check(err)
 
-	targetBranch := c.config.Internal.GitHubBranch
+	targetBranch := c.config.Repo.GitHubBranch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
 	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Viewer.PullRequests)
@@ -354,7 +354,7 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := c.config.Internal.GitHubBranch
+	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
@@ -512,7 +512,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := c.config.Internal.GitHubBranch
+	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}

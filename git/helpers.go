@@ -25,7 +25,7 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 }
 
 func BranchNameFromCommit(cfg *config.Config, commit Commit) string {
-	remoteBranchName := cfg.Internal.GitHubBranch
+	remoteBranchName := cfg.Repo.GitHubBranch
 	return "spr/" + remoteBranchName + "/" + commit.CommitID
 }
 
@@ -48,7 +48,7 @@ func GetLocalTopCommit(cfg *config.Config, gitcmd GitInterface) *Commit {
 func GetLocalCommitStack(cfg *config.Config, gitcmd GitInterface) []Commit {
 	var commitLog string
 	logCommand := fmt.Sprintf("log --format=medium --no-color %s/%s..HEAD",
-		cfg.Internal.GitHubRemote, cfg.Internal.GitHubBranch)
+		cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
 	gitcmd.MustGit(logCommand, &commitLog)
 	commits, valid := parseLocalCommitStack(commitLog)
 	if !valid {
@@ -56,7 +56,7 @@ func GetLocalCommitStack(cfg *config.Config, gitcmd GitInterface) []Commit {
 		rewordPath, err := exec.LookPath("spr_reword_helper")
 		check(err)
 		rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
-			cfg.Internal.GitHubRemote, cfg.Internal.GitHubBranch)
+			cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
 		gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
 
 		gitcmd.MustGit(logCommand, &commitLog)
