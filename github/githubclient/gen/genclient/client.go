@@ -81,6 +81,12 @@ func NewClient(url string, httpclient *http.Client) Client {
 	}
 }
 
+func NewDebugClient(url string, httpclient *http.Client) Client {
+	return &gqlclient{
+		gql: client.NewGQLClient(url, httpclient, client.WithDebug()),
+	}
+}
+
 type gqlclient struct {
 	gql *client.GQLClient
 }

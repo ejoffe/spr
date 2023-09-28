@@ -75,44 +75,45 @@ func (c *gqlclient) PullRequests(ctx context.Context,
 ) (*PullRequestsResponse, error) {
 
 	var pullRequestsOperation string = `
-	query PullRequests($repo_owner : String!, $repo_name : String!) {
-		viewer {
-			login
-			pullRequests(first: 100, states: [OPEN]) {
-				nodes {
+	query PullRequests ($repo_owner: String!, $repo_name: String!) {
+	viewer {
+		login
+		pullRequests(first: 100, states: [OPEN]) {
+			nodes {
+				id
+				number
+				title
+				body
+				baseRefName
+				headRefName
+				mergeable
+				reviewDecision
+				repository {
 					id
-					number
-					title
-					body
-					baseRefName
-					headRefName
-					mergeable
-					reviewDecision
-					repository {
-						id
-					}
-					mergeQueueEntry {
-						id
-					}
-					commits(first: 100) {
-						nodes {
-							commit {
-								oid
-								messageHeadline
-								messageBody
-								statusCheckRollup {
-									state
-								}
+				}
+				mergeQueueEntry {
+					id
+				}
+				commits(first: 100) {
+					nodes {
+						commit {
+							oid
+							messageHeadline
+							messageBody
+							statusCheckRollup {
+								state
 							}
 						}
 					}
 				}
 			}
 		}
-		repository(owner: $repo_owner, name: $repo_name) {
-			id
-		}
-	}`
+	}
+	repository(owner: $repo_owner, name: $repo_name) {
+		id
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "PullRequests",
@@ -177,21 +178,22 @@ func (c *gqlclient) AssignableUsers(ctx context.Context,
 ) (*AssignableUsersResponse, error) {
 
 	var assignableUsersOperation string = `
-	query AssignableUsers($repo_owner : String!, $repo_name : String!, $end_cursor : String) {
-		repository(owner: $repo_owner, name: $repo_name) {
-			assignableUsers(first: 100, after: $end_cursor) {
-				nodes {
-					id
-					login
-					name
-				}
-				pageInfo {
-					hasNextPage
-					endCursor
-				}
+	query AssignableUsers ($repo_owner: String!, $repo_name: String!, $end_cursor: String) {
+	repository(owner: $repo_owner, name: $repo_name) {
+		assignableUsers(first: 100, after: $end_cursor) {
+			nodes {
+				id
+				login
+				name
+			}
+			pageInfo {
+				hasNextPage
+				endCursor
 			}
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "AssignableUsers",
@@ -244,14 +246,15 @@ func (c *gqlclient) CreatePullRequest(ctx context.Context,
 ) (*CreatePullRequestResponse, error) {
 
 	var createPullRequestOperation string = `
-	mutation CreatePullRequest($input : CreatePullRequestInput!) {
-		createPullRequest(input: $input) {
-			pullRequest {
-				id
-				number
-			}
+	mutation CreatePullRequest ($input: CreatePullRequestInput!) {
+	createPullRequest(input: $input) {
+		pullRequest {
+			id
+			number
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "CreatePullRequest",
@@ -301,13 +304,14 @@ func (c *gqlclient) UpdatePullRequest(ctx context.Context,
 ) (*UpdatePullRequestResponse, error) {
 
 	var updatePullRequestOperation string = `
-	mutation UpdatePullRequest($input : UpdatePullRequestInput!) {
-		updatePullRequest(input: $input) {
-			pullRequest {
-				number
-			}
+	mutation UpdatePullRequest ($input: UpdatePullRequestInput!) {
+	updatePullRequest(input: $input) {
+		pullRequest {
+			number
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "UpdatePullRequest",
@@ -357,13 +361,14 @@ func (c *gqlclient) AddReviewers(ctx context.Context,
 ) (*AddReviewersResponse, error) {
 
 	var addReviewersOperation string = `
-	mutation AddReviewers($input : RequestReviewsInput!) {
-		requestReviews(input: $input) {
-			pullRequest {
-				id
-			}
+	mutation AddReviewers ($input: RequestReviewsInput!) {
+	requestReviews(input: $input) {
+		pullRequest {
+			id
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "AddReviewers",
@@ -409,11 +414,12 @@ func (c *gqlclient) CommentPullRequest(ctx context.Context,
 ) (*CommentPullRequestResponse, error) {
 
 	var commentPullRequestOperation string = `
-	mutation CommentPullRequest($input : AddCommentInput!) {
-		addComment(input: $input) {
-			clientMutationId
-		}
-	}`
+	mutation CommentPullRequest ($input: AddCommentInput!) {
+	addComment(input: $input) {
+		clientMutationId
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "CommentPullRequest",
@@ -463,13 +469,14 @@ func (c *gqlclient) MergePullRequest(ctx context.Context,
 ) (*MergePullRequestResponse, error) {
 
 	var mergePullRequestOperation string = `
-	mutation MergePullRequest($input : MergePullRequestInput!) {
-		mergePullRequest(input: $input) {
-			pullRequest {
-				number
-			}
+	mutation MergePullRequest ($input: MergePullRequestInput!) {
+	mergePullRequest(input: $input) {
+		pullRequest {
+			number
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "MergePullRequest",
@@ -519,13 +526,14 @@ func (c *gqlclient) AutoMergePullRequest(ctx context.Context,
 ) (*AutoMergePullRequestResponse, error) {
 
 	var autoMergePullRequestOperation string = `
-	mutation AutoMergePullRequest($input : EnablePullRequestAutoMergeInput!) {
-		enablePullRequestAutoMerge(input: $input) {
-			pullRequest {
-				number
-			}
+	mutation AutoMergePullRequest ($input: EnablePullRequestAutoMergeInput!) {
+	enablePullRequestAutoMerge(input: $input) {
+		pullRequest {
+			number
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "AutoMergePullRequest",
@@ -575,13 +583,14 @@ func (c *gqlclient) ClosePullRequest(ctx context.Context,
 ) (*ClosePullRequestResponse, error) {
 
 	var closePullRequestOperation string = `
-	mutation ClosePullRequest($input : ClosePullRequestInput!) {
-		closePullRequest(input: $input) {
-			pullRequest {
-				number
-			}
+	mutation ClosePullRequest ($input: ClosePullRequestInput!) {
+	closePullRequest(input: $input) {
+		pullRequest {
+			number
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "ClosePullRequest",
@@ -641,19 +650,20 @@ func (c *gqlclient) StarCheck(ctx context.Context,
 ) (*StarCheckResponse, error) {
 
 	var starCheckOperation string = `
-	query StarCheck($after : String) {
-		viewer {
-			starredRepositories(first: 100, after: $after) {
-				nodes {
-					nameWithOwner
-				}
-				edges {
-					cursor
-				}
-				totalCount
+	query StarCheck ($after: String) {
+	viewer {
+		starredRepositories(first: 100, after: $after) {
+			nodes {
+				nameWithOwner
 			}
+			edges {
+				cursor
+			}
+			totalCount
 		}
-	}`
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "StarCheck",
@@ -700,11 +710,12 @@ func (c *gqlclient) StarGetRepo(ctx context.Context,
 ) (*StarGetRepoResponse, error) {
 
 	var starGetRepoOperation string = `
-	query StarGetRepo($owner : String!, $name : String!) {
-		repository(owner: $owner, name: $name) {
-			id
-		}
-	}`
+	query StarGetRepo ($owner: String!, $name: String!) {
+	repository(owner: $owner, name: $name) {
+		id
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "StarGetRepo",
@@ -751,11 +762,12 @@ func (c *gqlclient) StarAdd(ctx context.Context,
 ) (*StarAddResponse, error) {
 
 	var starAddOperation string = `
-	mutation StarAdd($input : AddStarInput!) {
-		addStar(input: $input) {
-			clientMutationId
-		}
-	}`
+	mutation StarAdd ($input: AddStarInput!) {
+	addStar(input: $input) {
+		clientMutationId
+	}
+}
+`
 
 	gqlreq := &client.GQLRequest{
 		OperationName: "StarAdd",
