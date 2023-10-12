@@ -192,7 +192,7 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 
 	s.MergePullRequests(ctx, nil)
 	lines = strings.Split(output.String(), "\n")
-	assert.Equal("MERGED ·   1 : test commit 2", lines[0])
+	assert.Equal("MERGED .   1 : test commit 2", lines[0])
 	assert.Equal("MERGED   1 : test commit 3", lines[1])
 	assert.Equal("MERGED   1 : test commit 4", lines[2])
 	fmt.Printf("OUT: %s\n", output.String())
