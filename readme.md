@@ -156,7 +156,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubRepoOwner         | str  |            | name of the github owner (fetched from git remote config) |
 | githubRepoName          | str  |            | name of the github repository (fetched from git remote config) |
 | githubRemote            | str  | origin     | github remote name to use |
-| githubBranch            | str  | master     | github branch for pull request target |
+| githubBranch            | str  | main       | github branch for pull request target |
 | githubHost              | str  | github.com | github host, can be updated for github enterprise use case |
 | mergeMethod             | str  | rebase     | merge method, valid values: [rebase, squash, merge] |
 | mergeQueue              | bool | false      | use GitHub merge queue to merge pull requests |
