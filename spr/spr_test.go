@@ -84,7 +84,7 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 	githubmock.ExpectGetInfo()
 	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
 	fmt.Printf("OUT: %s\n", output.String())
-	assert.Equal("[✔✔✔✔]   1 : test commit 1\n", output.String())
+	assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2]
@@ -102,8 +102,8 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 	lines := strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
 	assert.Equal("warning: not updating reviewers for PR #1", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[1])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[2])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[2])
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2, c3, c4]
@@ -132,10 +132,10 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 	assert.Equal([]string{
 		"warning: not updating reviewers for PR #1",
 		"warning: not updating reviewers for PR #1",
-		"[✔✔✔✔]   1 : test commit 4",
-		"[✔✔✔✔]   1 : test commit 3",
-		"[✔✔✔✔]   1 : test commit 2",
-		"[✔✔✔✔]   1 : test commit 1",
+		"[vvvv]   1 : test commit 4",
+		"[vvvv]   1 : test commit 3",
+		"[vvvv]   1 : test commit 2",
+		"[vvvv]   1 : test commit 1",
 	}, lines[:6])
 	output.Reset()
 
@@ -170,9 +170,9 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 		"warning: not updating reviewers for PR #1",
 		"warning: not updating reviewers for PR #1",
 		"warning: not updating reviewers for PR #1",
-		"[✔✔✔✔]   1 : test commit 4",
-		"[✔✔✔✔]   1 : test commit 3",
-		"[✔✔✔✔] !   1 : test commit 2",
+		"[vvvv]   1 : test commit 4",
+		"[vvvv]   1 : test commit 3",
+		"[vvvv] !   1 : test commit 2",
 	}, lines[:6])
 	output.Reset()
 
@@ -192,7 +192,7 @@ func TestSPRBasicFlowFourCommitsQueue(t *testing.T) {
 
 	s.MergePullRequests(ctx, nil)
 	lines = strings.Split(output.String(), "\n")
-	assert.Equal("MERGED ·   1 : test commit 2", lines[0])
+	assert.Equal("MERGED .   1 : test commit 2", lines[0])
 	assert.Equal("MERGED   1 : test commit 3", lines[1])
 	assert.Equal("MERGED   1 : test commit 4", lines[2])
 	fmt.Printf("OUT: %s\n", output.String())
@@ -243,7 +243,7 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	githubmock.ExpectGetInfo()
 	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
 	fmt.Printf("OUT: %s\n", output.String())
-	assert.Equal("[✔✔✔✔]   1 : test commit 1\n", output.String())
+	assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2]
@@ -261,8 +261,8 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	lines := strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
 	assert.Equal("warning: not updating reviewers for PR #1", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[1])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[2])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[2])
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2, c3, c4]
@@ -291,10 +291,10 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	assert.Equal([]string{
 		"warning: not updating reviewers for PR #1",
 		"warning: not updating reviewers for PR #1",
-		"[✔✔✔✔]   1 : test commit 4",
-		"[✔✔✔✔]   1 : test commit 3",
-		"[✔✔✔✔]   1 : test commit 2",
-		"[✔✔✔✔]   1 : test commit 1",
+		"[vvvv]   1 : test commit 4",
+		"[vvvv]   1 : test commit 3",
+		"[vvvv]   1 : test commit 2",
+		"[vvvv]   1 : test commit 1",
 	}, lines[:6])
 	output.Reset()
 
@@ -370,10 +370,10 @@ func TestSPRMergeCount(t *testing.T) {
 	lines := strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
 	assert.Equal([]string{
-		"[✔✔✔✔]   1 : test commit 4",
-		"[✔✔✔✔]   1 : test commit 3",
-		"[✔✔✔✔]   1 : test commit 2",
-		"[✔✔✔✔]   1 : test commit 1",
+		"[vvvv]   1 : test commit 4",
+		"[vvvv]   1 : test commit 3",
+		"[vvvv]   1 : test commit 2",
+		"[vvvv]   1 : test commit 1",
 	}, lines[:4])
 	output.Reset()
 
@@ -426,8 +426,8 @@ func TestSPRAmendCommit(t *testing.T) {
 	s.UpdatePullRequests(ctx, nil, nil)
 	fmt.Printf("OUT: %s\n", output.String())
 	lines := strings.Split(output.String(), "\n")
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[1])
 	output.Reset()
 
 	// amend commit c2
@@ -443,8 +443,8 @@ func TestSPRAmendCommit(t *testing.T) {
 	s.UpdatePullRequests(ctx, nil, nil)
 	lines = strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[1])
 	output.Reset()
 
 	// amend commit c1
@@ -461,8 +461,8 @@ func TestSPRAmendCommit(t *testing.T) {
 	s.UpdatePullRequests(ctx, nil, nil)
 	lines = strings.Split(output.String(), "\n")
 	fmt.Printf("OUT: %s\n", output.String())
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[1])
 	output.Reset()
 
 	// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
@@ -535,10 +535,10 @@ func TestSPRReorderCommit(t *testing.T) {
 	s.UpdatePullRequests(ctx, nil, nil)
 	fmt.Printf("OUT: %s\n", output.String())
 	lines := strings.Split(output.String(), "\n")
-	assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[1])
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[2])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[3])
+	assert.Equal("[vvvv]   1 : test commit 4", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 3", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[2])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[3])
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c2, c4, c1, c3]
@@ -564,10 +564,10 @@ func TestSPRReorderCommit(t *testing.T) {
 	fmt.Printf("OUT: %s\n", output.String())
 	// TODO : Need to update pull requests in GetInfo expect to get this check to work
 	// lines = strings.Split(output.String(), "\n")
-	//assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[0])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[2])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
+	//assert.Equal("[vvvv]   1 : test commit 3", lines[0])
+	//assert.Equal("[vvvv]   1 : test commit 1", lines[1])
+	//assert.Equal("[vvvv]   1 : test commit 4", lines[2])
+	//assert.Equal("[vvvv]   1 : test commit 2", lines[3])
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c5, c1, c2, c3, c4]
@@ -595,11 +595,11 @@ func TestSPRReorderCommit(t *testing.T) {
 	fmt.Printf("OUT: %s\n", output.String())
 	// TODO : Need to update pull requests in GetInfo expect to get this check to work
 	// lines = strings.Split(output.String(), "\n")
-	//assert.Equal("[✔✔✔✔]   1 : test commit 5", lines[0])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[1])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[2])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[4])
+	//assert.Equal("[vvvv]   1 : test commit 5", lines[0])
+	//assert.Equal("[vvvv]   1 : test commit 4", lines[1])
+	//assert.Equal("[vvvv]   1 : test commit 3", lines[2])
+	//assert.Equal("[vvvv]   1 : test commit 2", lines[3])
+	//assert.Equal("[vvvv]   1 : test commit 1", lines[4])
 	output.Reset()
 
 	// TODO : add a call to merge and check merge order
@@ -655,10 +655,10 @@ func TestSPRDeleteCommit(t *testing.T) {
 	s.UpdatePullRequests(ctx, nil, nil)
 	fmt.Printf("OUT: %s\n", output.String())
 	lines := strings.Split(output.String(), "\n")
-	assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[0])
-	assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[1])
-	assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[2])
-	assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[3])
+	assert.Equal("[vvvv]   1 : test commit 4", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 3", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[2])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[3])
 	output.Reset()
 
 	// 'git spr update' :: UpdatePullRequest :: commits=[c2, c4, c1, c3]
@@ -680,10 +680,10 @@ func TestSPRDeleteCommit(t *testing.T) {
 	fmt.Printf("OUT: %s\n", output.String())
 	// TODO : Need to update pull requests in GetInfo expect to get this check to work
 	// lines = strings.Split(output.String(), "\n")
-	//assert.Equal("[✔✔✔✔]   1 : test commit 3", lines[0])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 1", lines[1])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 4", lines[2])
-	//assert.Equal("[✔✔✔✔]   1 : test commit 2", lines[3])
+	//assert.Equal("[vvvv]   1 : test commit 3", lines[0])
+	//assert.Equal("[vvvv]   1 : test commit 1", lines[1])
+	//assert.Equal("[vvvv]   1 : test commit 4", lines[2])
+	//assert.Equal("[vvvv]   1 : test commit 2", lines[3])
 	output.Reset()
 
 	// TODO : add a call to merge and check merge order

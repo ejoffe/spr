@@ -98,9 +98,9 @@ const (
 	colorBlue  = "\033[34m"
 
 	// ascii status bits
-	asciiCheckmark = "✔"
-	asciiCrossmark = "✗"
-	asciiPending   = "·"
+	asciiCheckmark = "v"
+	asciiCrossmark = "x"
+	asciiPending   = "."
 	asciiQuerymark = "?"
 	asciiEmpty     = "-"
 	asciiWarning   = "!"
