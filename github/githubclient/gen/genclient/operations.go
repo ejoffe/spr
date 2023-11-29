@@ -72,6 +72,7 @@ type PullRequestsResponse struct {
 func (c *gqlclient) PullRequests(ctx context.Context,
 	repoOwner string,
 	repoName string,
+    useMergeQueue bool,
 ) (*PullRequestsResponse, error) {
 
 	var pullRequestsOperation string = `
@@ -91,9 +92,17 @@ func (c *gqlclient) PullRequests(ctx context.Context,
 				repository {
 					id
 				}
+`
+
+	if useMergeQueue {
+		pullRequestsOperation += `
 				mergeQueueEntry {
 					id
 				}
+`
+	}
+
+	pullRequestsOperation += `
 				commits(first: 100) {
 					nodes {
 						commit {
@@ -114,7 +123,6 @@ func (c *gqlclient) PullRequests(ctx context.Context,
 	}
 }
 `
-
 	gqlreq := &client.GQLRequest{
 		OperationName: "PullRequests",
 		Query:         pullRequestsOperation,

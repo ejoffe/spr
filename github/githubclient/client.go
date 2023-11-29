@@ -179,7 +179,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	}
 	resp, err := c.api.PullRequests(ctx,
 		c.config.Repo.GitHubRepoOwner,
-		c.config.Repo.GitHubRepoName)
+		c.config.Repo.GitHubRepoName,
+        c.config.Repo.MergeQueue)
 	check(err)
 
 	targetBranch := c.config.Repo.GitHubBranch

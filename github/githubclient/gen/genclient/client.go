@@ -14,6 +14,7 @@ type Client interface {
 	PullRequests(ctx context.Context,
 		repoOwner string,
 		repoName string,
+        useMergeQueue bool,
 	) (*PullRequestsResponse, error)
 
 	// AssignableUsers from github/githubclient/queries.graphql:43
