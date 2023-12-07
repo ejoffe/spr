@@ -312,8 +312,8 @@ github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/imdario/mergo v0.3.8/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/inigolabs/fezzik v0.4.9 h1:60MiOii7N0JXrvTA0mk2g37qDmxM3roFo/wt4ateEAk=
-github.com/inigolabs/fezzik v0.4.9/go.mod h1:vCsZurxUwhjursURZPF8xxofoOFzpVVJaqiNOUO9I80=
+github.com/inigolabs/fezzik v0.4.10 h1:iV6KflmW5UVMVtqYgE8arGGfAaU88NQvM7mDoCC9zD0=
+github.com/inigolabs/fezzik v0.4.10/go.mod h1:vCsZurxUwhjursURZPF8xxofoOFzpVVJaqiNOUO9I80=
 github.com/jensneuse/abstractlogger v0.0.4/go.mod h1:6WuamOHuykJk8zED/R0LNiLhWR6C7FIAo43ocUEB3mo=
 github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68/go.mod h1:0D5r/VSW6D/o65rKLL9xk7sZxL2+oku2HvFPYeIMFr4=
 github.com/jensneuse/diffview v1.0.0 h1:4b6FQJ7y3295JUHU3tRko6euyEboL825ZsXeZZM47Z4=

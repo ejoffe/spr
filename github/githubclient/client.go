@@ -15,6 +15,7 @@ import (
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/github/githubclient/fezzik_types"
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
@@ -177,15 +178,32 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
 	}
-	resp, err := c.api.PullRequests(ctx,
-		c.config.Repo.GitHubRepoOwner,
-		c.config.Repo.GitHubRepoName)
-	check(err)
+
+	var pullRequestConnection fezzik_types.PullRequestConnection
+	var loginName string
+	var repoID string
+	if c.config.Repo.MergeQueue {
+		resp, err := c.api.PullRequestsWithMergeQueue(ctx,
+			c.config.Repo.GitHubRepoOwner,
+			c.config.Repo.GitHubRepoName)
+		check(err)
+		pullRequestConnection = resp.Viewer.PullRequests
+		loginName = resp.Viewer.Login
+		repoID = resp.Repository.Id
+	} else {
+		resp, err := c.api.PullRequests(ctx,
+			c.config.Repo.GitHubRepoOwner,
+			c.config.Repo.GitHubRepoName)
+		check(err)
+		pullRequestConnection = resp.Viewer.PullRequests
+		loginName = resp.Viewer.Login
+		repoID = resp.Repository.Id
+	}
 
 	targetBranch := c.config.Repo.GitHubBranch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
-	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, resp.Viewer.PullRequests)
+	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, pullRequestConnection)
 	for _, pr := range pullRequests {
 		if pr.Ready(c.config) {
 			pr.MergeStatus.Stacked = true
@@ -195,8 +213,8 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	}
 
 	info := &github.GitHubInfo{
-		UserName:     resp.Viewer.Login,
-		RepositoryID: resp.Repository.Id,
+		UserName:     loginName,
+		RepositoryID: repoID,
 		LocalBranch:  git.GetLocalBranchName(gitcmd),
 		PullRequests: pullRequests,
 	}
@@ -209,7 +227,7 @@ func matchPullRequestStack(
 	repoConfig *config.RepoConfig,
 	targetBranch string,
 	localCommitStack []git.Commit,
-	allPullRequests genclient.PullRequestsViewerPullRequests) []*github.PullRequest {
+	allPullRequests fezzik_types.PullRequestConnection) []*github.PullRequest {
 
 	if len(localCommitStack) == 0 || allPullRequests.Nodes == nil {
 		return []*github.PullRequest{}

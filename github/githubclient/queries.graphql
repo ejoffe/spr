@@ -17,6 +17,45 @@ query PullRequests(
 				repository {
 					id
 				}
+				commits(first:100) {
+					nodes {
+						commit {
+							oid
+							messageHeadline
+							messageBody
+							statusCheckRollup {
+								state
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	repository(owner:$repo_owner, name:$repo_name) {
+		id
+	}
+}
+
+query PullRequestsWithMergeQueue(
+	$repo_owner: String!,	
+	$repo_name: String!,	
+){
+	viewer {
+		login
+		pullRequests(first:100, states:[OPEN]) {
+			nodes {
+				id
+				number
+				title
+				body
+				baseRefName
+				headRefName
+				mergeable
+				reviewDecision
+				repository {
+					id
+				}
 				mergeQueueEntry {
 					id
 				}

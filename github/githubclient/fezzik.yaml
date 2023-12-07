@@ -4,6 +4,8 @@ operations:
   - queries.graphql
 package_name: genclient
 package_dir: gen
+autobind:
+  - github.com/ejoffe/spr/github/githubclient/fezzik_types
 scalar_type_map:
   ID:           string
   GitObjectID:  string
