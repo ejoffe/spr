@@ -621,14 +621,6 @@ const (
 	MergeStateStatus_UNSTABLE  MergeStateStatus = "UNSTABLE"
 )
 
-type MergeableState string
-
-const (
-	MergeableState_CONFLICTING MergeableState = "CONFLICTING"
-	MergeableState_MERGEABLE   MergeableState = "MERGEABLE"
-	MergeableState_UNKNOWN     MergeableState = "UNKNOWN"
-)
-
 type MigrationSourceType string
 
 const (
@@ -1114,14 +1106,6 @@ type PullRequestReviewCommentState string
 const (
 	PullRequestReviewCommentState_PENDING   PullRequestReviewCommentState = "PENDING"
 	PullRequestReviewCommentState_SUBMITTED PullRequestReviewCommentState = "SUBMITTED"
-)
-
-type PullRequestReviewDecision string
-
-const (
-	PullRequestReviewDecision_APPROVED          PullRequestReviewDecision = "APPROVED"
-	PullRequestReviewDecision_CHANGES_REQUESTED PullRequestReviewDecision = "CHANGES_REQUESTED"
-	PullRequestReviewDecision_REVIEW_REQUIRED   PullRequestReviewDecision = "REVIEW_REQUIRED"
 )
 
 type PullRequestReviewEvent string
@@ -1962,16 +1946,6 @@ type StarOrderField string
 
 const (
 	StarOrderField_STARRED_AT StarOrderField = "STARRED_AT"
-)
-
-type StatusState string
-
-const (
-	StatusState_ERROR    StatusState = "ERROR"
-	StatusState_EXPECTED StatusState = "EXPECTED"
-	StatusState_FAILURE  StatusState = "FAILURE"
-	StatusState_PENDING  StatusState = "PENDING"
-	StatusState_SUCCESS  StatusState = "SUCCESS"
 )
 
 type SubscriptionState string

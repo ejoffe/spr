@@ -6,7 +6,7 @@ require (
 	github.com/ejoffe/profiletimer v0.1.0
 	github.com/ejoffe/rake v0.2.7
 	github.com/google/uuid v1.3.0
-	github.com/inigolabs/fezzik v0.4.9
+	github.com/inigolabs/fezzik v0.4.10
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.7.1
