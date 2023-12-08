@@ -36,6 +36,8 @@ type RepoConfig struct {
 	MergeCheck string `yaml:"mergeCheck,omitempty"`
 
 	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
+
+	ShowPrTitlesInStack bool `default:"false" yaml:"showPrTitlesInStack"`
 }
 
 type UserConfig struct {

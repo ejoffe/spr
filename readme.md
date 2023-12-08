@@ -166,6 +166,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | mergeCheck              | str  |            | enforce a pre-merge check using 'git spr check' |
 | forceFetchTags          | bool | false      | also fetch tags when running 'git spr update' |
 | branchNameIncludeTarget | bool | false      | include target branch name in pull request branch name |
+| showPrTitlesInStack     | bool | false      | show PR titles in stack description within pull request body |
 
 
 | User Config          | Type | Default | Description                                                     |
