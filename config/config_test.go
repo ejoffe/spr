@@ -33,6 +33,7 @@ func TestDefaultConfig(t *testing.T) {
 			PRTemplatePath:        "",
 			PRTemplateInsertStart: "",
 			PRTemplateInsertEnd:   "",
+			ShowPrTitlesInStack:   false,
 		},
 		User: &UserConfig{
 			ShowPRLink:       true,

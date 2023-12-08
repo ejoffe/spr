@@ -382,7 +382,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
 		Msg("CreatePullRequest")
 
-	body := formatBody(commit, info.PullRequests)
+	body := formatBody(commit, info.PullRequests, c.config.Repo.ShowPrTitlesInStack)
 	if c.config.Repo.PRTemplatePath != "" {
 		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
 		if err != nil {
@@ -425,7 +425,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	return pr
 }
 
-func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string {
+func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest, showPrTitlesInStack bool) string {
 	var buf bytes.Buffer
 	for i := len(stack) - 1; i >= 0; i-- {
 		isCurrent := stack[i].Commit == commit
@@ -435,25 +435,32 @@ func formatStackMarkdown(commit git.Commit, stack []*github.PullRequest) string 
 		} else {
 			suffix = ""
 		}
-		buf.WriteString(fmt.Sprintf("- #%d%s\n", stack[i].Number, suffix))
+		var prTitle string
+		if showPrTitlesInStack {
+			prTitle = fmt.Sprintf("%s ", stack[i].Title)
+		} else {
+			prTitle = ""
+		}
+
+		buf.WriteString(fmt.Sprintf("- %s#%d%s\n", prTitle, stack[i].Number, suffix))
 	}
 
 	return buf.String()
 }
 
-func formatBody(commit git.Commit, stack []*github.PullRequest) string {
+func formatBody(commit git.Commit, stack []*github.PullRequest, showPrTitlesInStack bool) string {
 	if len(stack) <= 1 {
 		return strings.TrimSpace(commit.Body)
 	}
 
 	if commit.Body == "" {
 		return fmt.Sprintf("**Stack**:\n%s",
-			addManualMergeNotice(formatStackMarkdown(commit, stack)))
+			addManualMergeNotice(formatStackMarkdown(commit, stack, showPrTitlesInStack)))
 	}
 
 	return fmt.Sprintf("%s\n\n---\n\n**Stack**:\n%s",
 		commit.Body,
-		addManualMergeNotice(formatStackMarkdown(commit, stack)))
+		addManualMergeNotice(formatStackMarkdown(commit, stack, showPrTitlesInStack)))
 }
 
 // Reads the specified PR template file and returns it as a string
@@ -539,7 +546,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Str("FromBranch", pr.FromBranch).Str("ToBranch", baseRefName).
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
-	body := formatBody(commit, pullRequests)
+	body := formatBody(commit, pullRequests, c.config.Repo.ShowPrTitlesInStack)
 	if c.config.Repo.PRTemplatePath != "" {
 		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
 		if err != nil {

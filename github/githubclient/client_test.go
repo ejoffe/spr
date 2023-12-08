@@ -580,7 +580,64 @@ It even includes some **markdown** formatting.
 	}
 
 	for _, tc := range tests {
-		body := formatBody(tc.commit, tc.stack)
+		body := formatBody(tc.commit, tc.stack, false)
+		if body != tc.description {
+			t.Fatalf("expected: '%v', actual: '%v'", tc.description, body)
+		}
+	}
+}
+
+func TestFormatPullRequestBody_ShowPrTitle(t *testing.T) {
+	simpleCommit := git.Commit{
+		CommitID:   "abc123",
+		CommitHash: "abcdef123456",
+	}
+	descriptiveCommit := git.Commit{
+		CommitID:   "def456",
+		CommitHash: "ghijkl7890",
+		Body: `This body describes my nice PR.
+It even includes some **markdown** formatting.`}
+
+	tests := []struct {
+		description string
+		commit      git.Commit
+		stack       []*github.PullRequest
+	}{
+		{
+			description: "",
+			commit:      git.Commit{},
+			stack:       []*github.PullRequest{},
+		},
+		{
+			description: `This body describes my nice PR.
+It even includes some **markdown** formatting.`,
+			commit: descriptiveCommit,
+			stack: []*github.PullRequest{
+				{Number: 2, Commit: descriptiveCommit},
+			},
+		},
+		{
+			description: `This body describes my nice PR.
+It even includes some **markdown** formatting.
+
+---
+
+**Stack**:
+- Title B #2 ⬅
+- Title A #1
+
+
+⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
+			commit: descriptiveCommit,
+			stack: []*github.PullRequest{
+				{Number: 1, Commit: simpleCommit, Title: "Title A"},
+				{Number: 2, Commit: descriptiveCommit, Title: "Title B"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		body := formatBody(tc.commit, tc.stack, true)
 		if body != tc.description {
 			t.Fatalf("expected: '%v', actual: '%v'", tc.description, body)
 		}
