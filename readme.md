@@ -7,6 +7,9 @@
 [![Join the chat at https://gitter.im/ejoffe-spr/community](https://badges.gitter.im/ejoffe-spr/community.svg)](https://gitter.im/ejoffe-spr/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ![terminal cast](docs/git_spr_cast.gif)
+## GraphQL Users
+Checkout my company [Inigo](https://www.inigo.io) for the best holistic platform for your api.
+
 # Stacked Pull Requests on GitHub
 
 Easily manage stacks of pull requests on GitHub. 
