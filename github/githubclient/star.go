@@ -22,7 +22,22 @@ const (
 
 func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 	if !cfg.State.Stargazer && cfg.State.RunCount%promptCycle == 0 {
-		if c.isStar(ctx) {
+		starred, err := c.isStar(ctx)
+		if err != nil {
+			fmt.Println("enjoying git spr? [Y/n]")
+			fmt.Print("  please add a star at https://github.com/ejoffe/spr")
+			reader := bufio.NewReader(os.Stdin)
+			line, _ := reader.ReadString('\n')
+			line = strings.TrimSpace(line)
+			if line != "n" {
+				cfg.State.Stargazer = true
+				rake.LoadSources(cfg.State,
+					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
+				fmt.Println("Thank You! Happy Coding!")
+			}
+		}
+
+		if starred {
 			log.Debug().Bool("stargazer", true).Msg("MaybeStar")
 			cfg.State.Stargazer = true
 			rake.LoadSources(cfg.State,
@@ -39,30 +54,32 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 				cfg.State.Stargazer = true
 				rake.LoadSources(cfg.State,
 					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
-				fmt.Println("Thank you! Happy Coding!")
+				fmt.Println("Thank You! Happy Coding!")
 			}
 		}
 	}
 }
 
-func (c *client) isStar(ctx context.Context) bool {
+func (c *client) isStar(ctx context.Context) (bool, error) {
 	iteration := 0
 	cursor := ""
 	for {
 		resp, err := c.api.StarCheck(ctx, &cursor)
-		check(err)
+		if err != nil {
+			return false, err
+		}
 
 		edgeCount := len(*resp.Viewer.StarredRepositories.Edges)
 		if edgeCount == 0 {
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar::isStar")
-			return false
+			return false, nil
 		}
 
 		sprRepo := fmt.Sprintf("%s/%s", sprRepoOwner, sprRepoName)
 		for _, node := range *resp.Viewer.StarredRepositories.Nodes {
 			if node.NameWithOwner == sprRepo {
 				log.Debug().Bool("stargazer", true).Msg("MaybeStar::isStar")
-				return true
+				return true, nil
 			}
 		}
 
@@ -73,7 +90,7 @@ func (c *client) isStar(ctx context.Context) bool {
 		if iteration > 10 {
 			// too many stars in the sky
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar::isStar (too many stars)")
-			return false
+			return false, nil
 		}
 	}
 }
