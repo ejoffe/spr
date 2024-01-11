@@ -1,6 +1,7 @@
 package config_parser
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -49,6 +50,16 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 	rake.LoadSources(cfg.State,
 		rake.YamlFileWriter(InternalConfigFilePath()))
 
+	// init case : if yaml config files not found : create them
+	if _, err := os.Stat(RepoConfigFilePath(gitcmd)); errors.Is(err, os.ErrNotExist) {
+		rake.LoadSources(cfg.Repo,
+			rake.YamlFileWriter(RepoConfigFilePath(gitcmd)))
+	}
+
+	if _, err := os.Stat(UserConfigFilePath()); errors.Is(err, os.ErrNotExist) {
+		rake.LoadSources(cfg.User,
+			rake.YamlFileWriter(UserConfigFilePath()))
+	}
 	return cfg
 }
 
