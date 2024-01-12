@@ -40,6 +40,12 @@ func main() {
 	}
 
 	cfg := config_parser.ParseConfig(gitcmd)
+
+	err = config_parser.CheckConfig(cfg)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
 	gitcmd = realgit.NewGitCmd(cfg)
 
 	ctx := context.Background()
