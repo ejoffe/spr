@@ -146,6 +146,10 @@ MERGED #59 Feature 2
 
 By default merges are done using the rebase merge method, this can be changed using the mergeMethod configuration.
 
+Starting a New Stack
+---------------------
+Starting a new stack works by creating a new branch. For example, if you want to start a new stack from the latest pushed state of your current branch, use `git checkout -b new_branch @{push}`.
+
 Configuration
 -------------
 When the script is run for the first time two config files are created.
