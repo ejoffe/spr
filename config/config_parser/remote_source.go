@@ -45,7 +45,7 @@ func getRepoDetailsFromRemote(remote string) (string, string, string, bool) {
 	userFormat := `(git@)?`
 	// "/" is expected in "http://" or "ssh://" protocol, when no protocol given
 	// it should be ":"
-	repoFormat := `(?P<githubHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>\w+)/(?P<repoName>[\w-]+)`
+	repoFormat := `(?P<githubHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>[\w-]+)/(?P<repoName>[\w-]+)`
 	// This is neither required in https access nor in ssh one
 	suffixFormat := `(.git)?`
 	regexFormat := fmt.Sprintf(`^origin\s+%s%s%s%s \(push\)`,
