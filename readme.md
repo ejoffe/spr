@@ -22,15 +22,15 @@ Installation
 
 ### Brew
 ```shell
-> brew tap ejoffe/homebrew-tap
-> brew install ejoffe/tap/spr
+brew tap ejoffe/homebrew-tap
+brew install ejoffe/tap/spr
 ```
 
 ### Apt
 ```shell
-> echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" | sudo tee /etc/apt/sources.list.d/inigolabs.list
-> sudo apt update 
-> sudo apt install spr
+echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" | sudo tee /etc/apt/sources.list.d/inigolabs.list
+sudo apt update 
+sudo apt install spr
 ```
 
 ### Manual
@@ -39,7 +39,7 @@ Download the pre-compiled binaries from the [releases page](https://github.com/e
 ### From source
 Install [goreleaser](https://goreleaser.com/) and run make. Binaries can be found in the **dist** directory.
 ```shell
-> make bin
+make bin
 ```
 
 Workflow
