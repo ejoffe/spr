@@ -123,7 +123,7 @@ No GitHub OAuth token found! You can either create one
 at https://%s/settings/tokens and set the GITHUB_TOKEN environment variable,
 or use the official "gh" CLI (https://cli.github.com) config to log in:
 
-	$ gh auth login
+	$ gh auth login --insecure-storage
 
 Alternatively, configure a token manually in ~/.config/hub:
 
