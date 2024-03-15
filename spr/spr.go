@@ -328,6 +328,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 		sd.github.ClosePullRequest(ctx, pr)
+		git.DeleteRemoteBranch(sd.config, sd.gitcmd, pr.FromBranch)
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
 
