@@ -271,13 +271,15 @@ func matchPullRequestStack(
 				Body:       commit.MessageBody,
 			}
 
-			checkStatus := github.CheckStatusFail
+			checkStatus := github.CheckStatusPass
 			if commit.StatusCheckRollup != nil {
 				switch commit.StatusCheckRollup.State {
 				case "SUCCESS":
 					checkStatus = github.CheckStatusPass
 				case "PENDING":
 					checkStatus = github.CheckStatusPending
+				default:
+					checkStatus = github.CheckStatusFail
 				}
 			}
 
