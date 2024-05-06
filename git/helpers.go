@@ -24,9 +24,9 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 	panic("cannot determine local git branch name")
 }
 
-func BranchNameFromCommit(cfg *config.Config, commit Commit) string {
+func BranchNameFromCommit(gitcmd GitInterface, cfg *config.Config, commit Commit) string {
 	remoteBranchName := cfg.Repo.GitHubBranch
-	return "spr/" + remoteBranchName + "/" + commit.CommitID
+	return GetLocalBranchName(gitcmd) + "/spr/" + remoteBranchName + "/" + commit.CommitID
 }
 
 var BranchNameRegex = regexp.MustCompile(`spr/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)

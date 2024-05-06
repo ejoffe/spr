@@ -374,9 +374,9 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(gitcmd, c.config, *prevCommit)
 	}
-	headRefName := git.BranchNameFromCommit(c.config, commit)
+	headRefName := git.BranchNameFromCommit(gitcmd, c.config, commit)
 
 	log.Debug().Interface("Commit", commit).
 		Str("FromBranch", headRefName).Str("ToBranch", baseRefName).
@@ -539,7 +539,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
-		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
+		baseRefName = git.BranchNameFromCommit(gitcmd, c.config, *prevCommit)
 	}
 
 	log.Debug().Interface("Commit", commit).
