@@ -21,12 +21,26 @@ func NewGitCmd(cfg *config.Config) *gitcmd {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
-	rootdir = strings.TrimSpace(rootdir)
+	rootdir = strings.TrimSpace(maybeAdjustPathPerPlatform(rootdir))
 
 	return &gitcmd{
 		config:  cfg,
 		rootdir: rootdir,
 	}
+}
+
+func maybeAdjustPathPerPlatform(rawRootDir string) string {
+	if strings.HasPrefix(rawRootDir, "/cygdrive") {
+		// This is safe to run also on "proper" Windows paths
+		cmd := exec.Command("cygpath", []string{"-w", rawRootDir}...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			panic(err)
+		}
+		return string(out)
+	}
+
+	return rawRootDir
 }
 
 type gitcmd struct {
