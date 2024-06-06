@@ -61,7 +61,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						{CommitID: "2", CommitHash: "2", Body: "commit-id:2"},
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -122,7 +122,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						{CommitID: "2", CommitHash: "2", Body: "commit-id:2"},
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -138,7 +138,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						{CommitID: "3", CommitHash: "3", Body: "commit-id:3"},
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -187,7 +187,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "1",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -237,7 +237,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "1",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -249,7 +249,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "2",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -331,7 +331,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "1",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -343,7 +343,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "2",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -404,7 +404,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "1",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -416,7 +416,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "2",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -428,7 +428,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "3",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
@@ -489,7 +489,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "1",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 
@@ -502,7 +502,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "2",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 				{
@@ -514,7 +514,7 @@ func TestMatchPullRequestStack(t *testing.T) {
 						CommitHash: "3",
 					},
 					MergeStatus: github.PullRequestMergeStatus{
-						ChecksPass: github.CheckStatusFail,
+						ChecksPass: github.CheckStatusPass,
 					},
 				},
 			},
