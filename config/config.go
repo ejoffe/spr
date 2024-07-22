@@ -50,12 +50,13 @@ type UserConfig struct {
 	StatusBitsHeader bool `default:"true" yaml:"statusBitsHeader"`
 	StatusBitsEmojis bool `default:"true" yaml:"statusBitsEmojis"`
 
-	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
-	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
-	NoRebase             bool `default:"false" yaml:"noRebase"`
+	CreateDraftPRs       bool   `default:"false" yaml:"createDraftPRs"`
+	PreserveTitleAndBody bool   `default:"false" yaml:"preserveTitleAndBody"`
+	NoRebase             bool   `default:"false" yaml:"noRebase"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
 	ShortPRLink          bool `default:"false" yaml:"shortPRLink"`
 	ShowCommitID         bool `default:"false" yaml:"showCommitID"`
+	BranchPrefix         string `default:"spr" yaml:"branchPrefix"`
 }
 
 type InternalState struct {
