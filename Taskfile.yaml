@@ -1,0 +1,26 @@
+version: 3
+
+tasks:
+
+  build:
+    sources:
+      - cmd/**
+      - config/**
+      - git/**
+      - github/**
+      - pretty/**
+      - spr/**
+      - terminal/**
+      - tools/**
+      - .goreleaser.yml
+    cmd: goreleaser --snapshot --skip=publish --clean
+    generates:
+      - dist/**
+
+  install:
+    deps:
+      - build
+    cmds:
+      - cp dist/spr_darwin_arm64_v8.0/git-spr ~/.bin/
+      - cp dist/amend_darwin_arm64_v8.0/git-amend ~/.bin/
+      - cp dist/reword_darwin_arm64_v8.0/spr_reword_helper ~/.bin/
