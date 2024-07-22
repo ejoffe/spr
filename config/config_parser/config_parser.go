@@ -21,6 +21,7 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		NewGitHubRemoteSource(cfg, gitcmd),
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
 		NewRemoteBranchSource(gitcmd),
+		NewEnvSource(),
 	)
 	if cfg.Repo.GitHubHost == "" {
 		fmt.Println("unable to auto configure repository host - must be set manually in .spr.yml")
