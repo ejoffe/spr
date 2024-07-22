@@ -17,7 +17,7 @@ func NewRemoteBranchSource(gitcmd git.GitInterface) *remoteBranch {
 	}
 }
 
-var _remoteBranchRegex = regexp.MustCompile(`^## ([a-zA-Z0-9_\-/\.]+)\.\.\.([a-zA-Z0-9_\-/\.]+)/([a-zA-Z0-9_\-/\.]+)`)
+var _remoteBranchRegex = regexp.MustCompile(`^## ([a-zA-Z0-9_\-/\.]+)\.\.\.([a-zA-Z0-9_\-\.]+)/([a-zA-Z0-9_\-/\.]+)`)
 
 func (s *remoteBranch) Load(cfg interface{}) {
 	var output string
@@ -32,5 +32,7 @@ func (s *remoteBranch) Load(cfg interface{}) {
 	repoCfg := cfg.(*config.RepoConfig)
 
 	repoCfg.GitHubRemote = matches[2]
-	repoCfg.GitHubBranch = matches[3]
+	if repoCfg.GitHubBranch == "" {
+		repoCfg.GitHubBranch = matches[3]
+	}
 }
