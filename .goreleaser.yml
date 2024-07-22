@@ -1,4 +1,5 @@
 version: 2
+
 env:
   - GO111MODULE=on
 before:
@@ -8,35 +9,30 @@ builds:
   - main: ./cmd/spr
     id: spr
     binary: git-spr
+    goarch:
+      - arm64
     goos:
-      - linux
-      - windows
       - darwin
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
   - main: ./cmd/amend
     id: amend
     binary: git-amend
+    goarch:
+      - arm64
     goos:
-      - linux
-      - windows
       - darwin
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
   - main: ./cmd/reword
     id: reword
     binary: spr_reword_helper
+    goarch:
+      - arm64
     goos:
-      - linux
-      - windows
       - darwin
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=gorelease
-archives:
-  - name_template: '{{ .ProjectName }}_{{- if eq .Os "Darwin" }}macos_{{- else }}{{- tolower .Os }}_{{end}}{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    format_overrides:
-    - goos: windows
-      formats: ['zip']
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -47,44 +43,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-brews:
-  - 
-    name: spr
-    repository:
-      owner: ejoffe
-      name: homebrew-tap
-    homepage: https://github.com/ejoffe/spr
-    description: Stacked Pull Requests on GitHub
-    install: |
-      bin.install "git-spr"
-      bin.install "git-amend"
-      bin.install "spr_reword_helper"
-    license: "MIT"
-nfpms:
-  - file_name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    id: packages
-    homepage: https://github.com/ejoffe/spr
-    description: Stacked Pull Requests on GitHub
-    maintainer: Eitan <eitan@inigolabs.com>
-    license: MIT
-    formats:
-    - deb
-    - rpm
-    dependencies:
-    - git
-    recommends:
-    - golang
-#snapcrafts:
-#  - name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-#    summary: Stacked Pull Requests on GitHub
-#    description: |
-#      spr is a tool to easily run and automate stacked diff workflows on GitHub.
-#    confinement: classic
-#    publish: true
-publishers:
-  - name: fury.io
-    ids:
-      - packages
-    dir: "{{ dir .ArtifactPath }}"
-    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_ORG }}/
-  
