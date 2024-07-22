@@ -216,7 +216,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	targetBranch := c.config.Repo.GitHubBranch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
-	pullRequests := matchPullRequestStack(c.config.Repo, c.config.User.BranchPrefix, targetBranch, localCommitStack, pullRequestConnection)
+	pullRequests := matchPullRequestStack(c.config.Repo, c.config.BranchPrefix(), targetBranch, localCommitStack, pullRequestConnection)
 
 	// When RequiredChecks is explicitly configured, fetch individual check contexts
 	// and only evaluate the listed checks. This allows non-required check failures

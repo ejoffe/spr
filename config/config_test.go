@@ -93,6 +93,40 @@ func TestMergeMethodHelper(t *testing.T) {
 	})
 }
 
+func TestBranchPrefix(t *testing.T) {
+	t.Run("returns user default when repo is empty", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{},
+			User: &UserConfig{BranchPrefix: "spr"},
+		}
+		assert.Equal(t, "spr", cfg.BranchPrefix())
+	})
+
+	t.Run("repo overrides user", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{BranchPrefix: "team-x"},
+			User: &UserConfig{BranchPrefix: "spr"},
+		}
+		assert.Equal(t, "team-x", cfg.BranchPrefix())
+	})
+
+	t.Run("falls back to user when repo not set", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{},
+			User: &UserConfig{BranchPrefix: "custom"},
+		}
+		assert.Equal(t, "custom", cfg.BranchPrefix())
+	})
+
+	t.Run("strips trailing slash", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{BranchPrefix: "johndoe/spr/"},
+			User: &UserConfig{BranchPrefix: "spr"},
+		}
+		assert.Equal(t, "johndoe/spr", cfg.BranchPrefix())
+	})
+}
+
 func TestNormalizeConfig(t *testing.T) {
 	t.Run("PRTemplatePath provided sets PRTemplateType to custom", func(t *testing.T) {
 		cfg := &Config{

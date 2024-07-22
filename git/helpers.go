@@ -26,7 +26,7 @@ func GetLocalBranchName(gitcmd GitInterface) string {
 
 func BranchNameFromCommit(cfg *config.Config, commit Commit) string {
 	remoteBranchName := cfg.Repo.GitHubBranch
-	branchPrefix := cfg.User.BranchPrefix
+	branchPrefix := cfg.BranchPrefix()
 	return branchPrefix + "/" + remoteBranchName + "/" + commit.CommitID
 }
 

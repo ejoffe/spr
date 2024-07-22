@@ -83,3 +83,14 @@ func TestBranchNameFromCommit(t *testing.T) {
 		})
 	}
 }
+
+func TestBranchNameFromCommitRepoOverride(t *testing.T) {
+	cfg := config.EmptyConfig()
+	cfg.User.BranchPrefix = "spr"
+	cfg.Repo.BranchPrefix = "team-x"
+	cfg.Repo.GitHubBranch = "main"
+
+	commit := Commit{CommitID: "deadbeef"}
+	result := BranchNameFromCommit(cfg, commit)
+	assert.Equal(t, "team-x/main/deadbeef", result)
+}
