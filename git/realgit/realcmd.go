@@ -77,6 +77,7 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 		"-c", fmt.Sprintf("core.editor=%s", editorCmd),
 		"-c", "commit.verbose=false",
 		"-c", "rebase.abbreviateCommands=false",
+		"-c", fmt.Sprintf("sequence.editor=%s", editorCmd),
 	}
 	args = append(args, strings.Split(argStr, " ")...)
 	cmd := exec.Command("git", args...)
