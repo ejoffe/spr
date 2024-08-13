@@ -59,7 +59,11 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 	if c.config.User.LogGitCommands {
 		fmt.Printf("> git %s\n", argStr)
 	}
-	args := []string{"-c", fmt.Sprintf("core.editor=%s", editorCmd)}
+	args := []string{
+		"-c", fmt.Sprintf("core.editor=%s", editorCmd),
+		"-c", "commit.verbose=false",
+		"-c", "rebase.abbreviateCommands=false",
+	}
 	args = append(args, strings.Split(argStr, " ")...)
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.rootdir
