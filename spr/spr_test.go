@@ -306,10 +306,13 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	githubmock.ExpectMergePullRequest(c4, genclient.PullRequestMergeMethod_REBASE)
 	githubmock.ExpectCommentPullRequest(c1)
 	githubmock.ExpectClosePullRequest(c1)
+	gitmock.ExpectDeleteBranch('???') // Not sure where to find the branch name? 
 	githubmock.ExpectCommentPullRequest(c2)
 	githubmock.ExpectClosePullRequest(c2)
+	gitmock.ExpectDeleteBranch('???')
 	githubmock.ExpectCommentPullRequest(c3)
 	githubmock.ExpectClosePullRequest(c3)
+	gitmock.ExpectDeleteBranch('???')
 	s.MergePullRequests(ctx, nil)
 	lines = strings.Split(output.String(), "\n")
 	assert.Equal("MERGED   1 : test commit 1", lines[0])
