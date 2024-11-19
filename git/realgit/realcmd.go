@@ -21,12 +21,26 @@ func NewGitCmd(cfg *config.Config) *gitcmd {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
-	rootdir = strings.TrimSpace(rootdir)
+	rootdir = strings.TrimSpace(maybeAdjustPathPerPlatform(rootdir))
 
 	return &gitcmd{
 		config:  cfg,
 		rootdir: rootdir,
 	}
+}
+
+func maybeAdjustPathPerPlatform(rawRootDir string) string {
+	if strings.HasPrefix(rawRootDir, "/cygdrive") {
+		// This is safe to run also on "proper" Windows paths
+		cmd := exec.Command("cygpath", []string{"-w", rawRootDir}...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			panic(err)
+		}
+		return string(out)
+	}
+
+	return rawRootDir
 }
 
 type gitcmd struct {
@@ -59,7 +73,11 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 	if c.config.User.LogGitCommands {
 		fmt.Printf("> git %s\n", argStr)
 	}
-	args := []string{"-c", fmt.Sprintf("core.editor=%s", editorCmd)}
+	args := []string{
+		"-c", fmt.Sprintf("core.editor=%s", editorCmd),
+		"-c", "commit.verbose=false",
+		"-c", "rebase.abbreviateCommands=false",
+	}
 	args = append(args, strings.Split(argStr, " ")...)
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.rootdir
