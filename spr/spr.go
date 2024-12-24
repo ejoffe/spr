@@ -135,6 +135,7 @@ func alignLocalCommits(commits []git.Commit, prs []*github.PullRequest) []git.Co
 //	 will also be reordered to match the commit stack order.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string, count *uint) {
 	sd.profiletimer.Step("UpdatePullRequests::Start")
+	reviewers = append(sd.config.Repo.DefaultReviewers, reviewers...)
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
 	if githubInfo == nil {
 		return
