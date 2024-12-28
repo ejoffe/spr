@@ -825,3 +825,49 @@ func TestInsertBodyIntoPRTemplateErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestEmbedSprDescription(t *testing.T) {
+	existingBody := `# Some User Heading
+
+User paragraph that should remain untouched.
+
+<!-- SPR data start: please do NOT edit this section -->
+old spr content
+<!-- SPR data end -->
+
+Another user paragraph that should remain untouched as well.
+`
+
+	newSpr := `updated spr content with new data`
+
+	want := `# Some User Heading
+
+User paragraph that should remain untouched.
+
+<!-- SPR data start: please do NOT edit this section -->
+updated spr content with new data
+<!-- SPR data end -->
+
+Another user paragraph that should remain untouched as well.`
+	got := embedSprDescription(existingBody, newSpr)
+	if got != want {
+		t.Fatalf("Unexpected embedSprDescription result.\nGot:\n`%s`\n\nWant:\n`%s`\n", got, want)
+	}
+
+	// Test if markers are missing, we append them
+	existingBodyNoMarkers := `# Some User Heading
+
+No markers here.
+`
+	wantNoMarkers := `# Some User Heading
+
+No markers here.
+
+<!-- SPR data start: please do NOT edit this section -->
+updated spr content with new data
+<!-- SPR data end -->`
+	gotNoMarkers := embedSprDescription(existingBodyNoMarkers, newSpr)
+	if gotNoMarkers != wantNoMarkers {
+		t.Fatalf("Unexpected embedSprDescription result when markers are missing.\nGot:\n%s\n\nWant:\n%s\n", gotNoMarkers, wantNoMarkers)
+	}
+}

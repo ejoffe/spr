@@ -1,4 +1,4 @@
 
 bin:
-	goreleaser --snapshot --skip-publish --clean
+	goreleaser --snapshot --skip=publish --clean
 
