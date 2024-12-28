@@ -533,8 +533,52 @@ func addManualMergeNotice(body string) string {
 		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
-func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, pullRequests []*github.PullRequest, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
+// embedSprDescription finds or creates a section delimited by:
+//
+//   <!-- SPR data start: please do NOT edit this section -->
+//   <!-- SPR data end -->
+//
+// Anything between those markers is overwritten by newSprContent.
+// If the markers do not exist, a new section is appended.
+func embedSprDescription(existingBody, newSpr string) string {
+    startMarker := "<!-- SPR data start: please do NOT edit this section -->"
+    endMarker   := "<!-- SPR data end -->"
 
+    startIndex := strings.Index(existingBody, startMarker)
+    endIndex   := strings.Index(existingBody, endMarker)
+
+    // If both markers exist, replace:
+    if startIndex >= 0 && endIndex > 0 {
+        endIndex += len(endMarker)
+        result := existingBody[:startIndex] +
+            startMarker + "\n" + newSpr + "\n" +
+            endMarker +
+            existingBody[endIndex:]
+        return strings.TrimRight(result, "\n")
+    }
+
+    // If missing, append markers
+    trimmed := strings.TrimRight(existingBody, "\n")
+    if trimmed == "" {
+        // empty body
+        result := startMarker + "\n" + newSpr + "\n" + endMarker
+        return strings.TrimRight(result, "\n")
+    }
+
+    // Non-empty body, add a blank line, then markers
+    result := trimmed + "\n\n" +
+        startMarker + "\n" + newSpr + "\n" + endMarker
+    return strings.TrimRight(result, "\n")
+}
+
+func (c *client) UpdatePullRequest(
+	ctx context.Context,
+	gitcmd git.GitInterface,
+	pullRequests []*github.PullRequest,
+	pr *github.PullRequest,
+	commit git.Commit,
+	prevCommit *git.Commit,
+) {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
@@ -548,23 +592,30 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Str("FromBranch", pr.FromBranch).Str("ToBranch", baseRefName).
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
+	// Generate the new "spr" content that we want to embed in the PR body
 	body := formatBody(commit, pullRequests, c.config.Repo.ShowPrTitlesInStack)
 	if c.config.Repo.PRTemplatePath != "" {
 		pullRequestTemplate, err := readPRTemplate(gitcmd, c.config.Repo.PRTemplatePath)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to read PR template")
 		}
-		body, err = insertBodyIntoPRTemplate(body, pullRequestTemplate, c.config.Repo, pr)
+		newBody, err := insertBodyIntoPRTemplate(body, pullRequestTemplate, c.config.Repo, pr)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to insert body into PR template")
 		}
+		body = newBody
 	}
+
+	// Only modify the portion in the SPR markers, keep user edits outside them
+	existingBody := pr.Body
+	sprUpdatedBody := embedSprDescription(existingBody, body)
+
 	title := &commit.Subject
 
 	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
 		Title:         title,
-		Body:          &body,
+		Body:          &sprUpdatedBody,
 	}
 
 	if !pr.InQueue {
