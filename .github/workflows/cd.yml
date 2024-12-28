@@ -22,5 +22,3 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-          FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
-          FURY_ORG: ${{ secrets.FURY_ORG }}
