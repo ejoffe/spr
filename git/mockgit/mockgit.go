@@ -23,7 +23,7 @@ func (m *Mock) GitWithEditor(args string, output *string, editorCmd string) erro
 func (m *Mock) Git(args string, output *string) error {
 	fmt.Printf("CMD: git %s\n", args)
 
-	m.assert.NotEmpty(m.expectedCmd)
+	m.assert.NotEmpty(m.expectedCmd, fmt.Sprintf("Unexpected command: git %s\n", args))
 
 	expected := m.expectedCmd[0]
 	actual := "git " + args
@@ -40,6 +40,11 @@ func (m *Mock) Git(args string, output *string) error {
 	m.response = m.response[1:]
 
 	return nil
+}
+
+func (m *Mock) ExpectationsMet() {
+	m.assert.Empty(m.expectedCmd, fmt.Sprintf("expected additional git commands: %v", m.expectedCmd))
+	m.assert.Empty(m.response, fmt.Sprintf("expected additional git responses: %v", m.response))
 }
 
 func (m *Mock) MustGit(argStr string, output *string) {
@@ -73,8 +78,12 @@ func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
 	m.expect("git log --format=medium --no-color origin/master..HEAD").commitRespond(commits)
 }
 
-func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
+func (m *Mock) ExpectStatus() {
 	m.expect("git status --porcelain --untracked-files=no").commitRespond(nil)
+}
+
+func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
+	m.ExpectStatus()
 
 	var refNames []string
 	for _, c := range commits {

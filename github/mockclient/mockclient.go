@@ -208,15 +208,27 @@ func (c *MockClient) verifyExpectation(actual expectation) {
 	c.expectMutex.Lock()
 	defer c.expectMutex.Unlock()
 
-	for _, expected := range c.expect {
-		if reflect.DeepEqual(expected, actual) {
+	for i := 0; i != len(c.expect); i++ {
+		if reflect.DeepEqual(c.expect[i], actual) {
+			// Zero out the expectation once it has been met
+			c.expect[i] = expectation{}
 			return
 		}
 	}
 
-	expected := c.expect[0]
-	c.assert.Equal(expected, actual)
-	c.expect = c.expect[1:]
+	c.assert.FailNowf("verifyExpectations", "Unexpected github command: %v\n", actual)
+}
+
+func (c *MockClient) ExpectationsMet() {
+	c.expectMutex.Lock()
+	defer c.expectMutex.Unlock()
+
+	// Note that above the expectations are zeroed (not removed)
+	for _, expected := range c.expect {
+		if expected.op != "" {
+			c.assert.FailNowf("ExpectationsMet", "expected additional github commands: %#v", expected)
+		}
+	}
 }
 
 type operation string

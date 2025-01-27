@@ -91,4 +91,5 @@ func TestGitHubRemoteSource(t *testing.T) {
 	source := NewGitHubRemoteSource(&actual, mock)
 	source.Load(nil)
 	assert.Equal(t, expect, actual)
+	mock.ExpectationsMet()
 }
