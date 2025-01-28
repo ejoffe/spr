@@ -317,7 +317,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	mergeMethod, err := sd.config.MergeMethod()
 	check(err)
 	sd.github.MergePullRequest(ctx, prToMerge, mergeMethod)
-	sd.profiletimer.Step("MergePullRequests::merge pr")
+	if sd.config.User.DeleteMergedBranches {
+		git.DeleteRemoteBranch(sd.config, sd.gitcmd, prToMerge.FromBranch)
+	}
 
 	// Close all the pull requests in the stack below the merged pr
 	//  Before closing add a review comment with the pr that merged the commit.
@@ -328,6 +330,9 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 		sd.github.ClosePullRequest(ctx, pr)
+		if sd.config.User.DeleteMergedBranches {
+			git.DeleteRemoteBranch(sd.config, sd.gitcmd, pr.FromBranch)
+		}
 	}
 	sd.profiletimer.Step("MergePullRequests::close prs")
 

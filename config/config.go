@@ -51,6 +51,7 @@ type UserConfig struct {
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
+	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
 }
 
 type InternalState struct {
