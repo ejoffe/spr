@@ -26,10 +26,11 @@ func NewMockClient(t *testing.T) *MockClient {
 }
 
 type MockClient struct {
-	assert      *require.Assertions
-	Info        *github.GitHubInfo
-	expect      []expectation
-	expectMutex sync.Mutex
+	assert       *require.Assertions
+	Info         *github.GitHubInfo
+	expect       []expectation
+	expectMutex  sync.Mutex
+	Synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
 }
 
 func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
@@ -208,15 +209,23 @@ func (c *MockClient) verifyExpectation(actual expectation) {
 	c.expectMutex.Lock()
 	defer c.expectMutex.Unlock()
 
-	for i := 0; i != len(c.expect); i++ {
-		if reflect.DeepEqual(c.expect[i], actual) {
-			// Zero out the expectation once it has been met
-			c.expect[i] = expectation{}
-			return
+	if !c.Synchronized {
+		for i := 0; i != len(c.expect); i++ {
+			if reflect.DeepEqual(c.expect[i], actual) {
+				// Zero out the expectation once it has been met
+				c.expect[i] = expectation{}
+				return
+			}
 		}
-	}
 
-	c.assert.FailNowf("verifyExpectations", "Unexpected github command: %v\n", actual)
+		c.assert.FailNowf("verifyExpectations", "Unexpected github command: %v\n", actual)
+	} else {
+		c.assert.NotEmpty(c.expect, fmt.Sprintf("Unexpected github command %v\n", actual))
+
+		expected := c.expect[0]
+		c.assert.True(reflect.DeepEqual(expected, actual), "Expected github command %v got %v", expected, actual)
+		c.expect = c.expect[1:]
+	}
 }
 
 func (c *MockClient) ExpectationsMet() {

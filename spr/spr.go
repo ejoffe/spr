@@ -43,8 +43,9 @@ type stackediff struct {
 	profiletimer  profiletimer.Timer
 	DetailEnabled bool
 
-	output io.Writer
-	input  io.Reader
+	output       io.Writer
+	input        io.Reader
+	synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
 }
 
 // AmendCommit enables one to easily amend a commit in the middle of a stack
@@ -166,11 +167,16 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		//   first - rebase all pull requests to target branch
 		//   then - update all pull requests
 		for i := range githubInfo.PullRequests {
-			go func(i int) {
+			fn := func(i int) {
 				pr := githubInfo.PullRequests[i]
 				sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo.PullRequests, pr, pr.Commit, nil)
 				wg.Done()
-			}(i)
+			}
+			if sd.synchronized {
+				fn(i)
+			} else {
+				go fn(i)
+			}
 		}
 
 		wg.Wait()
@@ -237,11 +243,16 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	// Sort the PR stack by the local commit order, in case some commits were reordered
 	sortedPullRequests := sortPullRequestsByLocalCommitOrder(githubInfo.PullRequests, localCommits)
 	for i := range updateQueue {
-		go func(i int) {
+		fn := func(i int) {
 			pr := updateQueue[i]
 			sd.github.UpdatePullRequest(ctx, sd.gitcmd, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
 			wg.Done()
-		}(i)
+		}
+		if sd.synchronized {
+			fn(i)
+		} else {
+			go fn(i)
+		}
 	}
 
 	wg.Wait()
