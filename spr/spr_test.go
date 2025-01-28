@@ -343,6 +343,72 @@ func TestSPRBasicFlowFourCommits(t *testing.T) {
 	output.Reset()
 }
 
+func TestSPRBasicFlowDeleteBranch(t *testing.T) {
+	s, gitmock, githubmock, _, output := makeTestObjects(t)
+	s.config.User.DeleteMergedBranches = true
+	assert := require.New(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	c2 := git.Commit{
+		CommitID:   "00000002",
+		CommitHash: "c200000000000000000000000000000000000000",
+		Subject:    "test commit 2",
+	}
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c1]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c1})
+	githubmock.ExpectCreatePullRequest(c1, nil)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
+	output.Reset()
+
+	// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2]
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c2, &c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c2})
+	githubmock.ExpectCreatePullRequest(c2, &c1)
+	githubmock.ExpectGetAssignableUsers()
+	githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c2, &c1)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+	lines := strings.Split(output.String(), "\n")
+	fmt.Printf("OUT: %s\n", output.String())
+	assert.Equal("warning: not updating reviewers for PR #1", lines[0])
+	assert.Equal("[vvvv]   1 : test commit 2", lines[1])
+	assert.Equal("[vvvv]   1 : test commit 1", lines[2])
+	output.Reset()
+
+	// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
+	githubmock.ExpectGetInfo()
+	githubmock.ExpectUpdatePullRequest(c2, nil)
+	githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+	gitmock.ExpectDeleteBranch("from_branch") // <--- This is the key expectation of this test.
+	githubmock.ExpectCommentPullRequest(c1)
+	githubmock.ExpectClosePullRequest(c1)
+	gitmock.ExpectDeleteBranch("from_branch") // <--- This is the key expectation of this test.
+	s.MergePullRequests(ctx, nil)
+	lines = strings.Split(output.String(), "\n")
+	assert.Equal("MERGED   1 : test commit 1", lines[0])
+	fmt.Printf("OUT: %s\n", output.String())
+	output.Reset()
+}
+
 func TestSPRMergeCount(t *testing.T) {
 	s, gitmock, githubmock, _, output := makeTestObjects(t)
 	assert := require.New(t)

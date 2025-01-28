@@ -187,6 +187,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | createDraftPRs       | bool | false   | new pull requests are created as draft |
 | preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body |
 | noRebase             | bool | false   | when true spr update will not rebase on top of origin |
+| deleteMergedBranches | bool | false   | delete branches after prs are merged |
 
 Happy Coding!
 -------------

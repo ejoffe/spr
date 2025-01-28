@@ -74,6 +74,10 @@ func (m *Mock) ExpectFetch() {
 	m.expect("git rebase origin/master --autostash")
 }
 
+func (m *Mock) ExpectDeleteBranch(branchName string) {
+	m.expect(fmt.Sprintf("git push origin --delete %s", branchName))
+}
+
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
 	m.expect("git log --format=medium --no-color origin/master..HEAD").commitRespond(commits)
 }
