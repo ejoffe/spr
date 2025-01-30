@@ -190,7 +190,6 @@ VERSION: fork of {{.Version}}
 						stackedpr.MergePullRequests(ctx, &count)
 					} else {
 						stackedpr.MergePullRequests(ctx, nil)
-						stackedpr.UpdatePullRequests(ctx, nil, nil)
 					}
 					return nil
 				},
