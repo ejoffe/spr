@@ -314,7 +314,10 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	}
 	prToMerge := githubInfo.PullRequests[prIndex]
 	fmt.Printf("prToMerge: %v\n", prToMerge)
+
+	// add PR number and update prs
 	git.AddPRNumberToCommitStack(sd.config, sd.gitcmd, prToMerge.Number, prToMerge.Commit.CommitHash)
+	sd.UpdatePullRequests(ctx, []string{}, count)
 
 	// Update the base of the merging pr to target branch
 	sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo.PullRequests, prToMerge, prToMerge.Commit, nil)
