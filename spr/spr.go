@@ -280,7 +280,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	// MergeCheck
 	if sd.config.Repo.MergeCheck != "" {
 		localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
-		fmt.Printf("localCommits: %v\n", localCommits)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.State.MergeCheckCommit[githubInfo.Key()]
@@ -297,7 +296,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	var prIndex int
 	for prIndex = 0; prIndex < len(githubInfo.PullRequests); prIndex++ {
 		pr := githubInfo.PullRequests[prIndex]
-		fmt.Printf("pr: %v commit-hash: %v\n", pr, pr.Commit.CommitHash)
 		if !pr.Mergeable(sd.config) {
 			prIndex--
 			break
@@ -313,7 +311,6 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		return
 	}
 	prToMerge := githubInfo.PullRequests[prIndex]
-	fmt.Printf("prToMerge: %v\n", prToMerge)
 
 	// add PR number and update prs
 	git.AddPRNumberToCommitStack(sd.config, sd.gitcmd, prToMerge.Number, prToMerge.Commit.CommitHash)
