@@ -71,6 +71,18 @@ func GetLocalCommitStack(cfg *config.Config, gitcmd GitInterface) []Commit {
 	return commits
 }
 
+func AddPRNumberToCommitStack(cfg *config.Config, gitcmd GitInterface, prNumber int, untilCommitHash string) {
+	rewordPath, err := exec.LookPath("spr_reword_helper")
+	check(err)
+	rewordPath = fmt.Sprintf("%s -pr-number=%d", rewordPath, prNumber)
+	if untilCommitHash != "" {
+		rewordPath = fmt.Sprintf("%s -until-commit-hash=%s", rewordPath, untilCommitHash)
+	}
+	rebaseCommand := fmt.Sprintf("rebase %s/%s -i --autosquash --autostash",
+		cfg.Repo.GitHubRemote, cfg.Repo.GitHubBranch)
+	gitcmd.GitWithEditor(rebaseCommand, nil, rewordPath)
+}
+
 func parseLocalCommitStack(commitLog string) ([]Commit, bool) {
 	var commits []Commit
 
