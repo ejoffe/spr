@@ -1,9 +1,17 @@
+// TODO HARIOM: this is using interactive rebase to add commit-id to the commit message.
+// it does this by changing pick to reword in the commit message file.
+// as shown here: https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/changing-a-commit-message
+// the github api only allows us to update the commit message of the merge commit
+// as such, older commits in the stack which are merged to main won't contain PR numbers
+// use something like this to add PR numbers to commit summary of each commit before merging
 package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/ejoffe/spr/config"
@@ -11,8 +19,19 @@ import (
 	"github.com/google/uuid"
 )
 
+var PR_NUMBER_RE = regexp.MustCompile(`\(#\d+\)`)
+
 func main() {
-	filename := os.Args[1]
+	prNumber := flag.Int("pr-number", -1, "PR number to add to commit message")
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 1 {
+		fmt.Fprintf(os.Stderr, "Usage: %s [--pr-number <digits>] <filename>\n", os.Args[0])
+		os.Exit(1)
+	}
+	filename := args[0]
+
 	gitcmd := realgit.NewGitCmd(config.DefaultConfig())
 	if !strings.HasSuffix(filename, "COMMIT_EDITMSG") {
 		readfile, err := os.Open(filename)
@@ -46,6 +65,9 @@ func main() {
 		missingCommitID, missingNewLine := shouldAppendCommitID(filename)
 		if missingCommitID {
 			appendCommitID(filename, missingNewLine)
+		}
+		if *prNumber != -1 {
+			appendPRNumber(filename, *prNumber)
 		}
 	}
 }
@@ -99,6 +121,17 @@ func appendCommitID(filename string, missingNewLine bool) {
 	}
 	appendfile.WriteString("\n")
 	appendfile.WriteString(fmt.Sprintf("commit-id:%s\n", commitID.String()[:8]))
+}
+
+func appendPRNumber(filename string, prNumber int) {
+	content, err := os.ReadFile(filename)
+	check(err)
+
+	lines := strings.Split(string(content), "\n")
+	line := PR_NUMBER_RE.ReplaceAll([]byte(lines[0]), []byte(""))
+	lines[0] = fmt.Sprintf("%s (#%d)", strings.TrimSpace(string(line)), prNumber)
+
+	os.WriteFile(filename, []byte(strings.Join(lines, "\n")), 0666)
 }
 
 func check(err error) {

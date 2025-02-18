@@ -1,6 +1,8 @@
-githubRepoOwner: ejoffe
+githubRepoOwner: hariom-qure
 githubRepoName: spr
 githubHost: github.com
+githubRemote: origin
+githubBranch: hariom-test-base-1
 requireChecks: true
 requireApproval: false
 mergeMethod: rebase

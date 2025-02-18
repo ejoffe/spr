@@ -238,6 +238,9 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	sortedPullRequests := sortPullRequestsByLocalCommitOrder(githubInfo.PullRequests, localCommits)
 	for i := range updateQueue {
 		go func(i int) {
+			// TODO HARIOM: add support to ConvertPullRequestToDraft here
+			// will need to add a new mutation in graphql
+			// and a function in githubclient/client.go
 			pr := updateQueue[i]
 			sd.github.UpdatePullRequest(ctx, sd.gitcmd, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
 			wg.Done()
@@ -277,6 +280,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	// MergeCheck
 	if sd.config.Repo.MergeCheck != "" {
 		localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
+		fmt.Printf("localCommits: %v\n", localCommits)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.State.MergeCheckCommit[githubInfo.Key()]
@@ -293,6 +297,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	var prIndex int
 	for prIndex = 0; prIndex < len(githubInfo.PullRequests); prIndex++ {
 		pr := githubInfo.PullRequests[prIndex]
+		fmt.Printf("pr: %v commit-hash: %v\n", pr, pr.Commit.CommitHash)
 		if !pr.Mergeable(sd.config) {
 			prIndex--
 			break
