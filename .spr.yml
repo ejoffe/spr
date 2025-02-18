@@ -2,8 +2,8 @@ githubRepoOwner: hariom-qure
 githubRepoName: spr
 githubHost: github.com
 githubRemote: origin
-githubBranch: hariom-test-base-1
-requireChecks: true
+githubBranch: hariom-test-base-2
+requireChecks: false
 requireApproval: false
 mergeMethod: rebase
 mergeQueue: false
