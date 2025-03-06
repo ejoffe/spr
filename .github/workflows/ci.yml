@@ -27,7 +27,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v6.2.1
       with:
         version: latest
-        args: "check --soft"
+        args: check
 
     #- name: Upload coverage
     #  uses: codecov/codecov-action@v2
