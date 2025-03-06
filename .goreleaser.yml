@@ -36,11 +36,11 @@ archives:
   - name_template: '{{ .ProjectName }}_{{- if eq .Os "Darwin" }}macos_{{- else }}{{- tolower .Os }}_{{end}}{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format_overrides:
     - goos: windows
-      format: zip
+      formats: ['zip']
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
@@ -87,3 +87,4 @@ publishers:
       - packages
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_ORG }}/
+  
