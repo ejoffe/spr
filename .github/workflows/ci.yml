@@ -24,7 +24,7 @@ jobs:
       run: go test -race -coverprofile=./coverage.txt -covermode=atomic ./...
 
     - name: Check goreleaser file
-      uses: goreleaser/goreleaser-action@v2
+      uses: goreleaser/goreleaser-action@v6.2.1
       with:
         version: latest
         args: check --soft
