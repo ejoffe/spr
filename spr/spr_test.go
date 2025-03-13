@@ -395,6 +395,8 @@ func testSPRBasicFlowDeleteBranch(t *testing.T, sync bool) {
 		s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
 		fmt.Printf("OUT: %s\n", output.String())
 		assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
+		gitmock.ExpectationsMet()
+		githubmock.ExpectationsMet()
 		output.Reset()
 
 		// 'git spr update' :: UpdatePullRequest :: commits=[c1, c2]
@@ -414,6 +416,8 @@ func testSPRBasicFlowDeleteBranch(t *testing.T, sync bool) {
 		assert.Equal("warning: not updating reviewers for PR #1", lines[0])
 		assert.Equal("[vvvv]   1 : test commit 2", lines[1])
 		assert.Equal("[vvvv]   1 : test commit 1", lines[2])
+		gitmock.ExpectationsMet()
+		githubmock.ExpectationsMet()
 		output.Reset()
 
 		// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
@@ -428,6 +432,8 @@ func testSPRBasicFlowDeleteBranch(t *testing.T, sync bool) {
 		lines = strings.Split(output.String(), "\n")
 		assert.Equal("MERGED   1 : test commit 1", lines[0])
 		fmt.Printf("OUT: %s\n", output.String())
+		gitmock.ExpectationsMet()
+		githubmock.ExpectationsMet()
 		output.Reset()
 	})
 }
