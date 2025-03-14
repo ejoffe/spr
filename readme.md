@@ -175,7 +175,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | branchNameIncludeTarget | bool | false      | include target branch name in pull request branch name |
 | showPrTitlesInStack     | bool | false      | show PR titles in stack description within pull request body |
 | branchPushIndividually  | bool | false      | push branches individually instead of atomically (only enable to avoid timeouts) |
-
+| defaultReviewers        | list |            | default reviewers to add to each pull request |
 
 | User Config          | Type | Default | Description                                                     |
 | -------------------- | ---- | ------- | --------------------------------------------------------------- |
