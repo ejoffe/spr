@@ -23,8 +23,9 @@ type RepoConfig struct {
 	GitHubRemote string `default:"origin" yaml:"githubRemote"`
 	GitHubBranch string `default:"main" yaml:"githubBranch"`
 
-	RequireChecks   bool `default:"true" yaml:"requireChecks"`
-	RequireApproval bool `default:"true" yaml:"requireApproval"`
+	RequireChecks    bool     `default:"true" yaml:"requireChecks"`
+	RequireApproval  bool     `default:"true" yaml:"requireApproval"`
+	DefaultReviewers []string `yaml:"defaultReviewers"`
 
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
 	MergeQueue  bool   `default:"false" yaml:"mergeQueue"`
