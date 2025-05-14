@@ -42,12 +42,6 @@ func GetLocalTopCommit(cfg *config.Config, gitcmd GitInterface) *Commit {
 	return &commits[len(commits)-1]
 }
 
-func DeleteRemoteBranch(cfg *config.Config, gitcmd GitInterface, branchName string) {
-	command := fmt.Sprintf("push origin --delete %s", branchName)
-	err := gitcmd.Git(command, nil)
-	check(err)
-}
-
 // GetLocalCommitStack returns a list of unmerged commits
 //
 //	the list is ordered with the bottom commit in the stack first

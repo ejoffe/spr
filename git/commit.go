@@ -1,10 +1,13 @@
 package git
 
+import "context"
+
 type GitInterface interface {
 	GitWithEditor(args string, output *string, editorCmd string) error
 	Git(args string, output *string) error
 	MustGit(args string, output *string)
 	RootDir() string
+	DeleteRemoteBranch(ctx context.Context, branch string) error
 }
 
 // Commit has all the git commit info

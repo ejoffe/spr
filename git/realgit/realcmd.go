@@ -1,12 +1,16 @@
 package realgit
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/ejoffe/spr/config"
+	gogit "github.com/go-git/go-git/v5"
+	gogitconfig "github.com/go-git/go-git/v5/config"
+	gogitplumbing "github.com/go-git/go-git/v5/plumbing"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,8 +27,15 @@ func NewGitCmd(cfg *config.Config) *gitcmd {
 	}
 	rootdir = strings.TrimSpace(maybeAdjustPathPerPlatform(rootdir))
 
+	repo, err := gogit.PlainOpen(rootdir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+
 	return &gitcmd{
 		config:  cfg,
+		repo:    repo,
 		rootdir: rootdir,
 	}
 }
@@ -45,6 +56,7 @@ func maybeAdjustPathPerPlatform(rawRootDir string) string {
 
 type gitcmd struct {
 	config  *config.Config
+	repo    *gogit.Repository
 	rootdir string
 }
 
@@ -110,4 +122,30 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 
 func (c *gitcmd) RootDir() string {
 	return c.rootdir
+}
+
+func (c *gitcmd) DeleteRemoteBranch(ctx context.Context, branch string) error {
+	remoteName := c.config.Repo.GitHubRemote
+
+	remote, err := c.repo.Remote(remoteName)
+	if err != nil {
+		return fmt.Errorf("getting remote %s %w", remoteName, err)
+	}
+
+	// Construct the reference name for branch
+	refName := gogitplumbing.NewBranchReferenceName(branch)
+
+	pushOptions := gogit.PushOptions{
+		RemoteName: remoteName,
+		// Nothing before the colon says to push nothing to the destination branch (which deletes it).
+		RefSpecs: []gogitconfig.RefSpec{gogitconfig.RefSpec(fmt.Sprintf(":%s", refName))},
+	}
+
+	// Delete the remote branch
+	err = remote.Push(&pushOptions)
+	if err != nil {
+		return fmt.Errorf("removing remote branch %s %w", branch, err)
+	}
+
+	return nil
 }

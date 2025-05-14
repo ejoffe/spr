@@ -1,6 +1,7 @@
 package mockgit
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -42,6 +43,10 @@ func (m *Mock) Git(args string, output *string) error {
 	return nil
 }
 
+func (m *Mock) DeleteRemoteBranch(ctx context.Context, branch string) error {
+	return m.Git(fmt.Sprintf("DeleteRemoteBranch(%s)", branch), nil)
+}
+
 func (m *Mock) ExpectationsMet() {
 	m.assert.Empty(m.expectedCmd, fmt.Sprintf("expected additional git commands: %v", m.expectedCmd))
 	m.assert.Empty(m.response, fmt.Sprintf("expected additional git responses: %v", m.response))
@@ -75,7 +80,7 @@ func (m *Mock) ExpectFetch() {
 }
 
 func (m *Mock) ExpectDeleteBranch(branchName string) {
-	m.expect(fmt.Sprintf("git push origin --delete %s", branchName))
+	m.expect(fmt.Sprintf("git DeleteRemoteBranch(%s)", branchName))
 }
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
