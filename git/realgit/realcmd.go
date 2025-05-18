@@ -64,8 +64,7 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 	//  if output is not nil it will be set to the output of the command
 
 	// Rebase disabled
-	_, noRebaseFlag := os.LookupEnv("SPR_NOREBASE")
-	if (c.config.User.NoRebase || noRebaseFlag) && strings.HasPrefix(argStr, "rebase") {
+	if (c.config.User.NoRebase) && strings.HasPrefix(argStr, "rebase") {
 		return nil
 	}
 

@@ -150,10 +150,14 @@ VERSION: fork of {{.Version}}
 				Name:    "update",
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
-				Action: func(c *cli.Context) error {
-					if c.Bool("no-rebase") {
-						os.Setenv("SPR_NOREBASE", "true")
+				Before: func(c *cli.Context) error {
+					// only override whatever was set in yaml if flag is explicitly present
+					if c.IsSet("no-rebase") {
+						cfg.User.NoRebase = c.Bool("no-rebase")
 					}
+					return nil
+				},
+				Action: func(c *cli.Context) error {
 					if c.IsSet("count") {
 						count := c.Uint("count")
 						stackedpr.UpdatePullRequests(ctx, c.StringSlice("reviewer"), &count)
@@ -178,6 +182,9 @@ VERSION: fork of {{.Version}}
 						Name:    "no-rebase",
 						Aliases: []string{"nr"},
 						Usage:   "Disable rebasing",
+						// this env var is needed as previous versions used the env var itself to pass intent to logic
+						// layer ops so it is likely relied on as a feature by users at this point
+						EnvVars: []string{"SPR_NOREBASE"},
 					},
 				},
 			},
