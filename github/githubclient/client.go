@@ -496,7 +496,7 @@ func insertBodyIntoPRTemplate(body, prTemplate string, repo *config.RepoConfig, 
 
 	endPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, repo.PRTemplateInsertEnd, AfterMatch)
 	if err != nil {
-		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, repo.PRTemplateInsertStart)
+		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, repo.PRTemplateInsertEnd)
 	}
 
 	return fmt.Sprintf("%v%v\n%v\n\n%v%v", startPRTemplateSection, repo.PRTemplateInsertStart, body,
