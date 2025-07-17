@@ -100,7 +100,7 @@ func (t *CustomTemplatizer) insertBodyIntoPRTemplate(body, prTemplate string, pr
 
 	endPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, t.repoConfig.PRTemplateInsertEnd, AfterMatch)
 	if err != nil {
-		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, t.repoConfig.PRTemplateInsertStart)
+		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, t.repoConfig.PRTemplateInsertEnd)
 	}
 
 	return fmt.Sprintf("%v%v\n%v\n\n%v%v", startPRTemplateSection, t.repoConfig.PRTemplateInsertStart, body,
