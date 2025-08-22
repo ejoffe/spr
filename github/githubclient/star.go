@@ -24,12 +24,17 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 	if !cfg.State.Stargazer && cfg.State.RunCount%promptCycle == 0 {
 		starred, err := c.isStar(ctx)
 		if err != nil {
-			fmt.Println("enjoying git spr? [Y/n]")
+			fmt.Println("enjoying git spr? [Y/n/d] (d = don't ask again)")
 			fmt.Print("  please add a star at https://github.com/ejoffe/spr")
 			reader := bufio.NewReader(os.Stdin)
 			line, _ := reader.ReadString('\n')
 			line = strings.TrimSpace(line)
-			if line != "n" {
+			if line == "d" {
+				cfg.State.Stargazer = true
+				rake.LoadSources(cfg.State,
+					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
+				fmt.Println("OK, won't ask again!")
+			} else if line != "n" {
 				cfg.State.Stargazer = true
 				rake.LoadSources(cfg.State,
 					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
@@ -44,11 +49,16 @@ func (c *client) MaybeStar(ctx context.Context, cfg *config.Config) {
 				rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
 		} else {
 			log.Debug().Bool("stargazer", false).Msg("MaybeStar")
-			fmt.Print("enjoying git spr? add a GitHub star? [Y/n]:")
+			fmt.Print("enjoying git spr? add a GitHub star? [Y/n/d] (d = don't ask again): ")
 			reader := bufio.NewReader(os.Stdin)
 			line, _ := reader.ReadString('\n')
 			line = strings.TrimSpace(line)
-			if line != "n" {
+			if line == "d" {
+				cfg.State.Stargazer = true
+				rake.LoadSources(cfg.State,
+					rake.YamlFileWriter(config_parser.InternalConfigFilePath()))
+				fmt.Println("OK, won't ask again!")
+			} else if line != "n" {
 				log.Debug().Msg("MaybeStar : adding star")
 				c.addStar(ctx)
 				cfg.State.Stargazer = true
