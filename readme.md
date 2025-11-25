@@ -167,12 +167,12 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | githubHost              | str  | github.com | github host, can be updated for github enterprise use case |
 | mergeMethod             | str  | rebase     | merge method, valid values: [rebase, squash, merge] |
 | mergeQueue              | bool | false      | use GitHub merge queue to merge pull requests |
-| prTemplatePath          | str  |            | path to PR template (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md) |
-| prTemplateInsertStart   | str  |            | text to search for in PR template that determines body insert start location |
-| prTemplateInsertEnd     | str  |            | text to search for in PR template that determines body insert end location |
+| prTemplateType          | str  | stack      | PR template type, valid values: [stack, basic, why_what, custom]. If prTemplatePath is provided, this is automatically set to "custom" |
+| prTemplatePath          | str  |            | path to PR template file (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md). When provided, prTemplateType is automatically set to "custom" |
+| prTemplateInsertStart   | str  |            | text marker in PR template that determines where to insert commit body (used with custom template type) |
+| prTemplateInsertEnd     | str  |            | text marker in PR template that determines where to end commit body insertion (used with custom template type) |
 | mergeCheck              | str  |            | enforce a pre-merge check using 'git spr check' |
 | forceFetchTags          | bool | false      | also fetch tags when running 'git spr update' |
-| branchNameIncludeTarget | bool | false      | include target branch name in pull request branch name |
 | showPrTitlesInStack     | bool | false      | show PR titles in stack description within pull request body |
 | branchPushIndividually  | bool | false      | push branches individually instead of atomically (only enable to avoid timeouts) |
 

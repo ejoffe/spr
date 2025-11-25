@@ -1,0 +1,25 @@
+package template_stack
+
+import (
+	"github.com/ejoffe/spr/git"
+	"github.com/ejoffe/spr/github"
+	"github.com/ejoffe/spr/github/template"
+)
+
+type StackTemplatizer struct {
+	showPrTitlesInStack bool
+}
+
+func NewStackTemplatizer(showPrTitlesInStack bool) *StackTemplatizer {
+	return &StackTemplatizer{showPrTitlesInStack: showPrTitlesInStack}
+}
+
+func (t *StackTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) string {
+	return commit.Subject
+}
+
+func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) string {
+	stack := template.FormatStackMarkdown(commit, info.PullRequests, t.showPrTitlesInStack)
+	body := template.AddManualMergeNotice(commit.Body + "\n\n" + stack)
+	return body
+}

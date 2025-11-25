@@ -30,6 +30,7 @@ func TestDefaultConfig(t *testing.T) {
 			RequireChecks:         true,
 			RequireApproval:       true,
 			MergeMethod:           "rebase",
+			PRTemplateType:        "stack",
 			PRTemplatePath:        "",
 			PRTemplateInsertStart: "",
 			PRTemplateInsertEnd:   "",
@@ -88,5 +89,50 @@ func TestMergeMethodHelper(t *testing.T) {
 		actual, err := config.MergeMethod()
 		assert.Error(t, err)
 		assert.Empty(t, actual)
+	})
+}
+
+func TestNormalizeConfig(t *testing.T) {
+	t.Run("PRTemplatePath provided sets PRTemplateType to custom", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{
+				PRTemplateType: "stack",
+				PRTemplatePath: "/path/to/template.md",
+			},
+		}
+		cfg.Normalize()
+		assert.Equal(t, "custom", cfg.Repo.PRTemplateType)
+		assert.Equal(t, "/path/to/template.md", cfg.Repo.PRTemplatePath)
+	})
+
+	t.Run("PRTemplatePath empty does not change PRTemplateType", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{
+				PRTemplateType: "stack",
+				PRTemplatePath: "",
+			},
+		}
+		cfg.Normalize()
+		assert.Equal(t, "stack", cfg.Repo.PRTemplateType)
+		assert.Equal(t, "", cfg.Repo.PRTemplatePath)
+	})
+
+	t.Run("PRTemplatePath provided overrides existing PRTemplateType", func(t *testing.T) {
+		cfg := &Config{
+			Repo: &RepoConfig{
+				PRTemplateType: "why_what",
+				PRTemplatePath: "/custom/template.md",
+			},
+		}
+		cfg.Normalize()
+		assert.Equal(t, "custom", cfg.Repo.PRTemplateType)
+		assert.Equal(t, "/custom/template.md", cfg.Repo.PRTemplatePath)
+	})
+
+	t.Run("DefaultConfig with PRTemplatePath sets PRTemplateType to custom", func(t *testing.T) {
+		cfg := DefaultConfig()
+		cfg.Repo.PRTemplatePath = "/path/to/template.md"
+		cfg.Normalize()
+		assert.Equal(t, "custom", cfg.Repo.PRTemplateType)
 	})
 }

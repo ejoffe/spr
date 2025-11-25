@@ -29,6 +29,7 @@ type RepoConfig struct {
 	MergeMethod string `default:"rebase" yaml:"mergeMethod"`
 	MergeQueue  bool   `default:"false" yaml:"mergeQueue"`
 
+	PRTemplateType        string `default:"stack" yaml:"prTemplateType"`
 	PRTemplatePath        string `yaml:"prTemplatePath,omitempty"`
 	PRTemplateInsertStart string `yaml:"prTemplateInsertStart,omitempty"`
 	PRTemplateInsertEnd   string `yaml:"prTemplateInsertEnd,omitempty"`
@@ -82,7 +83,19 @@ func DefaultConfig() *Config {
 
 	cfg.User.LogGitCommands = false
 	cfg.User.LogGitHubCalls = false
+
+	// Normalize config (e.g., set PRTemplateType to "custom" if PRTemplatePath is provided)
+	cfg.Normalize()
+
 	return cfg
+}
+
+// Normalize applies normalization rules to the config
+// For example, if PRTemplatePath is provided, PRTemplateType should be set to "custom"
+func (c *Config) Normalize() {
+	if c.Repo != nil && c.Repo.PRTemplatePath != "" {
+		c.Repo.PRTemplateType = "custom"
+	}
 }
 
 func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
