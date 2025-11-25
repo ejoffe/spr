@@ -18,7 +18,7 @@ type GitHubInterface interface {
 	CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, commit git.Commit, prevCommit *git.Commit) *PullRequest
 
 	// UpdatePullRequest updates a pull request with current commit
-	UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, pullRequests []*PullRequest, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
+	UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *GitHubInfo, pullRequests []*PullRequest, pr *PullRequest, commit git.Commit, prevCommit *git.Commit)
 
 	// AddReviewers adds a reviewer to the given pull request
 	AddReviewers(ctx context.Context, pr *PullRequest, userIDs []string)

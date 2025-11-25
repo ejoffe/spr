@@ -61,6 +61,10 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		rake.LoadSources(cfg.User,
 			rake.YamlFileWriter(UserConfigFilePath()))
 	}
+
+	// Normalize config (e.g., set PRTemplateType to "custom" if PRTemplatePath is provided)
+	cfg.Normalize()
+
 	return cfg
 }
 
