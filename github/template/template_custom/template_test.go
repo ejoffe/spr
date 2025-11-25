@@ -1,6 +1,7 @@
 package template_custom
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,10 @@ func (m *mockGit) MustGit(args string, output *string) {
 
 func (m *mockGit) RootDir() string {
 	return m.rootDir
+}
+
+func (m *mockGit) DeleteRemoteBranch(ctx context.Context, branch string) error {
+	return nil
 }
 
 func TestTitle(t *testing.T) {
@@ -204,7 +209,7 @@ func TestReadPRTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
 	templatePath := filepath.Join(tmpDir, "pr_template.md")
 	templateContent := "# PR Template\n\n<!-- INSERT_BODY -->\n\n## Additional Notes\n"
-	
+
 	err := os.WriteFile(templatePath, []byte(templateContent), 0644)
 	require.NoError(t, err)
 
@@ -221,7 +226,7 @@ func TestReadPRTemplate(t *testing.T) {
 
 func TestReadPRTemplateNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	repoConfig := &config.RepoConfig{
 		PRTemplatePath: "nonexistent_template.md",
 	}
@@ -238,10 +243,10 @@ func TestReadPRTemplateWithSubdirectory(t *testing.T) {
 	subDir := filepath.Join(tmpDir, "templates")
 	err := os.MkdirAll(subDir, 0755)
 	require.NoError(t, err)
-	
+
 	templatePath := filepath.Join(subDir, "pr_template.md")
 	templateContent := "Template in subdirectory"
-	
+
 	err = os.WriteFile(templatePath, []byte(templateContent), 0644)
 	require.NoError(t, err)
 
@@ -323,7 +328,7 @@ func TestGetSectionOfPRTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := getSectionOfPRTemplate(tt.text, tt.searchString, tt.matchType)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -338,7 +343,7 @@ func TestInsertBodyIntoPRTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
 	templatePath := filepath.Join(tmpDir, "pr_template.md")
 	prTemplate := "# PR Template\n\n<!-- START -->\n\n<!-- END -->\n\n## Additional Notes\n"
-	
+
 	err := os.WriteFile(templatePath, []byte(prTemplate), 0644)
 	require.NoError(t, err)
 
@@ -362,21 +367,21 @@ func TestInsertBodyIntoPRTemplateWithExistingPR(t *testing.T) {
 	tmpDir := t.TempDir()
 	templatePath := filepath.Join(tmpDir, "pr_template.md")
 	prTemplate := "# PR Template\n\n<!-- START -->\n\n<!-- END -->\n"
-	
+
 	err := os.WriteFile(templatePath, []byte(prTemplate), 0644)
 	require.NoError(t, err)
 
 	repoConfig := &config.RepoConfig{
 		PRTemplatePath:        "pr_template.md",
-		PRTemplateInsertStart:  "<!-- START -->",
-		PRTemplateInsertEnd:    "<!-- END -->",
+		PRTemplateInsertStart: "<!-- START -->",
+		PRTemplateInsertEnd:   "<!-- END -->",
 	}
 	gitcmd := &mockGit{rootDir: tmpDir}
 	templatizer := NewCustomTemplatizer(repoConfig, gitcmd)
 
 	body := "Updated commit body"
 	existingPRBody := "# PR Template\n\n<!-- START -->\nOld body\n\n<!-- END -->\n"
-	
+
 	result, err := templatizer.insertBodyIntoPRTemplate(body, prTemplate, &github.PullRequest{
 		Body: existingPRBody,
 	})
@@ -392,7 +397,7 @@ func TestInsertBodyIntoPRTemplateMissingStartMarker(t *testing.T) {
 	prTemplate := "# PR Template\n\n<!-- END -->\n"
 
 	repoConfig := &config.RepoConfig{
-		PRTemplatePath:       "pr_template.md",
+		PRTemplatePath:        "pr_template.md",
 		PRTemplateInsertStart: "<!-- START -->",
 		PRTemplateInsertEnd:   "<!-- END -->",
 	}
@@ -410,7 +415,7 @@ func TestInsertBodyIntoPRTemplateMissingEndMarker(t *testing.T) {
 	prTemplate := "# PR Template\n\n<!-- START -->\n"
 
 	repoConfig := &config.RepoConfig{
-		PRTemplatePath:       "pr_template.md",
+		PRTemplatePath:        "pr_template.md",
 		PRTemplateInsertStart: "<!-- START -->",
 		PRTemplateInsertEnd:   "<!-- END -->",
 	}
@@ -428,7 +433,7 @@ func TestInsertBodyIntoPRTemplateMultipleStartMarkers(t *testing.T) {
 	prTemplate := "# PR Template\n\n<!-- START -->\n<!-- START -->\n<!-- END -->\n"
 
 	repoConfig := &config.RepoConfig{
-		PRTemplatePath:       "pr_template.md",
+		PRTemplatePath:        "pr_template.md",
 		PRTemplateInsertStart: "<!-- START -->",
 		PRTemplateInsertEnd:   "<!-- END -->",
 	}
@@ -509,4 +514,3 @@ func TestFormatBodyCurrentCommitIndicator(t *testing.T) {
 	assert.Contains(t, result, "#2 ⬅")
 	assert.NotContains(t, result, "#1 ⬅")
 }
-

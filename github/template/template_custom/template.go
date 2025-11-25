@@ -43,7 +43,7 @@ func (t *CustomTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) str
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to insert body into PR template")
 	}
-	return commit.Body
+	return body
 }
 
 func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*github.PullRequest) string {
