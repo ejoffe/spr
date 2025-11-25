@@ -52,6 +52,7 @@ type UserConfig struct {
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
+	NoFetch              bool `default:"false" yaml:"noFetch"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
 }
 

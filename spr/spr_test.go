@@ -971,6 +971,130 @@ func testAmendInvalidInput(t *testing.T, sync bool) {
 	})
 }
 
+func TestNoFetchConfig(t *testing.T) {
+	testNoFetchConfig(t, true)
+	testNoFetchConfig(t, false)
+}
+
+func testNoFetchConfig(t *testing.T, sync bool) {
+	t.Run(fmt.Sprintf("Sync: %v", sync), func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		cfg.Repo.RequireChecks = true
+		cfg.Repo.RequireApproval = true
+		cfg.Repo.GitHubRemote = "origin"
+		cfg.Repo.GitHubBranch = "master"
+		cfg.Repo.MergeMethod = "rebase"
+		cfg.User.NoFetch = true // Enable NoFetch config
+
+		gitmock := mockgit.NewMockGit(t)
+		githubmock := mockclient.NewMockClient(t)
+		githubmock.Info = &github.GitHubInfo{
+			UserName:     "TestSPR",
+			RepositoryID: "RepoID",
+			LocalBranch:  "master",
+		}
+		s := NewStackedPR(cfg, githubmock, gitmock)
+		output := &bytes.Buffer{}
+		s.output = output
+		input := &bytes.Buffer{}
+		s.input = input
+		s.synchronized = sync
+		githubmock.Synchronized = sync
+
+		assert := require.New(t)
+		ctx := context.Background()
+
+		c1 := git.Commit{
+			CommitID:   "00000001",
+			CommitHash: "c100000000000000000000000000000000000000",
+			Subject:    "test commit 1",
+		}
+
+		// 'git spr update' with NoFetch=true should NOT call fetch, but still rebase
+		githubmock.ExpectGetInfo()
+		// Note: NO gitmock.ExpectFetch() here - fetch should be skipped
+		// But we still expect rebase (which is part of fetchAndGetGitHubInfo)
+		gitmock.ExpectRebase()
+		gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+		gitmock.ExpectPushCommits([]*git.Commit{&c1})
+		githubmock.ExpectCreatePullRequest(c1, nil)
+		githubmock.ExpectGetAssignableUsers()
+		githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+		githubmock.ExpectUpdatePullRequest(c1, nil)
+		githubmock.ExpectGetInfo()
+		s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+		fmt.Printf("OUT: %s\n", output.String())
+		assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
+		gitmock.ExpectationsMet()
+		githubmock.ExpectationsMet()
+		output.Reset()
+
+		// Verify that fetch was NOT called by checking expectations
+		// If fetch was called, ExpectationsMet() would have failed above
+	})
+}
+
+func TestNoFetchConfigWithForceFetchTags(t *testing.T) {
+	testNoFetchConfigWithForceFetchTags(t, true)
+	testNoFetchConfigWithForceFetchTags(t, false)
+}
+
+func testNoFetchConfigWithForceFetchTags(t *testing.T, sync bool) {
+	t.Run(fmt.Sprintf("Sync: %v", sync), func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		cfg.Repo.RequireChecks = true
+		cfg.Repo.RequireApproval = true
+		cfg.Repo.GitHubRemote = "origin"
+		cfg.Repo.GitHubBranch = "master"
+		cfg.Repo.MergeMethod = "rebase"
+		cfg.Repo.ForceFetchTags = true
+		cfg.User.NoFetch = true // NoFetch should override ForceFetchTags
+
+		gitmock := mockgit.NewMockGit(t)
+		githubmock := mockclient.NewMockClient(t)
+		githubmock.Info = &github.GitHubInfo{
+			UserName:     "TestSPR",
+			RepositoryID: "RepoID",
+			LocalBranch:  "master",
+		}
+		s := NewStackedPR(cfg, githubmock, gitmock)
+		output := &bytes.Buffer{}
+		s.output = output
+		input := &bytes.Buffer{}
+		s.input = input
+		s.synchronized = sync
+		githubmock.Synchronized = sync
+
+		assert := require.New(t)
+		ctx := context.Background()
+
+		c1 := git.Commit{
+			CommitID:   "00000001",
+			CommitHash: "c100000000000000000000000000000000000000",
+			Subject:    "test commit 1",
+		}
+
+		// Even with ForceFetchTags=true, NoFetch=true should skip fetch
+		githubmock.ExpectGetInfo()
+		// Note: NO gitmock.ExpectFetch() here - fetch should be skipped
+		// But we still expect rebase (which is part of fetchAndGetGitHubInfo)
+		gitmock.ExpectRebase()
+		gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+		gitmock.ExpectPushCommits([]*git.Commit{&c1})
+		githubmock.ExpectCreatePullRequest(c1, nil)
+		githubmock.ExpectGetAssignableUsers()
+		githubmock.ExpectAddReviewers([]string{mockclient.NobodyUserID})
+		githubmock.ExpectUpdatePullRequest(c1, nil)
+		githubmock.ExpectGetInfo()
+		s.UpdatePullRequests(ctx, []string{mockclient.NobodyLogin}, nil)
+		fmt.Printf("OUT: %s\n", output.String())
+		assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
+		gitmock.ExpectationsMet()
+		githubmock.ExpectationsMet()
+		output.Reset()
+	})
+}
+
 func uintptr(a uint) *uint {
 	return &a
 }

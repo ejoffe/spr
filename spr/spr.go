@@ -492,10 +492,12 @@ func sortPullRequestsByLocalCommitOrder(pullRequests []*github.PullRequest, loca
 }
 
 func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
-	if sd.config.Repo.ForceFetchTags {
-		sd.gitcmd.MustGit("fetch --tags --force", nil)
-	} else {
-		sd.gitcmd.MustGit("fetch", nil)
+	if !sd.config.User.NoFetch {
+		if sd.config.Repo.ForceFetchTags {
+			sd.gitcmd.MustGit("fetch --tags --force", nil)
+		} else {
+			sd.gitcmd.MustGit("fetch", nil)
+		}
 	}
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
