@@ -170,7 +170,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		for i := range githubInfo.PullRequests {
 			fn := func(i int) {
 				pr := githubInfo.PullRequests[i]
-				sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo.PullRequests, pr, pr.Commit, nil)
+				sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, pr, pr.Commit, nil)
 				wg.Done()
 			}
 			if sd.synchronized {
@@ -246,7 +246,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	for i := range updateQueue {
 		fn := func(i int) {
 			pr := updateQueue[i]
-			sd.github.UpdatePullRequest(ctx, sd.gitcmd, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
+			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
 			wg.Done()
 		}
 		if sd.synchronized {
@@ -322,7 +322,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	prToMerge := githubInfo.PullRequests[prIndex]
 
 	// Update the base of the merging pr to target branch
-	sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo.PullRequests, prToMerge, prToMerge.Commit, nil)
+	sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, prToMerge, prToMerge.Commit, nil)
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
