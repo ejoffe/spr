@@ -93,6 +93,27 @@ Date:   Wed May 21 19:52:51 1980 -0700
 			expectedValid: true,
 		},
 		{
+			name: "SingleValidCommitWithSpaceAfterColon",
+			inputCommitLog: `
+commit d89e0e460ed817c81641f32b1a506b60164b4403 (HEAD -> master)
+Author: Han Solo
+Date:   Wed May 21 19:53:12 1980 -0700
+
+	Supergalactic speed
+
+	commit-id: 053f6d16
+`,
+			expectedCommits: []Commit{
+				{
+					CommitHash: "d89e0e460ed817c81641f32b1a506b60164b4403",
+					CommitID:   "053f6d16",
+					Subject:    "Supergalactic speed",
+					Body:       "",
+				},
+			},
+			expectedValid: true,
+		},
+		{
 			name: "SingleCommitMissingCommitID",
 			inputCommitLog: `
 commit d89e0e460ed817c81641f32b1a506b60164b4403 (HEAD -> master)
