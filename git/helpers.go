@@ -81,7 +81,7 @@ func parseLocalCommitStack(commitLog string) ([]Commit, bool) {
 	var commits []Commit
 
 	commitHashRegex := regexp.MustCompile(`^commit ([a-f0-9]{40})`)
-	commitIDRegex := regexp.MustCompile(`commit-id\:([a-f0-9]{8})`)
+	commitIDRegex := regexp.MustCompile(`commit-id\:\s*([a-f0-9]{8})`)
 
 	// The list of commits from the command line actually starts at the
 	//  most recent commit. In order to reverse the list we use a
