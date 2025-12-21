@@ -24,7 +24,6 @@ import (
 
 // NewStackedPR constructs and returns a new stackediff instance.
 func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface) *stackediff {
-
 	return &stackediff{
 		config:       config,
 		github:       github,
@@ -87,7 +86,8 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 }
 
 func (sd *stackediff) addReviewers(ctx context.Context,
-	pr *github.PullRequest, reviewers []string, assignable []github.RepoAssignee) {
+	pr *github.PullRequest, reviewers []string, assignable []github.RepoAssignee,
+) {
 	userIDs := make([]string, 0, len(reviewers))
 	for _, r := range reviewers {
 		found := false
@@ -106,7 +106,7 @@ func (sd *stackediff) addReviewers(ctx context.Context,
 }
 
 func alignLocalCommits(commits []git.Commit, prs []*github.PullRequest) []git.Commit {
-	var remoteCommits = map[string]bool{}
+	remoteCommits := map[string]bool{}
 	for _, pr := range prs {
 		for _, c := range pr.Commits {
 			remoteCommits[c.CommitID] = c.CommitID == pr.Commit.CommitID
@@ -317,6 +317,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		prIndex--
 	}
 	if prIndex == -1 {
+		check(errors.New("no mergeable pull requests found in the stack"))
 		return
 	}
 	prToMerge := githubInfo.PullRequests[prIndex]
@@ -441,7 +442,6 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 	}()
 
 	err = cmd.Wait()
-
 	if err != nil {
 		sd.config.State.MergeCheckCommit[githubInfo.Key()] = ""
 		rake.LoadSources(sd.config.State,
@@ -523,8 +523,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 //	which are new (on top of remote branch) and creates a corresponding
 //	branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
-	commits []git.Commit, info *github.GitHubInfo) bool {
-
+	commits []git.Commit, info *github.GitHubInfo,
+) bool {
 	var output string
 	sd.gitcmd.MustGit("status --porcelain --untracked-files=no", &output)
 	if output != "" {
