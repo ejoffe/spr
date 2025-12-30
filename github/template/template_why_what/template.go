@@ -20,7 +20,7 @@ func (t *WhyWhatTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) s
 	return commit.Subject
 }
 
-func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) string {
+func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
 	// Split commit body by empty lines and filter out empty sections
 	sections := splitByEmptyLines(commit.Body)
 

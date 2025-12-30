@@ -79,7 +79,7 @@ func TestBody_EmptyStack(t *testing.T) {
 		Body:    "Commit body text",
 	}
 
-	result := templatizer.Body(info, commit)
+	result := templatizer.Body(info, commit, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Commit body text")
@@ -133,7 +133,7 @@ func TestBody_WithStack_NoTitles(t *testing.T) {
 	}
 
 	// Test with commit2 (middle of stack)
-	result := templatizer.Body(info, commit2)
+	result := templatizer.Body(info, commit2, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Second body")
@@ -210,7 +210,7 @@ func TestBody_WithStack_WithTitles(t *testing.T) {
 	}
 
 	// Test with commit2 (middle of stack)
-	result := templatizer.Body(info, commit2)
+	result := templatizer.Body(info, commit2, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Second body")
@@ -254,7 +254,7 @@ func TestBody_StackOrder(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit2)
+	result := templatizer.Body(info, commit2, nil)
 
 	// Stack should be in reverse order (3, 2, 1)
 	// Find the stack section
@@ -305,7 +305,7 @@ func TestBody_CurrentCommitAtStart(t *testing.T) {
 	}
 
 	// Test with commit3 (last in stack, first in reverse order)
-	result := templatizer.Body(info, commit3)
+	result := templatizer.Body(info, commit3, nil)
 
 	// Should have arrow on #3
 	assert.Contains(t, result, "#3 ⬅")
@@ -343,7 +343,7 @@ func TestBody_CurrentCommitAtEnd(t *testing.T) {
 	}
 
 	// Test with commit1 (first in stack, last in reverse order)
-	result := templatizer.Body(info, commit1)
+	result := templatizer.Body(info, commit1, nil)
 
 	// Should have arrow on #1
 	assert.Contains(t, result, "#1 ⬅")
@@ -368,7 +368,7 @@ func TestBody_EmptyBody(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit)
+	result := templatizer.Body(info, commit, nil)
 
 	// Should still contain stack and notice
 	assert.Contains(t, result, "#1")
@@ -391,7 +391,7 @@ func TestBody_SinglePRInStack(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit)
+	result := templatizer.Body(info, commit, nil)
 
 	// Should contain the body
 	assert.Contains(t, result, "Single body")
@@ -427,7 +427,7 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 
 	// Test without titles
 	templatizerNoTitles := NewStackTemplatizer(false)
-	resultNoTitles := templatizerNoTitles.Body(info, commit2)
+	resultNoTitles := templatizerNoTitles.Body(info, commit2, nil)
 
 	// Should NOT contain PR titles
 	assert.NotContains(t, resultNoTitles, "First PR")
@@ -438,7 +438,7 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 
 	// Test with titles
 	templatizerWithTitles := NewStackTemplatizer(true)
-	resultWithTitles := templatizerWithTitles.Body(info, commit2)
+	resultWithTitles := templatizerWithTitles.Body(info, commit2, nil)
 
 	// Should contain PR titles
 	assert.Contains(t, resultWithTitles, "First PR #1")
@@ -460,7 +460,7 @@ func TestBody_Structure(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit)
+	result := templatizer.Body(info, commit, nil)
 
 	// Verify structure: body + \n\n + stack + \n\n + notice
 	// The body should come first
@@ -513,7 +513,7 @@ func TestBody_RealWorldExample(t *testing.T) {
 	}
 
 	// Test with middle commit
-	result := templatizer.Body(info, commit2)
+	result := templatizer.Body(info, commit2, nil)
 
 	// Should contain commit body
 	assert.Contains(t, result, "Created POST /login endpoint")
@@ -608,7 +608,7 @@ It even includes some **markdown** formatting.
 	templatizer := NewStackTemplatizer(false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			body := templatizer.Body(tc.info, tc.commit)
+			body := templatizer.Body(tc.info, tc.commit, nil)
 			if body != tc.expected {
 				t.Fatalf("expected: '%v', actual: '%v'", tc.expected, body)
 			}

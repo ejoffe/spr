@@ -108,6 +108,7 @@ mutation CreatePullRequest(
 		pullRequest {
 			id
 			number
+			body
 		}
 	}
 }

@@ -18,7 +18,7 @@ func (t *StackTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) str
 	return commit.Subject
 }
 
-func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) string {
+func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
 	body := commit.Body
 
 	// Always show stack section and notice
