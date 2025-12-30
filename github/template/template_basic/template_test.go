@@ -194,7 +194,7 @@ func TestBody(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := templatizer.Body(info, tt.commit)
+			got := templatizer.Body(info, tt.commit, nil)
 
 			// Verify all expected strings are present
 			for _, wantStr := range tt.wantContains {
@@ -229,7 +229,7 @@ func TestBodyManualMergeNoticeFormat(t *testing.T) {
 		Body:    "Test body",
 	}
 
-	result := templatizer.Body(info, commit)
+	result := templatizer.Body(info, commit, nil)
 
 	// Verify the exact format of the manual merge notice
 	expectedNotice := "⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*"
@@ -280,7 +280,7 @@ func TestBodyPreservesOriginalContent(t *testing.T) {
 				Body:    tc.body,
 			}
 
-			result := templatizer.Body(info, commit)
+			result := templatizer.Body(info, commit, nil)
 
 			// The result should contain the original body (if not empty)
 			if tc.body != "" {
@@ -349,7 +349,7 @@ Performance improvements:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := templatizer.Body(info, tt.commit)
+			result := templatizer.Body(info, tt.commit, nil)
 
 			// Should contain the original body content
 			assert.Contains(t, result, tt.commit.Body)
