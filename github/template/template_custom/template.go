@@ -1,6 +1,7 @@
 package template_custom
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -78,6 +79,16 @@ func (t *CustomTemplatizer) readPRTemplate() (string, error) {
 	return string(pullRequestTemplateBytes), nil
 }
 
+const (
+	// Default anchors mark where the stack content is inserted in PR templates.
+	// Can be overridden in RepoConfig using PRTemplateInsertStart and PRTemplateInsertEnd.
+	// If anchors are not found in the template, content is appended to the PR.
+	// Implemented as HTML comments so they don't appear in rendered Markdown.
+
+	defaultStartAnchor = "<!-- SPR-STACK-START -->"
+	defaultEndAnchor   = "<!-- SPR-STACK-END -->"
+)
+
 // insertBodyIntoPRTemplate inserts a text body into the given PR template and returns the result as a string.
 // It uses the PRTemplateInsertStart and PRTemplateInsertEnd values defined in RepoConfig to determine where the body
 // should be inserted in the PR template. If there are issues finding the correct place to insert the body
@@ -91,18 +102,32 @@ func (t *CustomTemplatizer) insertBodyIntoPRTemplate(body, prTemplate string, pr
 		templateOrExistingPRBody = pr.Body
 	}
 
-	startPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, t.repoConfig.PRTemplateInsertStart, BeforeMatch)
-	if err != nil {
-		return "", fmt.Errorf("%w: PR template insert start = '%v'", err, t.repoConfig.PRTemplateInsertStart)
+	startAnchor := t.repoConfig.PRTemplateInsertStart
+	if startAnchor == "" {
+		startAnchor = defaultStartAnchor
 	}
 
-	endPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, t.repoConfig.PRTemplateInsertEnd, AfterMatch)
-	if err != nil {
-		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, t.repoConfig.PRTemplateInsertEnd)
+	endAnchor := t.repoConfig.PRTemplateInsertEnd
+	if endAnchor == "" {
+		endAnchor = defaultEndAnchor
 	}
 
-	return fmt.Sprintf("%v%v\n%v\n\n%v%v", startPRTemplateSection, t.repoConfig.PRTemplateInsertStart, body,
-		t.repoConfig.PRTemplateInsertEnd, endPRTemplateSection), nil
+	startPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, startAnchor, BeforeMatch)
+	if err == ErrNoMatchesFound && startAnchor == defaultStartAnchor {
+		// Default append mode: if no anchors found in the template, append body at the end.
+		return fmt.Sprintf("%s\n\n%s\n%s\n\n%s\n", templateOrExistingPRBody, startAnchor, body, endAnchor), nil
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("%w: PR template insert start = '%v'", err, startAnchor)
+	}
+
+	endPRTemplateSection, err := getSectionOfPRTemplate(templateOrExistingPRBody, endAnchor, AfterMatch)
+	if err != nil {
+		return "", fmt.Errorf("%w: PR template insert end = '%v'", err, endAnchor)
+	}
+
+	return fmt.Sprintf("%v%v\n%v\n\n%v%v", startPRTemplateSection, startAnchor, body, endAnchor, endPRTemplateSection), nil
 }
 
 const (
@@ -110,21 +135,34 @@ const (
 	AfterMatch
 )
 
+var (
+	// Error returned when no matches are found in a PR template
+	ErrNoMatchesFound = fmt.Errorf("no matches found")
+	// Error returned when multiple matches are found in a PR template
+	ErrMultipleMatchesFound = fmt.Errorf("multiple matches found")
+)
+
 // getSectionOfPRTemplate searches text for a matching searchString and will return the text before or after the
 // match as a string. If there are no matches or more than one match is found, an error will be returned.
 func getSectionOfPRTemplate(text, searchString string, returnMatch int) (string, error) {
-	split := strings.Split(text, searchString)
-	switch len(split) {
-	case 2:
-		if returnMatch == BeforeMatch {
-			return split[0], nil
-		} else if returnMatch == AfterMatch {
-			return split[1], nil
-		}
-		return "", fmt.Errorf("invalid enum value")
+	// Check occurrence count in a single pass
+	count := strings.Count(text, searchString)
+	switch count {
+	case 0:
+		return "", ErrNoMatchesFound
 	case 1:
-		return "", fmt.Errorf("no matches found")
+		// Expected case: exactly one match
+		idx := strings.Index(text, searchString)
+		switch returnMatch {
+		case BeforeMatch:
+			return text[:idx], nil
+		case AfterMatch:
+			return text[idx+len(searchString):], nil
+		default:
+			return "", errors.New("invalid enum value")
+		}
 	default:
-		return "", fmt.Errorf("multiple matches found")
+		// count > 1
+		return "", ErrMultipleMatchesFound
 	}
 }
