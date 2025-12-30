@@ -2,6 +2,7 @@ package template_custom
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -513,4 +514,173 @@ func TestFormatBodyCurrentCommitIndicator(t *testing.T) {
 	// Current commit should have arrow indicator
 	assert.Contains(t, result, "#2 ⬅")
 	assert.NotContains(t, result, "#1 ⬅")
+}
+
+// TestInsertBodyIntoPRTemplateDefaultAnchors tests default anchor behavior for creation, replacement, and update scenarios
+func TestInsertBodyIntoPRTemplateDefaultAnchors(t *testing.T) {
+	tests := []struct {
+		name          string
+		prTemplate    string
+		body          string
+		pr            *github.PullRequest
+		expectedError error
+		expected      string
+	}{
+		{
+			name: "no_markers_exist_append_with_default_anchors",
+			prTemplate: `
+# PR Template
+
+content
+`,
+			body:          "Generated body content",
+			pr:            nil,
+			expectedError: nil,
+			expected: `
+# PR Template
+
+content
+
+
+<!-- SPR-STACK-START -->
+Generated body content
+
+<!-- SPR-STACK-END -->
+`,
+		},
+		{
+			name: "existing_markers_replace_content_between_default_anchors",
+			prTemplate: `
+# PR Template
+
+content before markers
+
+<!-- SPR-STACK-START -->
+	old spr stack goes here (to be replaced)
+<!-- SPR-STACK-END -->
+`,
+			body:          "New commit body",
+			pr:            nil,
+			expectedError: nil,
+			expected: `
+# PR Template
+
+content before markers
+
+<!-- SPR-STACK-START -->
+New commit body
+
+<!-- SPR-STACK-END -->
+`,
+		},
+		{
+			name: "pr_update_use_existing_PR_body_and_replace_content",
+			prTemplate: `# PR Template
+
+Initial description
+`,
+			body: "Updated commit body",
+			pr: &github.PullRequest{
+				Body: `# PR Template
+
+Initial description
+
+<!-- SPR-STACK-START -->
+Old body content
+
+<!-- SPR-STACK-END -->
+`,
+			},
+			expectedError: nil,
+			expected: `# PR Template
+
+Initial description
+
+<!-- SPR-STACK-START -->
+Updated commit body
+
+<!-- SPR-STACK-END -->
+`,
+		},
+		{
+			name: "error_missing_end_anchor_in_existing_PR_body",
+			prTemplate: `# PR Template
+
+description
+`,
+			body: "New body",
+			pr: &github.PullRequest{
+				Body: `# PR Template
+
+description
+
+<!-- SPR-STACK-START -->
+Old content
+`,
+			},
+			expectedError: ErrNoMatchesFound,
+			expected:      "",
+		},
+		{
+			name: "error_multiple_start_anchors_in_existing_PR_body",
+			prTemplate: `# PR Template
+
+description
+`,
+			body: "New body",
+			pr: &github.PullRequest{
+				Body: `# PR Template
+
+<!-- SPR-STACK-START -->
+Content 1
+<!-- SPR-STACK-START -->
+Content 2
+<!-- SPR-STACK-END -->
+`,
+			},
+			expectedError: ErrMultipleMatchesFound,
+			expected:      "",
+		},
+		{
+			name: "error_multiple_end_anchors_in_existing_PR_body",
+			prTemplate: `# PR Template
+
+description
+`,
+			body: "New body",
+			pr: &github.PullRequest{
+				Body: `# PR Template
+
+<!-- SPR-STACK-START -->
+Content
+<!-- SPR-STACK-END -->
+More content
+<!-- SPR-STACK-END -->
+`,
+			},
+			expectedError: ErrMultipleMatchesFound,
+			expected:      "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repoConfig := &config.RepoConfig{
+				PRTemplatePath: "pr_template.md",
+				// No custom anchors - use defaults
+			}
+			gitcmd := &mockGit{rootDir: "/tmp"}
+			templatizer := NewCustomTemplatizer(repoConfig, gitcmd)
+
+			result, err := templatizer.insertBodyIntoPRTemplate(tt.body, tt.prTemplate, tt.pr)
+
+			if tt.expectedError != nil {
+				assert.True(t, errors.Is(err, tt.expectedError), "expected error %v, got %v", tt.expectedError, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
