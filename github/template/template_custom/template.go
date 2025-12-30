@@ -1,9 +1,11 @@
 package template_custom
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -34,21 +36,104 @@ func (t *CustomTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) st
 	return commit.Subject
 }
 
-func (t *CustomTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) string {
+func (t *CustomTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
 	body := t.formatBody(commit, info.PullRequests)
 	pullRequestTemplate, err := t.readPRTemplate()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to read PR template")
 	}
-	body, err = t.insertBodyIntoPRTemplate(body, pullRequestTemplate, nil)
+	body, err = t.insertBodyIntoPRTemplate(body, pullRequestTemplate, pr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to insert body into PR template")
 	}
+
+	// Open editor for user to edit the PR content only when creating a new PR (pr == nil)
+	if pr != nil {
+		return body
+	}
+
+	if !promptUserToEdit(commit) {
+		return body
+	}
+
+	body, err = EditWithEditor(body)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to edit PR content with editor")
+	}
+
 	return body
 }
 
-func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*github.PullRequest) string {
+// promptUserToEdit prompts the user if they want to edit the PR content in their editor
+func promptUserToEdit(commit git.Commit) bool {
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Println()
+		fmt.Println("New PR for:")
+		fmt.Printf("  %s: %s\n", commit.CommitHash[:7], commit.Subject)
+		fmt.Println()
+		fmt.Print("Edit PR content? [Y/n]: ")
+		if !scanner.Scan() {
+			// On error or EOF, default to editing
+			return true
+		}
+		input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		switch input {
+		case "y", "yes":
+			return true
+		case "n", "no":
+			return false
+		case "":
+			// Empty input defaults to yes
+			return true
+		default:
+			// Invalid input, ask again
+			continue
+		}
+	}
+}
 
+// EditWithEditor opens the default editor to allow the user to edit the provided content.
+func EditWithEditor(initialContent string) (string, error) {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vi"
+	}
+
+	// Create temporary file to hold the content
+	tmpFile, err := os.CreateTemp("", "spr-pr-*.md")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Write initial content to temporary file
+	if _, err := tmpFile.WriteString(initialContent); err != nil {
+		tmpFile.Close()
+		return "", fmt.Errorf("failed to write to temporary file: %w", err)
+	}
+	tmpFile.Close()
+
+	// Open editor
+	cmd := exec.Command(editor, tmpFile.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("editor command failed: %w", err)
+	}
+
+	// Read edited content from temporary file
+	editedBytes, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		return "", fmt.Errorf("failed to read edited content: %w", err)
+	}
+
+	return string(editedBytes), nil
+}
+
+func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*github.PullRequest) string {
 	if len(stack) <= 1 {
 		return strings.TrimSpace(commit.Body)
 	}
