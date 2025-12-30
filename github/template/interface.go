@@ -7,5 +7,5 @@ import (
 
 type PRTemplatizer interface {
 	Title(info *github.GitHubInfo, commit git.Commit) string
-	Body(info *github.GitHubInfo, commit git.Commit) string
+	Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string
 }

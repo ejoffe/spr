@@ -385,7 +385,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 
-	body := templatizer.Body(info, commit)
+	body := templatizer.Body(info, commit, nil)
 	resp, err := c.api.CreatePullRequest(ctx, genclient.CreatePullRequestInput{
 		RepositoryId: info.RepositoryID,
 		BaseRefName:  baseRefName,
@@ -403,6 +403,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		ToBranch:   baseRefName,
 		Commit:     commit,
 		Title:      commit.Subject,
+		Body:       resp.CreatePullRequest.PullRequest.Body,
 		MergeStatus: github.PullRequestMergeStatus{
 			ChecksPass:     github.CheckStatusUnknown,
 			ReviewApproved: false,
@@ -437,7 +438,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 	title := templatizer.Title(info, commit)
-	body := templatizer.Body(info, commit)
+	body := templatizer.Body(info, commit, pr)
 	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
 		Title:         &title,

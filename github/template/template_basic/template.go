@@ -16,7 +16,7 @@ func (t *BasicTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) str
 	return commit.Subject
 }
 
-func (t *BasicTemplatizer) Body(info *github.GitHubInfo, commit git.Commit) string {
+func (t *BasicTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
 	body := commit.Body
 	body += "\n\n"
 	body += template.ManualMergeNotice()
