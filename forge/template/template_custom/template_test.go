@@ -169,7 +169,7 @@ func TestFormatBody(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := templatizer.formatBody(tt.commit, tt.stack)
+			result := templatizer.formatBody(tt.commit, tt.stack, "#")
 
 			for _, wantStr := range tt.contains {
 				assert.Contains(t, result, wantStr, "Expected output to contain: %s", wantStr)
@@ -199,7 +199,7 @@ func TestFormatBodyWithPRTitles(t *testing.T) {
 		{Number: 2, Title: "Second PR", Commit: git.Commit{CommitID: "commit2"}},
 	}
 
-	result := templatizer.formatBody(commit, stack)
+	result := templatizer.formatBody(commit, stack, "#")
 
 	assert.Contains(t, result, "First PR #1")
 	assert.Contains(t, result, "Second PR #2")
@@ -479,7 +479,7 @@ func TestFormatBodyStackOrder(t *testing.T) {
 		{Number: 3, Commit: commit3},
 	}
 
-	result := templatizer.formatBody(commit, stack)
+	result := templatizer.formatBody(commit, stack, "#")
 
 	// Stack should be in reverse order (3, 2, 1)
 	idx3 := strings.Index(result, "#3")
@@ -509,7 +509,7 @@ func TestFormatBodyCurrentCommitIndicator(t *testing.T) {
 		{Number: 2, Commit: commit2},
 	}
 
-	result := templatizer.formatBody(commit, stack)
+	result := templatizer.formatBody(commit, stack, "#")
 
 	// Current commit should have arrow indicator
 	assert.Contains(t, result, "#2 ⬅")

@@ -11,7 +11,7 @@ import (
 
 func TestTitle(t *testing.T) {
 	templatizer := NewStackTemplatizer(false)
-	info := &forge.ForgeInfo{}
+	info := &forge.ForgeInfo{PRNumberPrefix: "#"}
 
 	tests := []struct {
 		name   string
@@ -71,7 +71,8 @@ func TestTitle(t *testing.T) {
 func TestBody_EmptyStack(t *testing.T) {
 	templatizer := NewStackTemplatizer(false)
 	info := &forge.ForgeInfo{
-		PullRequests: []*forge.PullRequest{},
+		PRNumberPrefix: "#",
+		PullRequests:   []*forge.PullRequest{},
 	}
 
 	commit := git.Commit{
@@ -113,6 +114,7 @@ func TestBody_WithStack_NoTitles(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{
 				Number: 1,
@@ -190,6 +192,7 @@ func TestBody_WithStack_WithTitles(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{
 				Number: 1,
@@ -247,6 +250,7 @@ func TestBody_StackOrder(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
@@ -297,6 +301,7 @@ func TestBody_CurrentCommitAtStart(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
@@ -335,6 +340,7 @@ func TestBody_CurrentCommitAtEnd(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
@@ -363,6 +369,7 @@ func TestBody_EmptyBody(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit},
 		},
@@ -386,6 +393,7 @@ func TestBody_SinglePRInStack(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 42, Commit: commit},
 		},
@@ -419,6 +427,7 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Title: "First PR", Commit: commit1},
 			{Number: 2, Title: "Second PR", Commit: commit2},
@@ -455,6 +464,7 @@ func TestBody_Structure(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit},
 		},
@@ -493,6 +503,7 @@ func TestBody_RealWorldExample(t *testing.T) {
 	}
 
 	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
 		PullRequests: []*forge.PullRequest{
 			{
 				Number: 10,
@@ -561,9 +572,11 @@ It even includes some **markdown** formatting.`}
 			name:   "EmptyStack",
 			commit: git.Commit{},
 			info: &forge.ForgeInfo{
-				PullRequests: []*forge.PullRequest{},
+				PRNumberPrefix: "#",
+				PullRequests:   []*forge.PullRequest{},
 			},
 			expected: `
+
 ---
 **Stack**:
 ---
@@ -573,12 +586,14 @@ It even includes some **markdown** formatting.`}
 			name:   "SinglePRStack",
 			commit: descriptiveCommit,
 			info: &forge.ForgeInfo{
+				PRNumberPrefix: "#",
 				PullRequests: []*forge.PullRequest{
 					{Number: 2, Commit: descriptiveCommit},
 				},
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅
@@ -588,6 +603,7 @@ It even includes some **markdown** formatting.
 		{
 			name: "TwoPRStack",
 			info: &forge.ForgeInfo{
+				PRNumberPrefix: "#",
 				PullRequests: []*forge.PullRequest{
 					{Number: 1, Commit: simpleCommit},
 					{Number: 2, Commit: descriptiveCommit},
@@ -595,6 +611,7 @@ It even includes some **markdown** formatting.
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅

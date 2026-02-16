@@ -35,10 +35,11 @@ type ForgeInterface interface {
 }
 
 type ForgeInfo struct {
-	UserName     string
-	RepositoryID string
-	LocalBranch  string
-	PullRequests []*PullRequest
+	UserName       string
+	RepositoryID   string
+	LocalBranch    string
+	PullRequests   []*PullRequest
+	PRNumberPrefix string // Used to format PR bodies with the right auto-linking format
 }
 
 type RepoAssignee struct {

@@ -22,10 +22,10 @@ func (t *StackTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *fo
 	body := commit.Body
 
 	// Always show stack section and notice
-	body += "\n"
+	body += "\n\n"
 	body += "---\n"
 	body += "**Stack**:\n"
-	body += template.FormatStackMarkdown(commit, info.PullRequests, t.showPrTitlesInStack)
+	body += template.FormatStackMarkdown(commit, info.PullRequests, t.showPrTitlesInStack, info.PRNumberPrefix)
 	body += "---\n"
 	body += template.ManualMergeNotice()
 	return body

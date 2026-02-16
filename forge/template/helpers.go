@@ -21,7 +21,7 @@ func ManualMergeNotice() string {
 		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
-func FormatStackMarkdown(commit git.Commit, stack []*forge.PullRequest, showPrTitlesInStack bool) string {
+func FormatStackMarkdown(commit git.Commit, stack []*forge.PullRequest, showPrTitlesInStack bool, prNumberPrefix string) string {
 	var buf bytes.Buffer
 	for i := len(stack) - 1; i >= 0; i-- {
 		isCurrent := stack[i].Commit == commit
@@ -38,7 +38,7 @@ func FormatStackMarkdown(commit git.Commit, stack []*forge.PullRequest, showPrTi
 			prTitle = ""
 		}
 
-		buf.WriteString(fmt.Sprintf("- %s#%d%s\n", prTitle, stack[i].Number, suffix))
+		buf.WriteString(fmt.Sprintf("- %s%s%d%s\n", prTitle, prNumberPrefix, stack[i].Number, suffix))
 	}
 
 	return buf.String()

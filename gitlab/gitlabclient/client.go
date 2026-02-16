@@ -183,10 +183,11 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *forge.Fo
 	}
 
 	info := &forge.ForgeInfo{
-		UserName:     user.Username,
-		RepositoryID: fmt.Sprintf("%d", project.ID),
-		LocalBranch:  git.GetLocalBranchName(gitcmd),
-		PullRequests: pullRequests,
+		UserName:       user.Username,
+		RepositoryID:   fmt.Sprintf("%d", project.ID),
+		LocalBranch:    git.GetLocalBranchName(gitcmd),
+		PullRequests:   pullRequests,
+		PRNumberPrefix: "!",
 	}
 
 	log.Debug().Interface("Info", info).Msg("GetInfo")

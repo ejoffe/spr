@@ -27,9 +27,10 @@ func makeTestObjects(t *testing.T, synchronized bool) (
 	gitmock = mockgit.NewMockGit(t)
 	githubmock = mockclient.NewMockClient(t)
 	githubmock.Info = &forge.ForgeInfo{
-		UserName:     "TestSPR",
-		RepositoryID: "RepoID",
-		LocalBranch:  "master",
+		UserName:       "TestSPR",
+		RepositoryID:   "RepoID",
+		LocalBranch:    "master",
+		PRNumberPrefix: "#",
 	}
 	s = NewStackedPR(cfg, githubmock, gitmock)
 	output = &bytes.Buffer{}

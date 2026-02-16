@@ -64,10 +64,10 @@ func (t *WhyWhatTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *
 	body := buf.String()
 
 	// Always show stack section and notice
-	body += "\n"
+	body += "\n\n"
 	body += "---\n"
 	body += "**Stack**:\n"
-	body += template.FormatStackMarkdown(commit, info.PullRequests, true)
+	body += template.FormatStackMarkdown(commit, info.PullRequests, true, info.PRNumberPrefix)
 	body += "---\n"
 	body += template.ManualMergeNotice()
 	return body

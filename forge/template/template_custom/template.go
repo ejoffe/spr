@@ -37,7 +37,7 @@ func (t *CustomTemplatizer) Title(info *forge.ForgeInfo, commit git.Commit) stri
 }
 
 func (t *CustomTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *forge.PullRequest) string {
-	body := t.formatBody(commit, info.PullRequests)
+	body := t.formatBody(commit, info.PullRequests, info.PRNumberPrefix)
 	pullRequestTemplate, err := t.readPRTemplate()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to read PR template")
@@ -133,7 +133,7 @@ func EditWithEditor(initialContent string) (string, error) {
 	return string(editedBytes), nil
 }
 
-func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*forge.PullRequest) string {
+func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*forge.PullRequest, prNumberPrefix string) string {
 	if len(stack) <= 1 {
 		return strings.TrimSpace(commit.Body)
 	}
@@ -141,14 +141,14 @@ func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*forge.PullReq
 	if commit.Body == "" {
 		return fmt.Sprintf(
 			"**Stack**:\n%s\n%s",
-			template.FormatStackMarkdown(commit, stack, t.repoConfig.ShowPrTitlesInStack),
+			template.FormatStackMarkdown(commit, stack, t.repoConfig.ShowPrTitlesInStack, prNumberPrefix),
 			template.ManualMergeNotice(),
 		)
 	}
 
 	return fmt.Sprintf("%s\n\n---\n\n**Stack**:\n%s\n%s",
 		commit.Body,
-		template.FormatStackMarkdown(commit, stack, t.repoConfig.ShowPrTitlesInStack),
+		template.FormatStackMarkdown(commit, stack, t.repoConfig.ShowPrTitlesInStack, prNumberPrefix),
 		template.ManualMergeNotice(),
 	)
 }
