@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTitle(t *testing.T) {
 	templatizer := &BasicTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name   string
@@ -70,7 +70,7 @@ func TestTitle(t *testing.T) {
 
 func TestBody(t *testing.T) {
 	templatizer := &BasicTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name         string
@@ -222,7 +222,7 @@ func TestBody(t *testing.T) {
 
 func TestBodyManualMergeNoticeFormat(t *testing.T) {
 	templatizer := &BasicTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	commit := git.Commit{
 		Subject: "Test commit",
@@ -249,7 +249,7 @@ func TestBodyManualMergeNoticeFormat(t *testing.T) {
 
 func TestBodyPreservesOriginalContent(t *testing.T) {
 	templatizer := &BasicTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	testCases := []struct {
 		name string
@@ -302,7 +302,7 @@ func TestBodyPreservesOriginalContent(t *testing.T) {
 
 func TestBodyWithRealWorldExamples(t *testing.T) {
 	templatizer := &BasicTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name   string

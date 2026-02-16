@@ -5,8 +5,8 @@ import (
 	"strings"
 	go_template "text/template"
 
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/template"
 )
 
@@ -16,11 +16,11 @@ func NewWhyWhatTemplatizer() *WhyWhatTemplatizer {
 	return &WhyWhatTemplatizer{}
 }
 
-func (t *WhyWhatTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) string {
+func (t *WhyWhatTemplatizer) Title(info *forge.ForgeInfo, commit git.Commit) string {
 	return commit.Subject
 }
 
-func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *WhyWhatTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *forge.PullRequest) string {
 	// Split commit body by empty lines and filter out empty sections
 	sections := splitByEmptyLines(commit.Body)
 

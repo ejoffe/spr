@@ -1,8 +1,8 @@
 package template_stack
 
 import (
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/template"
 )
 
@@ -14,11 +14,11 @@ func NewStackTemplatizer(showPrTitlesInStack bool) *StackTemplatizer {
 	return &StackTemplatizer{showPrTitlesInStack: showPrTitlesInStack}
 }
 
-func (t *StackTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) string {
+func (t *StackTemplatizer) Title(info *forge.ForgeInfo, commit git.Commit) string {
 	return commit.Subject
 }
 
-func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *StackTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *forge.PullRequest) string {
 	body := commit.Body
 
 	// Always show stack section and notice

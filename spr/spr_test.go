@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/git/mockgit"
-	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/mockclient"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +26,7 @@ func makeTestObjects(t *testing.T, synchronized bool) (
 	cfg.Repo.MergeMethod = "rebase"
 	gitmock = mockgit.NewMockGit(t)
 	githubmock = mockclient.NewMockClient(t)
-	githubmock.Info = &github.GitHubInfo{
+	githubmock.Info = &forge.ForgeInfo{
 		UserName:     "TestSPR",
 		RepositoryID: "RepoID",
 		LocalBranch:  "master",

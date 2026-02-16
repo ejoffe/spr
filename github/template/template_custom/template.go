@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/template"
 	"github.com/rs/zerolog/log"
 )
@@ -32,11 +32,11 @@ func NewCustomTemplatizer(
 	}
 }
 
-func (t *CustomTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) string {
+func (t *CustomTemplatizer) Title(info *forge.ForgeInfo, commit git.Commit) string {
 	return commit.Subject
 }
 
-func (t *CustomTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *CustomTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *forge.PullRequest) string {
 	body := t.formatBody(commit, info.PullRequests)
 	pullRequestTemplate, err := t.readPRTemplate()
 	if err != nil {
@@ -133,7 +133,7 @@ func EditWithEditor(initialContent string) (string, error) {
 	return string(editedBytes), nil
 }
 
-func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*github.PullRequest) string {
+func (t *CustomTemplatizer) formatBody(commit git.Commit, stack []*forge.PullRequest) string {
 	if len(stack) <= 1 {
 		return strings.TrimSpace(commit.Body)
 	}
@@ -181,7 +181,7 @@ const (
 //
 // NOTE: on PR update, rather than using the PR template, it will use the existing PR body, which should have
 // the PR template from the initial PR create.
-func (t *CustomTemplatizer) insertBodyIntoPRTemplate(body, prTemplate string, pr *github.PullRequest) (string, error) {
+func (t *CustomTemplatizer) insertBodyIntoPRTemplate(body, prTemplate string, pr *forge.PullRequest) (string, error) {
 	templateOrExistingPRBody := prTemplate
 	if pr != nil && pr.Body != "" {
 		templateOrExistingPRBody = pr.Body

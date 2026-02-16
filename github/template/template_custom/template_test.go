@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +43,7 @@ func TestTitle(t *testing.T) {
 	repoConfig := &config.RepoConfig{}
 	gitcmd := &mockGit{rootDir: "/tmp"}
 	templatizer := NewCustomTemplatizer(repoConfig, gitcmd)
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name   string
@@ -94,7 +94,7 @@ func TestFormatBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		commit   git.Commit
-		stack    []*github.PullRequest
+		stack    []*forge.PullRequest
 		contains []string
 	}{
 		{
@@ -103,7 +103,7 @@ func TestFormatBody(t *testing.T) {
 				Subject: "Test commit",
 				Body:    "Commit body",
 			},
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 1, Commit: git.Commit{CommitID: "commit1"}},
 			},
 			contains: []string{"Commit body"},
@@ -114,7 +114,7 @@ func TestFormatBody(t *testing.T) {
 				Subject: "Test commit",
 				Body:    "Commit body",
 			},
-			stack:    []*github.PullRequest{},
+			stack:    []*forge.PullRequest{},
 			contains: []string{"Commit body"},
 		},
 		{
@@ -123,7 +123,7 @@ func TestFormatBody(t *testing.T) {
 				Subject: "Test commit",
 				Body:    "Commit body text",
 			},
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 1, Commit: git.Commit{CommitID: "commit1"}},
 				{Number: 2, Commit: git.Commit{CommitID: "commit2"}},
 			},
@@ -143,7 +143,7 @@ func TestFormatBody(t *testing.T) {
 				Subject: "Test commit",
 				Body:    "",
 			},
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 1, Commit: git.Commit{CommitID: "commit1"}},
 				{Number: 2, Commit: git.Commit{CommitID: "commit2"}},
 			},
@@ -160,7 +160,7 @@ func TestFormatBody(t *testing.T) {
 				Subject: "Test commit",
 				Body:    "Commit body",
 			},
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 1, Title: "First PR", Commit: git.Commit{CommitID: "commit1"}},
 				{Number: 2, Title: "Second PR", Commit: git.Commit{CommitID: "commit2"}},
 			},
@@ -194,7 +194,7 @@ func TestFormatBodyWithPRTitles(t *testing.T) {
 		Subject: "Test commit",
 		Body:    "Commit body",
 	}
-	stack := []*github.PullRequest{
+	stack := []*forge.PullRequest{
 		{Number: 1, Title: "First PR", Commit: git.Commit{CommitID: "commit1"}},
 		{Number: 2, Title: "Second PR", Commit: git.Commit{CommitID: "commit2"}},
 	}
@@ -383,7 +383,7 @@ func TestInsertBodyIntoPRTemplateWithExistingPR(t *testing.T) {
 	body := "Updated commit body"
 	existingPRBody := "# PR Template\n\n<!-- START -->\nOld body\n\n<!-- END -->\n"
 
-	result, err := templatizer.insertBodyIntoPRTemplate(body, prTemplate, &github.PullRequest{
+	result, err := templatizer.insertBodyIntoPRTemplate(body, prTemplate, &forge.PullRequest{
 		Body: existingPRBody,
 	})
 	require.NoError(t, err)
@@ -473,7 +473,7 @@ func TestFormatBodyStackOrder(t *testing.T) {
 		Subject: "Test",
 		Body:    "Body text",
 	}
-	stack := []*github.PullRequest{
+	stack := []*forge.PullRequest{
 		{Number: 1, Commit: commit1},
 		{Number: 2, Commit: commit2},
 		{Number: 3, Commit: commit3},
@@ -504,7 +504,7 @@ func TestFormatBodyCurrentCommitIndicator(t *testing.T) {
 	commit2 := git.Commit{CommitID: "commit2", Subject: "Second"}
 
 	commit := commit2
-	stack := []*github.PullRequest{
+	stack := []*forge.PullRequest{
 		{Number: 1, Commit: commit1},
 		{Number: 2, Commit: commit2},
 	}
@@ -522,7 +522,7 @@ func TestInsertBodyIntoPRTemplateDefaultAnchors(t *testing.T) {
 		name          string
 		prTemplate    string
 		body          string
-		pr            *github.PullRequest
+		pr            *forge.PullRequest
 		expectedError error
 		expected      string
 	}{
@@ -580,7 +580,7 @@ New commit body
 Initial description
 `,
 			body: "Updated commit body",
-			pr: &github.PullRequest{
+			pr: &forge.PullRequest{
 				Body: `# PR Template
 
 Initial description
@@ -609,7 +609,7 @@ Updated commit body
 description
 `,
 			body: "New body",
-			pr: &github.PullRequest{
+			pr: &forge.PullRequest{
 				Body: `# PR Template
 
 description
@@ -628,7 +628,7 @@ Old content
 description
 `,
 			body: "New body",
-			pr: &github.PullRequest{
+			pr: &forge.PullRequest{
 				Body: `# PR Template
 
 <!-- SPR-STACK-START -->
@@ -648,7 +648,7 @@ Content 2
 description
 `,
 			body: "New body",
-			pr: &github.PullRequest{
+			pr: &forge.PullRequest{
 				Body: `# PR Template
 
 <!-- SPR-STACK-START -->

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 )
 
 /*
@@ -21,7 +21,7 @@ func ManualMergeNotice() string {
 		"Do not merge manually using the UI - doing so may have unexpected results.*"
 }
 
-func FormatStackMarkdown(commit git.Commit, stack []*github.PullRequest, showPrTitlesInStack bool) string {
+func FormatStackMarkdown(commit git.Commit, stack []*forge.PullRequest, showPrTitlesInStack bool) string {
 	var buf bytes.Buffer
 	for i := len(stack) - 1; i >= 0; i-- {
 		isCurrent := stack[i].Commit == commit
