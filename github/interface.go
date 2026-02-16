@@ -3,8 +3,8 @@ package github
 import (
 	"context"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 )
 
 type GitHubInterface interface {
@@ -27,7 +27,7 @@ type GitHubInterface interface {
 	CommentPullRequest(ctx context.Context, pr *PullRequest, comment string)
 
 	// MergePullRequest merged the given pull request
-	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod genclient.PullRequestMergeMethod)
+	MergePullRequest(ctx context.Context, pr *PullRequest, mergeMethod config.MergeMethod)
 
 	// ClosePullRequest closes the given pull request
 	ClosePullRequest(ctx context.Context, pr *PullRequest)

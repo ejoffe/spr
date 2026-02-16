@@ -510,22 +510,23 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 }
 
 func (c *client) MergePullRequest(ctx context.Context,
-	pr *github.PullRequest, mergeMethod genclient.PullRequestMergeMethod) {
+	pr *github.PullRequest, mergeMethod config.MergeMethod) {
 	log.Debug().
 		Interface("PR", pr).
 		Str("mergeMethod", string(mergeMethod)).
 		Msg("MergePullRequest")
 
+	apiMergeMethod := toGitHubMergeMethod(mergeMethod)
 	var err error
 	if c.config.Repo.MergeQueue {
 		_, err = c.api.AutoMergePullRequest(ctx, genclient.EnablePullRequestAutoMergeInput{
 			PullRequestId: pr.ID,
-			MergeMethod:   &mergeMethod,
+			MergeMethod:   &apiMergeMethod,
 		})
 	} else {
 		_, err = c.api.MergePullRequest(ctx, genclient.MergePullRequestInput{
 			PullRequestId: pr.ID,
-			MergeMethod:   &mergeMethod,
+			MergeMethod:   &apiMergeMethod,
 		})
 	}
 	if err != nil {
@@ -540,6 +541,19 @@ func (c *client) MergePullRequest(ctx context.Context,
 
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github merge %d : %s\n", pr.Number, pr.Title)
+	}
+}
+
+func toGitHubMergeMethod(m config.MergeMethod) genclient.PullRequestMergeMethod {
+	switch m {
+	case config.MergeMethodMerge:
+		return genclient.PullRequestMergeMethod_MERGE
+	case config.MergeMethodSquash:
+		return genclient.PullRequestMergeMethod_SQUASH
+	case config.MergeMethodRebase:
+		return genclient.PullRequestMergeMethod_REBASE
+	default:
+		return genclient.PullRequestMergeMethod_REBASE
 	}
 }
 

@@ -327,7 +327,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
-	mergeMethod, err := sd.config.MergeMethod()
+	mergeMethod, err := sd.config.ParseMergeMethod()
 	check(err)
 	sd.github.MergePullRequest(ctx, prToMerge, mergeMethod)
 	if sd.config.User.DeleteMergedBranches {

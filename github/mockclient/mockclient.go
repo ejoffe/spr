@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,7 +107,7 @@ func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequ
 }
 
 func (c *MockClient) MergePullRequest(ctx context.Context,
-	pr *github.PullRequest, mergeMethod genclient.PullRequestMergeMethod) {
+	pr *github.PullRequest, mergeMethod config.MergeMethod) {
 	fmt.Printf("HUB: MergePullRequest, method=%q\n", mergeMethod)
 	c.verifyExpectation(expectation{
 		op:          mergePullRequestOP,
@@ -184,7 +184,7 @@ func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
 	})
 }
 
-func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod genclient.PullRequestMergeMethod) {
+func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod config.MergeMethod) {
 	c.expectMutex.Lock()
 	defer c.expectMutex.Unlock()
 
@@ -257,6 +257,6 @@ type expectation struct {
 	op          operation
 	commit      git.Commit
 	prev        *git.Commit
-	mergeMethod genclient.PullRequestMergeMethod
+	mergeMethod config.MergeMethod
 	userIDs     []string
 }
