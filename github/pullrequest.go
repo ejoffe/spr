@@ -178,7 +178,7 @@ func (pr *PullRequest) String(config *config.Config) string {
 	prInfo := fmt.Sprintf("%3d", pr.Number)
 	if config.User.ShowPRLink {
 		prInfo = fmt.Sprintf("https://%s/%s/%s/pull/%d",
-			config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+			config.Repo.ForgeHost, config.Repo.RepoOwner, config.Repo.RepoName, pr.Number)
 	}
 
 	var mq string

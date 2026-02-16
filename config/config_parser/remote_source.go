@@ -30,9 +30,9 @@ func (s *remoteSource) Load(_ interface{}) {
 	for _, line := range lines {
 		githubHost, repoOwner, repoName, match := getRepoDetailsFromRemote(line)
 		if match {
-			s.config.Repo.GitHubHost = githubHost
-			s.config.Repo.GitHubRepoOwner = repoOwner
-			s.config.Repo.GitHubRepoName = repoName
+			s.config.Repo.ForgeHost = githubHost
+			s.config.Repo.RepoOwner = repoOwner
+			s.config.Repo.RepoName = repoName
 			break
 		}
 	}

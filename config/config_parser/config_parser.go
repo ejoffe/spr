@@ -22,16 +22,16 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
 		NewRemoteBranchSource(gitcmd),
 	)
-	if cfg.Repo.GitHubHost == "" {
+	if cfg.Repo.ForgeHost == "" {
 		fmt.Println("unable to auto configure repository host - must be set manually in .spr.yml")
 		os.Exit(2)
 	}
-	if cfg.Repo.GitHubRepoOwner == "" {
+	if cfg.Repo.RepoOwner == "" {
 		fmt.Println("unable to auto configure repository owner - must be set manually in .spr.yml")
 		os.Exit(3)
 	}
 
-	if cfg.Repo.GitHubRepoName == "" {
+	if cfg.Repo.RepoName == "" {
 		fmt.Println("unable to auto configure repository name - must be set manually in .spr.yml")
 		os.Exit(4)
 	}
@@ -69,7 +69,7 @@ func ParseConfig(gitcmd git.GitInterface) *config.Config {
 }
 
 func CheckConfig(cfg *config.Config) error {
-	if strings.Contains(cfg.Repo.GitHubBranch, "/") {
+	if strings.Contains(cfg.Repo.Branch, "/") {
 		return errors.New("Remote branch name must not contain backslashes '/'")
 	}
 	return nil

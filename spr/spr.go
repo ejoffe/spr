@@ -81,7 +81,7 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	sd.gitcmd.MustGit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.Remote, sd.config.Repo.Branch)
 	sd.gitcmd.MustGit(rebaseCmd, nil)
 }
 
@@ -340,7 +340,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
 			"✓ Commit merged in pull request [#%d](https://%s/%s/%s/pull/%d)",
-			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
+			prToMerge.Number, sd.config.Repo.ForgeHost, sd.config.Repo.RepoOwner, sd.config.Repo.RepoName, prToMerge.Number)
 		sd.github.CommentPullRequest(ctx, pr, comment)
 		sd.github.ClosePullRequest(ctx, pr)
 		if sd.config.User.DeleteMergedBranches {
@@ -499,7 +499,7 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 		sd.gitcmd.MustGit("fetch", nil)
 	}
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.Remote, sd.config.Repo.Branch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil
@@ -564,11 +564,11 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	if len(updatedCommits) > 0 {
 		if sd.config.Repo.BranchPushIndividually {
 			for _, refName := range refNames {
-				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.GitHubRemote, refName)
+				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.Remote, refName)
 				sd.gitcmd.MustGit(pushCommand, nil)
 			}
 		} else {
-			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
+			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.Remote)
 			pushCommand += strings.Join(refNames, " ")
 			sd.gitcmd.MustGit(pushCommand, nil)
 		}

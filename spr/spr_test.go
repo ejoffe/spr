@@ -21,8 +21,8 @@ func makeTestObjects(t *testing.T, synchronized bool) (
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
-	cfg.Repo.GitHubRemote = "origin"
-	cfg.Repo.GitHubBranch = "master"
+	cfg.Repo.Remote = "origin"
+	cfg.Repo.Branch = "master"
 	cfg.Repo.MergeMethod = "rebase"
 	gitmock = mockgit.NewMockGit(t)
 	githubmock = mockclient.NewMockClient(t)

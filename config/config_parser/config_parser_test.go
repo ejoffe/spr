@@ -69,9 +69,9 @@ func TestGitHubRemoteSource(t *testing.T) {
 
 	expect := config.Config{
 		Repo: &config.RepoConfig{
-			GitHubRepoOwner: "r2",
-			GitHubRepoName:  "d2",
-			GitHubHost:      "github.com",
+			RepoOwner:       "r2",
+			RepoName:        "d2",
+			ForgeHost:       "github.com",
 			RequireChecks:   false,
 			RequireApproval: false,
 			MergeMethod:     "",

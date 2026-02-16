@@ -21,11 +21,11 @@ func TestEmptyConfig(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	expect := &Config{
 		Repo: &RepoConfig{
-			GitHubRepoOwner:       "",
-			GitHubRepoName:        "",
-			GitHubRemote:          "origin",
-			GitHubBranch:          "main",
-			GitHubHost:            "github.com",
+			RepoOwner:             "",
+			RepoName:              "",
+			Remote:                "origin",
+			Branch:                "main",
+			ForgeHost:             "github.com",
 			RequireChecks:         true,
 			RequireApproval:       true,
 			MergeMethod:           "rebase",

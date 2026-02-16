@@ -136,9 +136,9 @@ so if you already use that, spr will automatically pick up your token.
 `
 
 func NewGitHubClient(ctx context.Context, config *config.Config) *client {
-	token := findToken(config.Repo.GitHubHost)
+	token := findToken(config.Repo.ForgeHost)
 	if token == "" {
-		fmt.Printf(tokenHelpText, config.Repo.GitHubHost)
+		fmt.Printf(tokenHelpText, config.Repo.ForgeHost)
 		os.Exit(3)
 	}
 	ts := oauth2.StaticTokenSource(
@@ -147,14 +147,14 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	tc := oauth2.NewClient(ctx, ts)
 
 	var api genclient.Client
-	if strings.HasSuffix(config.Repo.GitHubHost, "github.com") {
+	if strings.HasSuffix(config.Repo.ForgeHost, "github.com") {
 		api = genclient.NewClient("https://api.github.com/graphql", tc)
 	} else {
 		var scheme, host string
-		gitHubRemoteUrl, err := url.Parse(config.Repo.GitHubHost)
+		gitHubRemoteUrl, err := url.Parse(config.Repo.ForgeHost)
 		check(err)
 		if gitHubRemoteUrl.Host == "" {
-			host = config.Repo.GitHubHost
+			host = config.Repo.ForgeHost
 			scheme = "https"
 		} else {
 			host = gitHubRemoteUrl.Host
@@ -183,23 +183,23 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	var repoID string
 	if c.config.Repo.MergeQueue {
 		resp, err := c.api.PullRequestsWithMergeQueue(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName)
 		check(err)
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
 	} else {
 		resp, err := c.api.PullRequests(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName)
 		check(err)
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
 	}
 
-	targetBranch := c.config.Repo.GitHubBranch
+	targetBranch := c.config.Repo.Branch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
 	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, pullRequestConnection)
@@ -344,8 +344,8 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 	var endCursor *string
 	for {
 		resp, err := c.api.AssignableUsers(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName, endCursor)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName, endCursor)
 		if err != nil {
 			log.Fatal().Err(err).Msg("get assignable users failed")
 			return nil
@@ -373,7 +373,7 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := c.config.Repo.Branch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
@@ -427,7 +427,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := c.config.Repo.Branch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
