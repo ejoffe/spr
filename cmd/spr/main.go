@@ -53,31 +53,48 @@ func main() {
 	gitcmd = realgit.NewGitCmd(cfg)
 
 	ctx := context.Background()
+
+	forgeType := strings.ToLower(cfg.Repo.ForgeType)
+	if forgeType == "" {
+		host := strings.ToLower(cfg.Repo.ForgeHost)
+		switch {
+		case strings.Contains(host, "github"):
+			forgeType = "github"
+		case strings.Contains(host, "gitlab"):
+			forgeType = "gitlab"
+		default:
+			fmt.Printf("Unable to detect forge type from host %q.\n", cfg.Repo.ForgeHost)
+			fmt.Println("Please select your forge:")
+			fmt.Println("  1. GitHub")
+			fmt.Println("  2. GitLab")
+			fmt.Print("Choice [1/2]: ")
+			reader := bufio.NewReader(os.Stdin)
+			line, _ := reader.ReadString('\n')
+			line = strings.TrimSpace(line)
+			switch line {
+			case "1":
+				forgeType = "github"
+			case "2":
+				forgeType = "gitlab"
+			default:
+				fmt.Println("Invalid choice.")
+				os.Exit(2)
+			}
+		}
+		cfg.Repo.ForgeType = forgeType
+		rake.LoadSources(cfg.Repo,
+			rake.YamlFileWriter(config_parser.RepoConfigFilePath(gitcmd)))
+	}
+
 	var client forge.ForgeInterface
-	host := strings.ToLower(cfg.Repo.ForgeHost)
-	switch {
-	case strings.Contains(host, "github"):
+	switch forgeType {
+	case "github":
 		client = githubclient.NewGitHubClient(ctx, cfg)
-	case strings.Contains(host, "gitlab"):
+	case "gitlab":
 		client = gitlabclient.NewGitLabClient(ctx, cfg)
 	default:
-		fmt.Printf("Unable to detect forge type from host %q.\n", cfg.Repo.ForgeHost)
-		fmt.Println("Please select your forge:")
-		fmt.Println("  1. GitHub")
-		fmt.Println("  2. GitLab")
-		fmt.Print("Choice [1/2]: ")
-		reader := bufio.NewReader(os.Stdin)
-		line, _ := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
-		switch line {
-		case "1":
-			client = githubclient.NewGitHubClient(ctx, cfg)
-		case "2":
-			client = gitlabclient.NewGitLabClient(ctx, cfg)
-		default:
-			fmt.Println("Invalid choice.")
-			os.Exit(2)
-		}
+		fmt.Printf("Unknown forge type %q. Valid values: github, gitlab.\n", forgeType)
+		os.Exit(2)
 	}
 	stackedpr := spr.NewStackedPR(cfg, client, gitcmd)
 

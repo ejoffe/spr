@@ -18,6 +18,7 @@ type RepoConfig struct {
 	RepoOwner string `yaml:"repoOwner"`
 	RepoName  string `yaml:"repoName"`
 	ForgeHost string `yaml:"forgeHost"`
+	ForgeType string `yaml:"forgeType,omitempty"`
 
 	Remote string `default:"origin" yaml:"remote"`
 	Branch string `default:"main" yaml:"branch"`
