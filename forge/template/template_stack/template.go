@@ -2,8 +2,8 @@ package template_stack
 
 import (
 	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github/template"
 )
 
 type StackTemplatizer struct {

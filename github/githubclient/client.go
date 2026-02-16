@@ -12,10 +12,10 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template/config_fetcher"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github/githubclient/fezzik_types"
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
-	"github.com/ejoffe/spr/github/template/config_fetcher"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 )

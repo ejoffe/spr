@@ -10,8 +10,8 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template/config_fetcher"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github/template/config_fetcher"
 	"github.com/rs/zerolog/log"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"gopkg.in/yaml.v3"

@@ -12,8 +12,8 @@ import (
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github/template"
 	"github.com/rs/zerolog/log"
 )
 
