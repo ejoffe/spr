@@ -15,12 +15,12 @@ type Config struct {
 
 // Config object to hold spr configuration
 type RepoConfig struct {
-	RepoOwner string `yaml:"githubRepoOwner"`
-	RepoName  string `yaml:"githubRepoName"`
-	ForgeHost string `default:"github.com" yaml:"githubHost"`
+	RepoOwner string `yaml:"repoOwner"`
+	RepoName  string `yaml:"repoName"`
+	ForgeHost string `yaml:"forgeHost"`
 
-	Remote string `default:"origin" yaml:"githubRemote"`
-	Branch string `default:"main" yaml:"githubBranch"`
+	Remote string `default:"origin" yaml:"remote"`
+	Branch string `default:"main" yaml:"branch"`
 
 	RequireChecks    bool     `default:"true" yaml:"requireChecks"`
 	RequireApproval  bool     `default:"true" yaml:"requireApproval"`

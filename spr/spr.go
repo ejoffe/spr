@@ -340,7 +340,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
 			"✓ Commit merged in pull request [#%d](%s)",
-			prToMerge.Number, prToMerge.URL)
+			prToMerge.Number, forge.PullRequestURL(sd.config, prToMerge.Number))
 		sd.forge.CommentPullRequest(ctx, pr, comment)
 		sd.forge.ClosePullRequest(ctx, pr)
 		if sd.config.User.DeleteMergedBranches {

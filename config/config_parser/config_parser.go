@@ -11,14 +11,73 @@ import (
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
+
+// migrateRepoConfigKeys migrates old GitHub-specific YAML keys to
+// forge-agnostic names in the given .spr.yml file. If the file contains
+// any legacy keys they are renamed in place and the file is rewritten.
+func migrateRepoConfigKeys(cfgPath string) {
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return // file doesn't exist yet or is unreadable; nothing to migrate
+	}
+
+	var raw yaml.Node
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return
+	}
+
+	renames := map[string]string{
+		"githubRepoOwner": "repoOwner",
+		"githubRepoName":  "repoName",
+		"githubHost":      "forgeHost",
+		"githubRemote":    "remote",
+		"githubBranch":    "branch",
+	}
+
+	// The top-level node is a document; its first child is the mapping.
+	if raw.Kind != yaml.DocumentNode || len(raw.Content) == 0 {
+		return
+	}
+	mapping := raw.Content[0]
+	if mapping.Kind != yaml.MappingNode {
+		return
+	}
+
+	migrated := false
+	for i := 0; i < len(mapping.Content)-1; i += 2 {
+		keyNode := mapping.Content[i]
+		if newKey, ok := renames[keyNode.Value]; ok {
+			keyNode.Value = newKey
+			migrated = true
+		}
+	}
+
+	if !migrated {
+		return
+	}
+
+	out, err := yaml.Marshal(&raw)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to marshal migrated config")
+		return
+	}
+	if err := os.WriteFile(cfgPath, out, 0644); err != nil {
+		log.Warn().Err(err).Msg("failed to write migrated config")
+	}
+}
 
 func ParseConfig(gitcmd git.GitInterface) *config.Config {
 	cfg := config.EmptyConfig()
 
+	// Migrate legacy GitHub-specific config keys before loading.
+	migrateRepoConfigKeys(RepoConfigFilePath(gitcmd))
+
 	rake.LoadSources(cfg.Repo,
 		rake.DefaultSource(),
-		NewGitHubRemoteSource(cfg, gitcmd),
+		NewRemoteSource(cfg, gitcmd),
 		rake.YamlFileSource(RepoConfigFilePath(gitcmd)),
 		NewRemoteBranchSource(gitcmd),
 	)

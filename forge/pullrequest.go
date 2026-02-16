@@ -2,12 +2,23 @@ package forge
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/terminal"
 )
+
+func PullRequestURL(cfg *config.Config, number int) string {
+	host := strings.ToLower(cfg.Repo.ForgeHost)
+	if strings.Contains(host, "gitlab") {
+		return fmt.Sprintf("https://%s/%s/%s/-/merge_requests/%d",
+			cfg.Repo.ForgeHost, cfg.Repo.RepoOwner, cfg.Repo.RepoName, number)
+	}
+	return fmt.Sprintf("https://%s/%s/%s/pull/%d",
+		cfg.Repo.ForgeHost, cfg.Repo.RepoOwner, cfg.Repo.RepoName, number)
+}
 
 // PullRequest has pull request data
 type PullRequest struct {
@@ -170,8 +181,8 @@ func (pr *PullRequest) String(config *config.Config) string {
 	}
 
 	prInfo := fmt.Sprintf("%3d", pr.Number)
-	if config.User.ShowPRLink && pr.URL != "" {
-		prInfo = pr.URL
+	if config.User.ShowPRLink {
+		prInfo = PullRequestURL(config, pr.Number)
 	}
 
 	var mq string

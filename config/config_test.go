@@ -25,7 +25,7 @@ func TestDefaultConfig(t *testing.T) {
 			RepoName:              "",
 			Remote:                "origin",
 			Branch:                "main",
-			ForgeHost:             "github.com",
+			ForgeHost:             "",
 			RequireChecks:         true,
 			RequireApproval:       true,
 			MergeMethod:           "rebase",
