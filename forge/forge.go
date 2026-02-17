@@ -32,6 +32,9 @@ type ForgeInterface interface {
 
 	// ClosePullRequest closes the given pull request
 	ClosePullRequest(ctx context.Context, pr *PullRequest)
+
+	// PullRequestURL returns the web URL for the given pull request number
+	PullRequestURL(number int) string
 }
 
 type ForgeInfo struct {

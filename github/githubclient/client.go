@@ -520,6 +520,11 @@ func toGitHubMergeMethod(m config.MergeMethod) genclient.PullRequestMergeMethod 
 	}
 }
 
+func (c *client) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://%s/%s/%s/pull/%d",
+		c.config.Repo.ForgeHost, c.config.Repo.RepoOwner, c.config.Repo.RepoName, number)
+}
+
 func (c *client) ClosePullRequest(ctx context.Context, pr *forge.PullRequest) {
 	log.Debug().Interface("PR", pr).Msg("ClosePullRequest")
 	_, err := c.api.ClosePullRequest(ctx, genclient.ClosePullRequestInput{

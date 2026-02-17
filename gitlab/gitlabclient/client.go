@@ -449,6 +449,11 @@ func (c *client) MergePullRequest(ctx context.Context,
 	}
 }
 
+func (c *client) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://%s/%s/%s/-/merge_requests/%d",
+		c.config.Repo.ForgeHost, c.config.Repo.RepoOwner, c.config.Repo.RepoName, number)
+}
+
 func (c *client) ClosePullRequest(ctx context.Context, pr *forge.PullRequest) {
 	log.Debug().Interface("MR", pr).Msg("ClosePullRequest")
 	stateEvent := "close"

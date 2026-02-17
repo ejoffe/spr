@@ -116,6 +116,10 @@ func (c *MockClient) MergePullRequest(ctx context.Context,
 	})
 }
 
+func (c *MockClient) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://github.com/test/repo/pull/%d", number)
+}
+
 func (c *MockClient) ClosePullRequest(ctx context.Context, pr *forge.PullRequest) {
 	fmt.Printf("HUB: ClosePullRequest\n")
 	c.verifyExpectation(expectation{

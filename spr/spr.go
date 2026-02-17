@@ -340,7 +340,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
 			"✓ Commit merged in pull request [#%d](%s)",
-			prToMerge.Number, forge.PullRequestURL(sd.config, prToMerge.Number))
+			prToMerge.Number, sd.forge.PullRequestURL(prToMerge.Number))
 		sd.forge.CommentPullRequest(ctx, pr, comment)
 		sd.forge.ClosePullRequest(ctx, pr)
 		if sd.config.User.DeleteMergedBranches {
@@ -352,7 +352,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		pr.Merged = true
-		fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
+		fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config, sd.forge))
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -374,7 +374,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 		}
 		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 			pr := githubInfo.PullRequests[i]
-			fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
+			fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config, sd.forge))
 		}
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
