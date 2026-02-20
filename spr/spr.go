@@ -590,7 +590,7 @@ func check(err error) {
 func header(config *config.Config) string {
 	if config.User.StatusBitsEmojis {
 		return `
- ┌─ github checks pass
+ ┌─ ci checks pass
  │ ┌── pull request approved
  │ │ ┌─── no merge conflicts
  │ │ │ ┌──── stack check
@@ -598,7 +598,7 @@ func header(config *config.Config) string {
 `
 	} else {
 		return `
- ┌─ github checks pass
+ ┌─ ci checks pass
  │┌── pull request approved
  ││┌─── no merge conflicts
  │││┌──── stack check
