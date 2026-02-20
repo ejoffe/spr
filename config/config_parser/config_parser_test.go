@@ -44,6 +44,12 @@ func TestGetRepoDetailsFromRemote(t *testing.T) {
 
 		// GitHub names are case-sensitive
 		{"origin  https://github.com/R2/D2.git (push)", "github.com", "R2", "D2", true},
+
+		// GitLab nested subgroups (multi-level paths)
+		{"origin  https://gitlab.cfdata.org/cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  git@gitlab.cfdata.org:cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  ssh://git@gitlab.cfdata.org/cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  https://gitlab.cfdata.org/cloudflare/rt/mobile/core (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
 	}
 	for i, testCase := range testCases {
 		t.Logf("Testing %v %q", i, testCase.remote)
