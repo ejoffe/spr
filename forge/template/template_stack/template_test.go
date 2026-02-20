@@ -381,6 +381,12 @@ func TestBody_EmptyBody(t *testing.T) {
 	assert.Contains(t, result, "#1")
 	assert.Contains(t, result, "⚠️")
 	assert.Contains(t, result, "Part of a stack created by [spr]")
+
+	// Body must not start with "---" (even after trimming whitespace),
+	// because Markdown renderers (especially GitLab) interpret leading
+	// "---" as YAML frontmatter, swallowing everything until the next "---".
+	assert.False(t, strings.HasPrefix(strings.TrimSpace(result), "---"),
+		"empty commit body must not produce output starting with --- (YAML frontmatter)")
 }
 
 func TestBody_SinglePRInStack(t *testing.T) {
@@ -575,10 +581,7 @@ It even includes some **markdown** formatting.`}
 				PRNumberPrefix: "#",
 				PullRequests:   []*forge.PullRequest{},
 			},
-			expected: `
-
----
-**Stack**:
+			expected: `**Stack**:
 ---
 ⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
 		},
