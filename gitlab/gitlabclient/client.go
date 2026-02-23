@@ -3,10 +3,12 @@ package gitlabclient
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/forge"
@@ -434,19 +436,41 @@ func (c *client) MergePullRequest(ctx context.Context,
 		}
 	}
 
-	_, _, err := c.api.MergeRequests.AcceptMergeRequest(c.projectID, int64(pr.Number), opts)
-	if err != nil {
-		log.Fatal().
-			Str("id", pr.ID).
-			Int("number", pr.Number).
-			Str("title", pr.Title).
-			Err(err).
-			Msg("merge request merge failed")
+	// GitLab recalculates MR mergeability asynchronously after target branch
+	// changes and rebases. Retry on 405 (not yet mergeable) with backoff.
+	const maxAttempts = 15
+	const retryDelay = 2 * time.Second
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		_, resp, err := c.api.MergeRequests.AcceptMergeRequest(c.projectID, int64(pr.Number), opts)
+		if err == nil {
+			if c.config.User.LogGitHubCalls {
+				fmt.Printf("> gitlab merge !%d : %s\n", pr.Number, pr.Title)
+			}
+			return
+		}
+		lastErr = err
+
+		if resp == nil || resp.StatusCode != http.StatusMethodNotAllowed {
+			break
+		}
+
+		if attempt < maxAttempts {
+			log.Debug().
+				Int("attempt", attempt).
+				Int("maxAttempts", maxAttempts).
+				Msg("merge request not yet mergeable, waiting")
+			time.Sleep(retryDelay)
+		}
 	}
 
-	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> gitlab merge !%d : %s\n", pr.Number, pr.Title)
-	}
+	log.Fatal().
+		Str("id", pr.ID).
+		Int("number", pr.Number).
+		Str("title", pr.Title).
+		Err(lastErr).
+		Msg("merge request merge failed")
 }
 
 func (c *client) PullRequestURL(number int) string {
