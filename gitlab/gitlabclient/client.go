@@ -152,7 +152,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *forge.Fo
 		if err != nil {
 			log.Warn().Err(err).Int("mr", pr.Number).Msg("failed to get merge request approvals")
 		} else {
-			pr.MergeStatus.ReviewApproved = approvals.Approved
+			pr.MergeStatus.ReviewApproved = len(approvals.ApprovedBy) > 0
 		}
 	}
 	for _, pr := range pullRequests {
