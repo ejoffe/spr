@@ -1,4 +1,4 @@
-package github
+package forge
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/ejoffe/spr/terminal"
 )
 
-// PullRequest has GitHub pull request data
+// PullRequest has pull request data
 type PullRequest struct {
 	ID         string
 	Number     int
@@ -30,28 +30,22 @@ type checkStatus int
 const (
 	// CheckStatusUnknown
 	CheckStatusUnknown checkStatus = iota
-
 	// CheckStatusPending when checks are still running
 	CheckStatusPending
-
 	// CheckStatusPass when all checks pass
 	CheckStatusPass
-
-	// CheckStatusFail when some chechs have failed
+	// CheckStatusFail when some checks have failed
 	CheckStatusFail
 )
 
 // PullRequestMergeStatus is the merge status of a pull request
 type PullRequestMergeStatus struct {
-	// ChecksPass is the status of GitHub checks
+	// ChecksPass is the status of pull request checks
 	ChecksPass checkStatus
-
 	// ReviewApproved is true when a pull request is approved by a fellow reviewer
 	ReviewApproved bool
-
 	// NoConflicts is true when there are no merge conflicts
 	NoConflicts bool
-
 	// Stacked is true when all requests in the stack up to this one are ready to merge
 	Stacked bool
 }
@@ -136,7 +130,7 @@ func statusBitIcons(config *config.Config) map[string]string {
 	}
 }
 
-// StatusString returs a string representation of the merge status bits
+// StatusString returns a string representation of the merge status bits
 func (pr *PullRequest) StatusString(config *config.Config) string {
 	icons := statusBitIcons(config)
 	statusString := "["
@@ -169,7 +163,7 @@ func (pr *PullRequest) StatusString(config *config.Config) string {
 	return statusString
 }
 
-func (pr *PullRequest) String(config *config.Config) string {
+func (pr *PullRequest) String(config *config.Config, forgeClient ForgeInterface) string {
 	prStatus := pr.StatusString(config)
 	if pr.Merged {
 		prStatus = "MERGED"
@@ -177,8 +171,7 @@ func (pr *PullRequest) String(config *config.Config) string {
 
 	prInfo := fmt.Sprintf("%3d", pr.Number)
 	if config.User.ShowPRLink {
-		prInfo = fmt.Sprintf("https://%s/%s/%s/pull/%d",
-			config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+		prInfo = forgeClient.PullRequestURL(pr.Number)
 	}
 
 	var mq string

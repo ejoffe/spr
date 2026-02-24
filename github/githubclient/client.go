@@ -11,11 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template/config_fetcher"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/githubclient/fezzik_types"
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
-	"github.com/ejoffe/spr/github/template/config_fetcher"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 )
@@ -136,9 +136,9 @@ so if you already use that, spr will automatically pick up your token.
 `
 
 func NewGitHubClient(ctx context.Context, config *config.Config) *client {
-	token := findToken(config.Repo.GitHubHost)
+	token := findToken(config.Repo.ForgeHost)
 	if token == "" {
-		fmt.Printf(tokenHelpText, config.Repo.GitHubHost)
+		fmt.Printf(tokenHelpText, config.Repo.ForgeHost)
 		os.Exit(3)
 	}
 	ts := oauth2.StaticTokenSource(
@@ -147,14 +147,14 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	tc := oauth2.NewClient(ctx, ts)
 
 	var api genclient.Client
-	if strings.HasSuffix(config.Repo.GitHubHost, "github.com") {
+	if strings.HasSuffix(config.Repo.ForgeHost, "github.com") {
 		api = genclient.NewClient("https://api.github.com/graphql", tc)
 	} else {
 		var scheme, host string
-		gitHubRemoteUrl, err := url.Parse(config.Repo.GitHubHost)
+		gitHubRemoteUrl, err := url.Parse(config.Repo.ForgeHost)
 		check(err)
 		if gitHubRemoteUrl.Host == "" {
-			host = config.Repo.GitHubHost
+			host = config.Repo.ForgeHost
 			scheme = "https"
 		} else {
 			host = gitHubRemoteUrl.Host
@@ -173,7 +173,7 @@ type client struct {
 	api    genclient.Client
 }
 
-func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
+func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *forge.ForgeInfo {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
 	}
@@ -183,23 +183,23 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	var repoID string
 	if c.config.Repo.MergeQueue {
 		resp, err := c.api.PullRequestsWithMergeQueue(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName)
 		check(err)
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
 	} else {
 		resp, err := c.api.PullRequests(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName)
 		check(err)
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
 	}
 
-	targetBranch := c.config.Repo.GitHubBranch
+	targetBranch := c.config.Repo.Branch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
 	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, pullRequestConnection)
@@ -211,11 +211,12 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 		}
 	}
 
-	info := &github.GitHubInfo{
-		UserName:     loginName,
-		RepositoryID: repoID,
-		LocalBranch:  git.GetLocalBranchName(gitcmd),
-		PullRequests: pullRequests,
+	info := &forge.ForgeInfo{
+		UserName:       loginName,
+		RepositoryID:   repoID,
+		LocalBranch:    git.GetLocalBranchName(gitcmd),
+		PullRequests:   pullRequests,
+		PRNumberPrefix: "#",
 	}
 
 	log.Debug().Interface("Info", info).Msg("GetInfo")
@@ -226,14 +227,14 @@ func matchPullRequestStack(
 	repoConfig *config.RepoConfig,
 	targetBranch string,
 	localCommitStack []git.Commit,
-	allPullRequests fezzik_types.PullRequestConnection) []*github.PullRequest {
+	allPullRequests fezzik_types.PullRequestConnection) []*forge.PullRequest {
 
 	if len(localCommitStack) == 0 || allPullRequests.Nodes == nil {
-		return []*github.PullRequest{}
+		return []*forge.PullRequest{}
 	}
 
 	// pullRequestMap is a map from commit-id to pull request
-	pullRequestMap := make(map[string]*github.PullRequest)
+	pullRequestMap := make(map[string]*forge.PullRequest)
 	for _, node := range *allPullRequests.Nodes {
 		var commits []git.Commit
 		for _, v := range *node.Commits.Nodes {
@@ -249,7 +250,7 @@ func matchPullRequestStack(
 			}
 		}
 
-		pullRequest := &github.PullRequest{
+		pullRequest := &forge.PullRequest{
 			ID:         node.Id,
 			Number:     node.Number,
 			Title:      node.Title,
@@ -270,19 +271,19 @@ func matchPullRequestStack(
 				Body:       commit.MessageBody,
 			}
 
-			checkStatus := github.CheckStatusPass
+			checkStatus := forge.CheckStatusPass
 			if commit.StatusCheckRollup != nil {
 				switch commit.StatusCheckRollup.State {
 				case "SUCCESS":
-					checkStatus = github.CheckStatusPass
+					checkStatus = forge.CheckStatusPass
 				case "PENDING":
-					checkStatus = github.CheckStatusPending
+					checkStatus = forge.CheckStatusPending
 				default:
-					checkStatus = github.CheckStatusFail
+					checkStatus = forge.CheckStatusFail
 				}
 			}
 
-			pullRequest.MergeStatus = github.PullRequestMergeStatus{
+			pullRequest.MergeStatus = forge.PullRequestMergeStatus{
 				ChecksPass:     checkStatus,
 				ReviewApproved: node.ReviewDecision != nil && *node.ReviewDecision == "APPROVED",
 				NoConflicts:    node.Mergeable == "MERGEABLE",
@@ -292,67 +293,29 @@ func matchPullRequestStack(
 		}
 	}
 
-	var pullRequests []*github.PullRequest
-
-	// find top pr
-	var currpr *github.PullRequest
-	var found bool
-	for i := len(localCommitStack) - 1; i >= 0; i-- {
-		currpr, found = pullRequestMap[localCommitStack[i].CommitID]
-		if found {
-			break
-		}
-	}
-
-	// The list of commits from the command line actually starts at the
-	//  most recent commit. In order to reverse the list we use a
-	//  custom prepend function instead of append
-	prepend := func(l []*github.PullRequest, pr *github.PullRequest) []*github.PullRequest {
-		l = append(l, &github.PullRequest{})
-		copy(l[1:], l)
-		l[0] = pr
-		return l
-	}
-
-	// build pr stack
-	for currpr != nil {
-		pullRequests = prepend(pullRequests, currpr)
-		if currpr.ToBranch == targetBranch {
-			break
-		}
-
-		matches := git.BranchNameRegex.FindStringSubmatch(currpr.ToBranch)
-		if matches == nil {
-			panic(fmt.Errorf("invalid base branch for pull request:%s", currpr.ToBranch))
-		}
-		nextCommitID := matches[2]
-
-		currpr = pullRequestMap[nextCommitID]
-	}
-
-	return pullRequests
+	return forge.BuildPullRequestStack(targetBranch, localCommitStack, pullRequestMap)
 }
 
 // GetAssignableUsers is taken from github.com/cli/cli/api and is the approach used by the official gh
 // client to resolve user IDs to "ID" values for the update PR API calls. See api.RepoAssignableUsers.
-func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
+func (c *client) GetAssignableUsers(ctx context.Context) []forge.RepoAssignee {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github get assignable users\n")
 	}
 
-	users := []github.RepoAssignee{}
+	users := []forge.RepoAssignee{}
 	var endCursor *string
 	for {
 		resp, err := c.api.AssignableUsers(ctx,
-			c.config.Repo.GitHubRepoOwner,
-			c.config.Repo.GitHubRepoName, endCursor)
+			c.config.Repo.RepoOwner,
+			c.config.Repo.RepoName, endCursor)
 		if err != nil {
 			log.Fatal().Err(err).Msg("get assignable users failed")
 			return nil
 		}
 
 		for _, node := range *resp.Repository.AssignableUsers.Nodes {
-			user := github.RepoAssignee{
+			user := forge.RepoAssignee{
 				ID:    node.Id,
 				Login: node.Login,
 			}
@@ -371,9 +334,9 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 }
 
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
-	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
+	info *forge.ForgeInfo, commit git.Commit, prevCommit *git.Commit) *forge.PullRequest {
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := c.config.Repo.Branch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
@@ -396,7 +359,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	})
 	check(err)
 
-	pr := &github.PullRequest{
+	pr := &forge.PullRequest{
 		ID:         resp.CreatePullRequest.PullRequest.Id,
 		Number:     resp.CreatePullRequest.PullRequest.Number,
 		FromBranch: headRefName,
@@ -404,8 +367,8 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Commit:     commit,
 		Title:      commit.Subject,
 		Body:       resp.CreatePullRequest.PullRequest.Body,
-		MergeStatus: github.PullRequestMergeStatus{
-			ChecksPass:     github.CheckStatusUnknown,
+		MergeStatus: forge.PullRequestMergeStatus{
+			ChecksPass:     forge.CheckStatusUnknown,
 			ReviewApproved: false,
 			NoConflicts:    false,
 			Stacked:        false,
@@ -420,14 +383,14 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 }
 
 func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
-	info *github.GitHubInfo, pullRequests []*github.PullRequest, pr *github.PullRequest,
+	info *forge.ForgeInfo, pullRequests []*forge.PullRequest, pr *forge.PullRequest,
 	commit git.Commit, prevCommit *git.Commit) {
 
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
 	}
 
-	baseRefName := c.config.Repo.GitHubBranch
+	baseRefName := c.config.Repo.Branch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
 	}
@@ -468,7 +431,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 // AddReviewers adds reviewers to the provided pull request using the requestReviews() API call. It
 // takes github user IDs (ID type) as its input. These can be found by first querying the AssignableUsers
 // for the repo, and then mapping login name to ID.
-func (c *client) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
+func (c *client) AddReviewers(ctx context.Context, pr *forge.PullRequest, userIDs []string) {
 	log.Debug().Strs("userIDs", userIDs).Msg("AddReviewers")
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github add reviewers %d : %s - %+v\n", pr.Number, pr.Title, userIDs)
@@ -490,7 +453,7 @@ func (c *client) AddReviewers(ctx context.Context, pr *github.PullRequest, userI
 	}
 }
 
-func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
+func (c *client) CommentPullRequest(ctx context.Context, pr *forge.PullRequest, comment string) {
 	_, err := c.api.CommentPullRequest(ctx, genclient.AddCommentInput{
 		SubjectId: pr.ID,
 		Body:      comment,
@@ -510,22 +473,23 @@ func (c *client) CommentPullRequest(ctx context.Context, pr *github.PullRequest,
 }
 
 func (c *client) MergePullRequest(ctx context.Context,
-	pr *github.PullRequest, mergeMethod genclient.PullRequestMergeMethod) {
+	pr *forge.PullRequest, mergeMethod config.MergeMethod) {
 	log.Debug().
 		Interface("PR", pr).
 		Str("mergeMethod", string(mergeMethod)).
 		Msg("MergePullRequest")
 
+	apiMergeMethod := toGitHubMergeMethod(mergeMethod)
 	var err error
 	if c.config.Repo.MergeQueue {
 		_, err = c.api.AutoMergePullRequest(ctx, genclient.EnablePullRequestAutoMergeInput{
 			PullRequestId: pr.ID,
-			MergeMethod:   &mergeMethod,
+			MergeMethod:   &apiMergeMethod,
 		})
 	} else {
 		_, err = c.api.MergePullRequest(ctx, genclient.MergePullRequestInput{
 			PullRequestId: pr.ID,
-			MergeMethod:   &mergeMethod,
+			MergeMethod:   &apiMergeMethod,
 		})
 	}
 	if err != nil {
@@ -543,7 +507,25 @@ func (c *client) MergePullRequest(ctx context.Context,
 	}
 }
 
-func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
+func toGitHubMergeMethod(m config.MergeMethod) genclient.PullRequestMergeMethod {
+	switch m {
+	case config.MergeMethodMerge:
+		return genclient.PullRequestMergeMethod_MERGE
+	case config.MergeMethodSquash:
+		return genclient.PullRequestMergeMethod_SQUASH
+	case config.MergeMethodRebase:
+		return genclient.PullRequestMergeMethod_REBASE
+	default:
+		return genclient.PullRequestMergeMethod_REBASE
+	}
+}
+
+func (c *client) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://%s/%s/%s/pull/%d",
+		c.config.Repo.ForgeHost, c.config.Repo.RepoOwner, c.config.Repo.RepoName, number)
+}
+
+func (c *client) ClosePullRequest(ctx context.Context, pr *forge.PullRequest) {
 	log.Debug().Interface("PR", pr).Msg("ClosePullRequest")
 	_, err := c.api.ClosePullRequest(ctx, genclient.ClosePullRequestInput{
 		PullRequestId: pr.ID,

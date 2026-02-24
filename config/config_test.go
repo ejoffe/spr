@@ -3,7 +3,6 @@ package config
 import (
 	"testing"
 
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,11 +21,11 @@ func TestEmptyConfig(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	expect := &Config{
 		Repo: &RepoConfig{
-			GitHubRepoOwner:       "",
-			GitHubRepoName:        "",
-			GitHubRemote:          "origin",
-			GitHubBranch:          "main",
-			GitHubHost:            "github.com",
+			RepoOwner:             "",
+			RepoName:              "",
+			Remote:                "origin",
+			Branch:                "main",
+			ForgeHost:             "",
 			RequireChecks:         true,
 			RequireApproval:       true,
 			MergeMethod:           "rebase",
@@ -54,23 +53,23 @@ func TestDefaultConfig(t *testing.T) {
 func TestMergeMethodHelper(t *testing.T) {
 	for _, tc := range []struct {
 		configValue string
-		expected    genclient.PullRequestMergeMethod
+		expected    MergeMethod
 	}{
 		{
 			configValue: "rebase",
-			expected:    genclient.PullRequestMergeMethod_REBASE,
+			expected:    MergeMethodRebase,
 		},
 		{
 			configValue: "",
-			expected:    genclient.PullRequestMergeMethod_REBASE,
+			expected:    MergeMethodRebase,
 		},
 		{
 			configValue: "Merge",
-			expected:    genclient.PullRequestMergeMethod_MERGE,
+			expected:    MergeMethodMerge,
 		},
 		{
 			configValue: "SQUASH",
-			expected:    genclient.PullRequestMergeMethod_SQUASH,
+			expected:    MergeMethodSquash,
 		},
 	} {
 		tcName := tc.configValue
@@ -79,14 +78,14 @@ func TestMergeMethodHelper(t *testing.T) {
 		}
 		t.Run(tcName, func(t *testing.T) {
 			config := &Config{Repo: &RepoConfig{MergeMethod: tc.configValue}}
-			actual, err := config.MergeMethod()
+			actual, err := config.ParseMergeMethod()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
 	t.Run("invalid", func(t *testing.T) {
 		config := &Config{Repo: &RepoConfig{MergeMethod: "magic"}}
-		actual, err := config.MergeMethod()
+		actual, err := config.ParseMergeMethod()
 		assert.Error(t, err)
 		assert.Empty(t, actual)
 	})

@@ -80,7 +80,7 @@ func (m *Mock) ExpectFetch() {
 }
 
 func (m *Mock) ExpectDeleteBranch(branchName string) {
-	m.expect(fmt.Sprintf("git DeleteRemoteBranch(%s)", branchName))
+	m.expect("git DeleteRemoteBranch(%s)", branchName)
 }
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
@@ -99,7 +99,7 @@ func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
 		branchName := "spr/master/" + c.CommitID
 		refNames = append(refNames, c.CommitHash+":refs/heads/"+branchName)
 	}
-	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))
+	m.expect("git push --force --atomic origin %s", strings.Join(refNames, " "))
 }
 
 func (m *Mock) ExpectRemote(remote string) {
@@ -109,7 +109,7 @@ func (m *Mock) ExpectRemote(remote string) {
 }
 
 func (m *Mock) ExpectFixup(commitHash string) {
-	m.expect("git commit --fixup " + commitHash)
+	m.expect("git commit --fixup %s", commitHash)
 	m.expect("git rebase -i --autosquash --autostash origin/master")
 }
 

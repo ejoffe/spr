@@ -31,6 +31,6 @@ func (s *remoteBranch) Load(cfg interface{}) {
 
 	repoCfg := cfg.(*config.RepoConfig)
 
-	repoCfg.GitHubRemote = matches[2]
-	repoCfg.GitHubBranch = matches[3]
+	repoCfg.Remote = matches[2]
+	repoCfg.Branch = matches[3]
 }

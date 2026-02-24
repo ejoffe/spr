@@ -10,11 +10,11 @@ import (
 
 func TestGetRepoDetailsFromRemote(t *testing.T) {
 	type testCase struct {
-		remote     string
-		githubHost string
-		repoOwner  string
-		repoName   string
-		match      bool
+		remote    string
+		forgeHost string
+		repoOwner string
+		repoName  string
+		match     bool
 	}
 	testCases := []testCase{
 		{"origin  https://github.com/r2/d2.git (push)", "github.com", "r2", "d2", true},
@@ -44,12 +44,18 @@ func TestGetRepoDetailsFromRemote(t *testing.T) {
 
 		// GitHub names are case-sensitive
 		{"origin  https://github.com/R2/D2.git (push)", "github.com", "R2", "D2", true},
+
+		// GitLab nested subgroups (multi-level paths)
+		{"origin  https://gitlab.cfdata.org/cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  git@gitlab.cfdata.org:cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  ssh://git@gitlab.cfdata.org/cloudflare/rt/mobile/core.git (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
+		{"origin  https://gitlab.cfdata.org/cloudflare/rt/mobile/core (push)", "gitlab.cfdata.org", "cloudflare/rt/mobile", "core", true},
 	}
 	for i, testCase := range testCases {
 		t.Logf("Testing %v %q", i, testCase.remote)
-		githubHost, repoOwner, repoName, match := getRepoDetailsFromRemote(testCase.remote)
-		if githubHost != testCase.githubHost {
-			t.Fatalf("Wrong \"githubHost\" returned for test case %v, expected %q, got %q", i, testCase.githubHost, githubHost)
+		forgeHost, repoOwner, repoName, match := getRepoDetailsFromRemote(testCase.remote)
+		if forgeHost != testCase.forgeHost {
+			t.Fatalf("Wrong \"forgeHost\" returned for test case %v, expected %q, got %q", i, testCase.forgeHost, forgeHost)
 		}
 		if repoOwner != testCase.repoOwner {
 			t.Fatalf("Wrong \"repoOwner\" returned for test case %v, expected %q, got %q", i, testCase.repoOwner, repoOwner)
@@ -63,15 +69,15 @@ func TestGetRepoDetailsFromRemote(t *testing.T) {
 	}
 }
 
-func TestGitHubRemoteSource(t *testing.T) {
+func TestRemoteSource(t *testing.T) {
 	mock := mockgit.NewMockGit(t)
 	mock.ExpectRemote("https://github.com/r2/d2.git")
 
 	expect := config.Config{
 		Repo: &config.RepoConfig{
-			GitHubRepoOwner: "r2",
-			GitHubRepoName:  "d2",
-			GitHubHost:      "github.com",
+			RepoOwner:       "r2",
+			RepoName:        "d2",
+			ForgeHost:       "github.com",
 			RequireChecks:   false,
 			RequireApproval: false,
 			MergeMethod:     "",
@@ -88,7 +94,7 @@ func TestGitHubRemoteSource(t *testing.T) {
 		Repo: &config.RepoConfig{},
 		User: &config.UserConfig{},
 	}
-	source := NewGitHubRemoteSource(&actual, mock)
+	source := NewRemoteSource(&actual, mock)
 	source.Load(nil)
 	assert.Equal(t, expect, actual)
 	mock.ExpectationsMet()

@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/config/config_parser"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
+	"github.com/ejoffe/spr/gitlab/gitlabclient"
 	"github.com/ejoffe/spr/spr"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -49,7 +53,49 @@ func main() {
 	gitcmd = realgit.NewGitCmd(cfg)
 
 	ctx := context.Background()
-	client := githubclient.NewGitHubClient(ctx, cfg)
+
+	forgeType := strings.ToLower(cfg.Repo.ForgeType)
+	if forgeType == "" {
+		host := strings.ToLower(cfg.Repo.ForgeHost)
+		switch {
+		case strings.Contains(host, "github"):
+			forgeType = "github"
+		case strings.Contains(host, "gitlab"):
+			forgeType = "gitlab"
+		default:
+			fmt.Printf("Unable to detect forge type from host %q.\n", cfg.Repo.ForgeHost)
+			fmt.Println("Please select your forge:")
+			fmt.Println("  1. GitHub")
+			fmt.Println("  2. GitLab")
+			fmt.Print("Choice [1/2]: ")
+			reader := bufio.NewReader(os.Stdin)
+			line, _ := reader.ReadString('\n')
+			line = strings.TrimSpace(line)
+			switch line {
+			case "1":
+				forgeType = "github"
+			case "2":
+				forgeType = "gitlab"
+			default:
+				fmt.Println("Invalid choice.")
+				os.Exit(2)
+			}
+		}
+		cfg.Repo.ForgeType = forgeType
+		rake.LoadSources(cfg.Repo,
+			rake.YamlFileWriter(config_parser.RepoConfigFilePath(gitcmd)))
+	}
+
+	var client forge.ForgeInterface
+	switch forgeType {
+	case "github":
+		client = githubclient.NewGitHubClient(ctx, cfg)
+	case "gitlab":
+		client = gitlabclient.NewGitLabClient(ctx, cfg)
+	default:
+		fmt.Printf("Unknown forge type %q. Valid values: github, gitlab.\n", forgeType)
+		os.Exit(2)
+	}
 	stackedpr := spr.NewStackedPR(cfg, client, gitcmd)
 
 	detailFlag := &cli.BoolFlag{
@@ -122,7 +168,12 @@ VERSION: fork of {{.Version}}
 				cfg.User.LogGitCommands = true
 				cfg.User.LogGitHubCalls = true
 			}
-			client.MaybeStar(ctx, cfg)
+			type stargazer interface {
+				MaybeStar(ctx context.Context, cfg *config.Config)
+			}
+			if s, ok := client.(stargazer); ok {
+				s.MaybeStar(ctx, cfg)
+			}
 			return nil
 		},
 		Commands: []*cli.Command{

@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTitle(t *testing.T) {
 	templatizer := &WhyWhatTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name   string
@@ -54,7 +54,7 @@ func TestTitle(t *testing.T) {
 
 func TestBody(t *testing.T) {
 	templatizer := &WhyWhatTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name        string
@@ -313,7 +313,7 @@ func TestSplitByEmptyLines(t *testing.T) {
 func TestBodyTemplateStructure(t *testing.T) {
 	// This test ensures the template always produces the correct structure
 	templatizer := &WhyWhatTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	commit := git.Commit{
 		Subject: "Test",
@@ -336,7 +336,7 @@ func TestBodyTemplateStructure(t *testing.T) {
 
 func TestBodyWithRealWorldExamples(t *testing.T) {
 	templatizer := &WhyWhatTemplatizer{}
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{}
 
 	tests := []struct {
 		name   string

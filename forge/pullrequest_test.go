@@ -1,6 +1,7 @@
-package github
+package forge
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,6 +9,23 @@ import (
 	"github.com/ejoffe/spr/git"
 	"github.com/stretchr/testify/assert"
 )
+
+type stubForge struct{}
+
+func (stubForge) GetInfo(context.Context, git.GitInterface) *ForgeInfo { return nil }
+func (stubForge) GetAssignableUsers(context.Context) []RepoAssignee    { return nil }
+func (stubForge) CreatePullRequest(context.Context, git.GitInterface, *ForgeInfo, git.Commit, *git.Commit) *PullRequest {
+	return nil
+}
+func (stubForge) UpdatePullRequest(context.Context, git.GitInterface, *ForgeInfo, []*PullRequest, *PullRequest, git.Commit, *git.Commit) {
+}
+func (stubForge) AddReviewers(context.Context, *PullRequest, []string)               {}
+func (stubForge) CommentPullRequest(context.Context, *PullRequest, string)           {}
+func (stubForge) MergePullRequest(context.Context, *PullRequest, config.MergeMethod) {}
+func (stubForge) ClosePullRequest(context.Context, *PullRequest)                     {}
+func (stubForge) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://stub/pull/%d", number)
+}
 
 func TestMergable(t *testing.T) {
 	type testcase struct {
@@ -176,6 +194,6 @@ func TestString(t *testing.T) {
 		{expect: "[?xxx] !   0 : Title", pr: pr(false, 2), cfg: cfg},
 	}
 	for i, test := range tests {
-		assert.Equal(t, test.expect, test.pr.String(test.cfg), fmt.Sprintf("case %d failed", i))
+		assert.Equal(t, test.expect, test.pr.String(test.cfg, stubForge{}), fmt.Sprintf("case %d failed", i))
 	}
 }

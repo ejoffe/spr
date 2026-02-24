@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,13 +27,13 @@ func NewMockClient(t *testing.T) *MockClient {
 
 type MockClient struct {
 	assert       *require.Assertions
-	Info         *github.GitHubInfo
+	Info         *forge.ForgeInfo
 	expect       []expectation
 	expectMutex  sync.Mutex
 	Synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
 }
 
-func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
+func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *forge.ForgeInfo {
 	fmt.Printf("HUB: GetInfo\n")
 	c.verifyExpectation(expectation{
 		op: getInfoOP,
@@ -41,12 +41,12 @@ func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *gith
 	return c.Info
 }
 
-func (c *MockClient) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
+func (c *MockClient) GetAssignableUsers(ctx context.Context) []forge.RepoAssignee {
 	fmt.Printf("HUB: GetAssignableUsers\n")
 	c.verifyExpectation(expectation{
 		op: getAssignableUsersOP,
 	})
-	return []github.RepoAssignee{
+	return []forge.RepoAssignee{
 		{
 			ID:    NobodyUserID,
 			Login: NobodyLogin,
@@ -55,8 +55,8 @@ func (c *MockClient) GetAssignableUsers(ctx context.Context) []github.RepoAssign
 	}
 }
 
-func (c *MockClient) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *github.GitHubInfo,
-	commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
+func (c *MockClient) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *forge.ForgeInfo,
+	commit git.Commit, prevCommit *git.Commit) *forge.PullRequest {
 	fmt.Printf("HUB: CreatePullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     createPullRequestOP,
@@ -66,15 +66,15 @@ func (c *MockClient) CreatePullRequest(ctx context.Context, gitcmd git.GitInterf
 
 	// TODO - don't hardcode ID and Number
 	// TODO - set FromBranch and ToBranch correctly
-	return &github.PullRequest{
+	return &forge.PullRequest{
 		ID:         "001",
 		Number:     1,
 		FromBranch: "from_branch",
 		ToBranch:   "to_branch",
 		Commit:     commit,
 		Title:      commit.Subject,
-		MergeStatus: github.PullRequestMergeStatus{
-			ChecksPass:     github.CheckStatusPass,
+		MergeStatus: forge.PullRequestMergeStatus{
+			ChecksPass:     forge.CheckStatusPass,
 			ReviewApproved: true,
 			NoConflicts:    true,
 			Stacked:        true,
@@ -82,7 +82,7 @@ func (c *MockClient) CreatePullRequest(ctx context.Context, gitcmd git.GitInterf
 	}
 }
 
-func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *github.GitHubInfo, pullRequests []*github.PullRequest, pr *github.PullRequest, commit git.Commit, prevCommit *git.Commit) {
+func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface, info *forge.ForgeInfo, pullRequests []*forge.PullRequest, pr *forge.PullRequest, commit git.Commit, prevCommit *git.Commit) {
 	fmt.Printf("HUB: UpdatePullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     updatePullRequestOP,
@@ -91,14 +91,14 @@ func (c *MockClient) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterf
 	})
 }
 
-func (c *MockClient) AddReviewers(ctx context.Context, pr *github.PullRequest, userIDs []string) {
+func (c *MockClient) AddReviewers(ctx context.Context, pr *forge.PullRequest, userIDs []string) {
 	c.verifyExpectation(expectation{
 		op:      addReviewersOP,
 		userIDs: userIDs,
 	})
 }
 
-func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequest, comment string) {
+func (c *MockClient) CommentPullRequest(ctx context.Context, pr *forge.PullRequest, comment string) {
 	fmt.Printf("HUB: CommentPullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     commentPullRequestOP,
@@ -107,7 +107,7 @@ func (c *MockClient) CommentPullRequest(ctx context.Context, pr *github.PullRequ
 }
 
 func (c *MockClient) MergePullRequest(ctx context.Context,
-	pr *github.PullRequest, mergeMethod genclient.PullRequestMergeMethod) {
+	pr *forge.PullRequest, mergeMethod config.MergeMethod) {
 	fmt.Printf("HUB: MergePullRequest, method=%q\n", mergeMethod)
 	c.verifyExpectation(expectation{
 		op:          mergePullRequestOP,
@@ -116,7 +116,11 @@ func (c *MockClient) MergePullRequest(ctx context.Context,
 	})
 }
 
-func (c *MockClient) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
+func (c *MockClient) PullRequestURL(number int) string {
+	return fmt.Sprintf("https://github.com/test/repo/pull/%d", number)
+}
+
+func (c *MockClient) ClosePullRequest(ctx context.Context, pr *forge.PullRequest) {
 	fmt.Printf("HUB: ClosePullRequest\n")
 	c.verifyExpectation(expectation{
 		op:     closePullRequestOP,
@@ -184,7 +188,7 @@ func (c *MockClient) ExpectCommentPullRequest(commit git.Commit) {
 	})
 }
 
-func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod genclient.PullRequestMergeMethod) {
+func (c *MockClient) ExpectMergePullRequest(commit git.Commit, mergeMethod config.MergeMethod) {
 	c.expectMutex.Lock()
 	defer c.expectMutex.Unlock()
 
@@ -257,6 +261,6 @@ type expectation struct {
 	op          operation
 	commit      git.Commit
 	prev        *git.Commit
-	mergeMethod genclient.PullRequestMergeMethod
+	mergeMethod config.MergeMethod
 	userIDs     []string
 }

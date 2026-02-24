@@ -8,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/ejoffe/spr/config"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/git/mockgit"
-	"github.com/ejoffe/spr/github"
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/ejoffe/spr/github/mockclient"
 	"github.com/stretchr/testify/require"
 )
@@ -22,15 +21,16 @@ func makeTestObjects(t *testing.T, synchronized bool) (
 	cfg := config.EmptyConfig()
 	cfg.Repo.RequireChecks = true
 	cfg.Repo.RequireApproval = true
-	cfg.Repo.GitHubRemote = "origin"
-	cfg.Repo.GitHubBranch = "master"
+	cfg.Repo.Remote = "origin"
+	cfg.Repo.Branch = "master"
 	cfg.Repo.MergeMethod = "rebase"
 	gitmock = mockgit.NewMockGit(t)
 	githubmock = mockclient.NewMockClient(t)
-	githubmock.Info = &github.GitHubInfo{
-		UserName:     "TestSPR",
-		RepositoryID: "RepoID",
-		LocalBranch:  "master",
+	githubmock.Info = &forge.ForgeInfo{
+		UserName:       "TestSPR",
+		RepositoryID:   "RepoID",
+		LocalBranch:    "master",
+		PRNumberPrefix: "#",
 	}
 	s = NewStackedPR(cfg, githubmock, gitmock)
 	output = &bytes.Buffer{}
@@ -158,7 +158,7 @@ func testSPRBasicFlowFourCommitsQueue(t *testing.T, sync bool) {
 		// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c2, nil)
-		githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c2, config.MergeMethodRebase)
 		githubmock.ExpectCommentPullRequest(c1)
 		githubmock.ExpectClosePullRequest(c1)
 		count := uint(2)
@@ -202,7 +202,7 @@ func testSPRBasicFlowFourCommitsQueue(t *testing.T, sync bool) {
 		// 'git spr merge' :: MergePullRequest :: commits=[a2, a3, a4]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c4, nil)
-		githubmock.ExpectMergePullRequest(c4, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c4, config.MergeMethodRebase)
 
 		githubmock.ExpectCommentPullRequest(c2)
 		githubmock.ExpectClosePullRequest(c2)
@@ -339,7 +339,7 @@ func testSPRBasicFlowFourCommits(t *testing.T, sync bool) {
 		// 'git spr merge' :: MergePullRequest :: commits=[a1, a2, a3, a4]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c4, nil)
-		githubmock.ExpectMergePullRequest(c4, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c4, config.MergeMethodRebase)
 		githubmock.ExpectCommentPullRequest(c1)
 		githubmock.ExpectClosePullRequest(c1)
 		githubmock.ExpectCommentPullRequest(c2)
@@ -423,7 +423,7 @@ func testSPRBasicFlowDeleteBranch(t *testing.T, sync bool) {
 		// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c2, nil)
-		githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c2, config.MergeMethodRebase)
 		gitmock.ExpectDeleteBranch("from_branch") // <--- This is the key expectation of this test.
 		githubmock.ExpectCommentPullRequest(c1)
 		githubmock.ExpectClosePullRequest(c1)
@@ -506,7 +506,7 @@ func testSPRMergeCount(t *testing.T, sync bool) {
 		// 'git spr merge --count 2' :: MergePullRequest :: commits=[a1, a2, a3, a4]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c2, nil)
-		githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c2, config.MergeMethodRebase)
 		githubmock.ExpectCommentPullRequest(c1)
 		githubmock.ExpectClosePullRequest(c1)
 		s.MergePullRequests(ctx, uintptr(2))
@@ -611,7 +611,7 @@ func testSPRAmendCommit(t *testing.T, sync bool) {
 		// 'git spr merge' :: MergePullRequest :: commits=[a1, a2]
 		githubmock.ExpectGetInfo()
 		githubmock.ExpectUpdatePullRequest(c2, nil)
-		githubmock.ExpectMergePullRequest(c2, genclient.PullRequestMergeMethod_REBASE)
+		githubmock.ExpectMergePullRequest(c2, config.MergeMethodRebase)
 		githubmock.ExpectCommentPullRequest(c1)
 		githubmock.ExpectClosePullRequest(c1)
 		s.MergePullRequests(ctx, nil)

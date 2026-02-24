@@ -124,7 +124,7 @@ func (c *gitcmd) RootDir() string {
 }
 
 func (c *gitcmd) DeleteRemoteBranch(ctx context.Context, branch string) error {
-	remoteName := c.config.Repo.GitHubRemote
+	remoteName := c.config.Repo.Remote
 
 	remote, err := c.repo.Remote(remoteName)
 	if err != nil {

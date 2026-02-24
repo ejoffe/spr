@@ -18,15 +18,15 @@ import (
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/config/config_parser"
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 )
 
 // NewStackedPR constructs and returns a new stackediff instance.
-func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd git.GitInterface) *stackediff {
+func NewStackedPR(config *config.Config, forgeClient forge.ForgeInterface, gitcmd git.GitInterface) *stackediff {
 	return &stackediff{
 		config:       config,
-		github:       github,
+		forge:        forgeClient,
 		gitcmd:       gitcmd,
 		profiletimer: profiletimer.StartNoopTimer(),
 
@@ -37,7 +37,7 @@ func NewStackedPR(config *config.Config, github github.GitHubInterface, gitcmd g
 
 type stackediff struct {
 	config        *config.Config
-	github        github.GitHubInterface
+	forge         forge.ForgeInterface
 	gitcmd        git.GitInterface
 	profiletimer  profiletimer.Timer
 	DetailEnabled bool
@@ -81,12 +81,12 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	sd.gitcmd.MustGit("commit --fixup "+localCommits[commitIndex].CommitHash, nil)
 
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.Remote, sd.config.Repo.Branch)
 	sd.gitcmd.MustGit(rebaseCmd, nil)
 }
 
 func (sd *stackediff) addReviewers(ctx context.Context,
-	pr *github.PullRequest, reviewers []string, assignable []github.RepoAssignee,
+	pr *forge.PullRequest, reviewers []string, assignable []forge.RepoAssignee,
 ) {
 	userIDs := make([]string, 0, len(reviewers))
 	for _, r := range reviewers {
@@ -102,10 +102,10 @@ func (sd *stackediff) addReviewers(ctx context.Context,
 			check(fmt.Errorf("unable to add reviewer, user %q not found", r))
 		}
 	}
-	sd.github.AddReviewers(ctx, pr, userIDs)
+	sd.forge.AddReviewers(ctx, pr, userIDs)
 }
 
-func alignLocalCommits(commits []git.Commit, prs []*github.PullRequest) []git.Commit {
+func alignLocalCommits(commits []git.Commit, prs []*forge.PullRequest) []git.Commit {
 	remoteCommits := map[string]bool{}
 	for _, pr := range prs {
 		for _, c := range pr.Commits {
@@ -145,15 +145,15 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
 
 	// close prs for deleted commits
-	var validPullRequests []*github.PullRequest
+	var validPullRequests []*forge.PullRequest
 	localCommitMap := map[string]*git.Commit{}
 	for _, commit := range localCommits {
 		localCommitMap[commit.CommitID] = &commit
 	}
 	for _, pr := range githubInfo.PullRequests {
 		if _, found := localCommitMap[pr.Commit.CommitID]; !found {
-			sd.github.CommentPullRequest(ctx, pr, "Closing pull request: commit has gone away")
-			sd.github.ClosePullRequest(ctx, pr)
+			sd.forge.CommentPullRequest(ctx, pr, "Closing pull request: commit has gone away")
+			sd.forge.ClosePullRequest(ctx, pr)
 		} else {
 			validPullRequests = append(validPullRequests, pr)
 		}
@@ -170,7 +170,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		for i := range githubInfo.PullRequests {
 			fn := func(i int) {
 				pr := githubInfo.PullRequests[i]
-				sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, pr, pr.Commit, nil)
+				sd.forge.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, pr, pr.Commit, nil)
 				wg.Done()
 			}
 			if sd.synchronized {
@@ -190,13 +190,13 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	sd.profiletimer.Step("UpdatePullRequests::SyncCommitStackToGithub")
 
 	type prUpdate struct {
-		pr         *github.PullRequest
+		pr         *forge.PullRequest
 		commit     git.Commit
 		prevCommit *git.Commit
 	}
 
 	updateQueue := make([]prUpdate, 0)
-	var assignable []github.RepoAssignee
+	var assignable []forge.RepoAssignee
 
 	// iterate through local_commits and update pull_requests
 	var prevCommit *git.Commit
@@ -220,12 +220,12 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		if !prFound {
 			// if pull request is not found for this commit_id it means the commit
 			//  is new and we need to create a new pull request
-			pr := sd.github.CreatePullRequest(ctx, sd.gitcmd, githubInfo, c, prevCommit)
+			pr := sd.forge.CreatePullRequest(ctx, sd.gitcmd, githubInfo, c, prevCommit)
 			githubInfo.PullRequests = append(githubInfo.PullRequests, pr)
 			updateQueue = append(updateQueue, prUpdate{pr, c, prevCommit})
 			if len(reviewers) != 0 {
 				if assignable == nil {
-					assignable = sd.github.GetAssignableUsers(ctx)
+					assignable = sd.forge.GetAssignableUsers(ctx)
 				}
 				sd.addReviewers(ctx, pr, reviewers, assignable)
 			}
@@ -246,7 +246,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 	for i := range updateQueue {
 		fn := func(i int) {
 			pr := updateQueue[i]
-			sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
+			sd.forge.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, sortedPullRequests, pr.pr, pr.commit, pr.prevCommit)
 			wg.Done()
 		}
 		if sd.synchronized {
@@ -283,7 +283,7 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 //	their commits have already been merged.
 func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	sd.profiletimer.Step("MergePullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	githubInfo := sd.forge.GetInfo(ctx, sd.gitcmd)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
 	// MergeCheck
@@ -323,13 +323,13 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	prToMerge := githubInfo.PullRequests[prIndex]
 
 	// Update the base of the merging pr to target branch
-	sd.github.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, prToMerge, prToMerge.Commit, nil)
+	sd.forge.UpdatePullRequest(ctx, sd.gitcmd, githubInfo, githubInfo.PullRequests, prToMerge, prToMerge.Commit, nil)
 	sd.profiletimer.Step("MergePullRequests::update pr base")
 
 	// Merge pull request
-	mergeMethod, err := sd.config.MergeMethod()
+	mergeMethod, err := sd.config.ParseMergeMethod()
 	check(err)
-	sd.github.MergePullRequest(ctx, prToMerge, mergeMethod)
+	sd.forge.MergePullRequest(ctx, prToMerge, mergeMethod)
 	if sd.config.User.DeleteMergedBranches {
 		sd.gitcmd.DeleteRemoteBranch(ctx, prToMerge.FromBranch)
 	}
@@ -339,10 +339,10 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	for i := 0; i < prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		comment := fmt.Sprintf(
-			"✓ Commit merged in pull request [#%d](https://%s/%s/%s/pull/%d)",
-			prToMerge.Number, sd.config.Repo.GitHubHost, sd.config.Repo.GitHubRepoOwner, sd.config.Repo.GitHubRepoName, prToMerge.Number)
-		sd.github.CommentPullRequest(ctx, pr, comment)
-		sd.github.ClosePullRequest(ctx, pr)
+			"✓ Commit merged in pull request [#%d](%s)",
+			prToMerge.Number, sd.forge.PullRequestURL(prToMerge.Number))
+		sd.forge.CommentPullRequest(ctx, pr, comment)
+		sd.forge.ClosePullRequest(ctx, pr)
 		if sd.config.User.DeleteMergedBranches {
 			sd.gitcmd.DeleteRemoteBranch(ctx, pr.FromBranch)
 		}
@@ -352,7 +352,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 	for i := 0; i <= prIndex; i++ {
 		pr := githubInfo.PullRequests[i]
 		pr.Merged = true
-		fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
+		fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config, sd.forge))
 	}
 
 	sd.profiletimer.Step("MergePullRequests::End")
@@ -364,7 +364,7 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 //	remotely on github.
 func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	githubInfo := sd.forge.GetInfo(ctx, sd.gitcmd)
 
 	if len(githubInfo.PullRequests) == 0 {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
@@ -374,7 +374,7 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 		}
 		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
 			pr := githubInfo.PullRequests[i]
-			fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config))
+			fmt.Fprintf(sd.output, "%s\n", pr.String(sd.config, sd.forge))
 		}
 	}
 	sd.profiletimer.Step("StatusPullRequests::End")
@@ -385,7 +385,7 @@ func (sd *stackediff) SyncStack(ctx context.Context) {
 	sd.profiletimer.Step("SyncStack::Start")
 	defer sd.profiletimer.Step("SyncStack::End")
 
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	githubInfo := sd.forge.GetInfo(ctx, sd.gitcmd)
 
 	if len(githubInfo.PullRequests) == 0 {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
@@ -413,7 +413,7 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 		return
 	}
 
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	githubInfo := sd.forge.GetInfo(ctx, sd.gitcmd)
 
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
@@ -468,7 +468,7 @@ func (sd *stackediff) ProfilingSummary() {
 	check(err)
 }
 
-func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequest) bool {
+func commitsReordered(localCommits []git.Commit, pullRequests []*forge.PullRequest) bool {
 	for i := 0; i < len(pullRequests); i++ {
 		if localCommits[i].CommitID != pullRequests[i].Commit.CommitID {
 			return true
@@ -477,13 +477,13 @@ func commitsReordered(localCommits []git.Commit, pullRequests []*github.PullRequ
 	return false
 }
 
-func sortPullRequestsByLocalCommitOrder(pullRequests []*github.PullRequest, localCommits []git.Commit) []*github.PullRequest {
-	pullRequestMap := map[string]*github.PullRequest{}
+func sortPullRequestsByLocalCommitOrder(pullRequests []*forge.PullRequest, localCommits []git.Commit) []*forge.PullRequest {
+	pullRequestMap := map[string]*forge.PullRequest{}
 	for _, pullRequest := range pullRequests {
 		pullRequestMap[pullRequest.Commit.CommitID] = pullRequest
 	}
 
-	var sortedPullRequests []*github.PullRequest
+	var sortedPullRequests []*forge.PullRequest
 	for _, commit := range localCommits {
 		if !commit.WIP && pullRequestMap[commit.CommitID] != nil {
 			sortedPullRequests = append(sortedPullRequests, pullRequestMap[commit.CommitID])
@@ -492,19 +492,19 @@ func sortPullRequestsByLocalCommitOrder(pullRequests []*github.PullRequest, loca
 	return sortedPullRequests
 }
 
-func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubInfo {
+func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *forge.ForgeInfo {
 	if sd.config.Repo.ForceFetchTags {
 		sd.gitcmd.MustGit("fetch --tags --force", nil)
 	} else {
 		sd.gitcmd.MustGit("fetch", nil)
 	}
 	rebaseCommand := fmt.Sprintf("rebase %s/%s --autostash",
-		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+		sd.config.Repo.Remote, sd.config.Repo.Branch)
 	err := sd.gitcmd.Git(rebaseCommand, nil)
 	if err != nil {
 		return nil
 	}
-	info := sd.github.GetInfo(ctx, sd.gitcmd)
+	info := sd.forge.GetInfo(ctx, sd.gitcmd)
 	if git.BranchNameRegex.FindString(info.LocalBranch) != "" {
 		fmt.Printf("error: don't run spr in a remote pr branch\n")
 		fmt.Printf(" this could lead to weird duplicate pull requests getting created\n")
@@ -523,7 +523,7 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 //	which are new (on top of remote branch) and creates a corresponding
 //	branch on github for each commit.
 func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
-	commits []git.Commit, info *github.GitHubInfo,
+	commits []git.Commit, info *forge.ForgeInfo,
 ) bool {
 	var output string
 	sd.gitcmd.MustGit("status --porcelain --untracked-files=no", &output)
@@ -535,7 +535,7 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		defer sd.gitcmd.MustGit("stash pop", nil)
 	}
 
-	commitUpdated := func(c git.Commit, info *github.GitHubInfo) bool {
+	commitUpdated := func(c git.Commit, info *forge.ForgeInfo) bool {
 		for _, pr := range info.PullRequests {
 			if pr.Commit.CommitID == c.CommitID {
 				return pr.Commit.CommitHash != c.CommitHash
@@ -564,11 +564,11 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	if len(updatedCommits) > 0 {
 		if sd.config.Repo.BranchPushIndividually {
 			for _, refName := range refNames {
-				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.GitHubRemote, refName)
+				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.Remote, refName)
 				sd.gitcmd.MustGit(pushCommand, nil)
 			}
 		} else {
-			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
+			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.Remote)
 			pushCommand += strings.Join(refNames, " ")
 			sd.gitcmd.MustGit(pushCommand, nil)
 		}
@@ -590,7 +590,7 @@ func check(err error) {
 func header(config *config.Config) string {
 	if config.User.StatusBitsEmojis {
 		return `
- ┌─ github checks pass
+ ┌─ ci checks pass
  │ ┌── pull request approved
  │ │ ┌─── no merge conflicts
  │ │ │ ┌──── stack check
@@ -598,7 +598,7 @@ func header(config *config.Config) string {
 `
 	} else {
 		return `
- ┌─ github checks pass
+ ┌─ ci checks pass
  │┌── pull request approved
  ││┌─── no merge conflicts
  │││┌──── stack check

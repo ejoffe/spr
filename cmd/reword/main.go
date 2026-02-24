@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/google/uuid"
 )
+
+var commitIDRegex = regexp.MustCompile(`commit-id\:\s*([a-f0-9]{8})`)
 
 func main() {
 	filename := os.Args[1]
@@ -35,7 +38,7 @@ func main() {
 				res := strings.Split(line, " ")
 				var out string
 				gitcmd.Git("log --format=%B -n 1 "+res[1], &out)
-				if !strings.Contains(out, "commit-id") {
+				if !commitIDRegex.MatchString(out) {
 					line = strings.Replace(line, "pick ", "reword ", 1)
 				}
 			}
@@ -69,7 +72,7 @@ func shouldAppendCommitID(filename string) (missingCommitID bool, missingNewLine
 		if !strings.HasPrefix(line, "#") {
 			lineCount += 1
 		}
-		if strings.HasPrefix(line, "commit-id:") {
+		if commitIDRegex.MatchString(line) {
 			missingCommitID = false
 			return
 		}

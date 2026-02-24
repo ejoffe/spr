@@ -5,9 +5,9 @@ import (
 	"strings"
 	go_template "text/template"
 
+	"github.com/ejoffe/spr/forge"
+	"github.com/ejoffe/spr/forge/template"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
-	"github.com/ejoffe/spr/github/template"
 )
 
 type WhyWhatTemplatizer struct{}
@@ -16,11 +16,11 @@ func NewWhyWhatTemplatizer() *WhyWhatTemplatizer {
 	return &WhyWhatTemplatizer{}
 }
 
-func (t *WhyWhatTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) string {
+func (t *WhyWhatTemplatizer) Title(info *forge.ForgeInfo, commit git.Commit) string {
 	return commit.Subject
 }
 
-func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *WhyWhatTemplatizer) Body(info *forge.ForgeInfo, commit git.Commit, pr *forge.PullRequest) string {
 	// Split commit body by empty lines and filter out empty sections
 	sections := splitByEmptyLines(commit.Body)
 
@@ -64,10 +64,10 @@ func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr
 	body := buf.String()
 
 	// Always show stack section and notice
-	body += "\n"
+	body += "\n\n"
 	body += "---\n"
 	body += "**Stack**:\n"
-	body += template.FormatStackMarkdown(commit, info.PullRequests, true)
+	body += template.FormatStackMarkdown(commit, info.PullRequests, true, info.PRNumberPrefix)
 	body += "---\n"
 	body += template.ManualMergeNotice()
 	return body

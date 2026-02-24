@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ejoffe/rake"
-	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 )
 
 type Config struct {
@@ -16,12 +15,13 @@ type Config struct {
 
 // Config object to hold spr configuration
 type RepoConfig struct {
-	GitHubRepoOwner string `yaml:"githubRepoOwner"`
-	GitHubRepoName  string `yaml:"githubRepoName"`
-	GitHubHost      string `default:"github.com" yaml:"githubHost"`
+	RepoOwner string `yaml:"repoOwner"`
+	RepoName  string `yaml:"repoName"`
+	ForgeHost string `yaml:"forgeHost"`
+	ForgeType string `yaml:"forgeType,omitempty"`
 
-	GitHubRemote string `default:"origin" yaml:"githubRemote"`
-	GitHubBranch string `default:"main" yaml:"githubBranch"`
+	Remote string `default:"origin" yaml:"remote"`
+	Branch string `default:"main" yaml:"branch"`
 
 	RequireChecks    bool     `default:"true" yaml:"requireChecks"`
 	RequireApproval  bool     `default:"true" yaml:"requireApproval"`
@@ -99,21 +99,26 @@ func (c *Config) Normalize() {
 	}
 }
 
-func (c Config) MergeMethod() (genclient.PullRequestMergeMethod, error) {
-	var mergeMethod genclient.PullRequestMergeMethod
-	var err error
+type MergeMethod string
+
+const (
+	MergeMethodMerge  MergeMethod = "merge"
+	MergeMethodSquash MergeMethod = "squash"
+	MergeMethodRebase MergeMethod = "rebase"
+)
+
+func (c Config) ParseMergeMethod() (MergeMethod, error) {
 	switch strings.ToLower(c.Repo.MergeMethod) {
 	case "merge":
-		mergeMethod = genclient.PullRequestMergeMethod_MERGE
+		return MergeMethodMerge, nil
 	case "squash":
-		mergeMethod = genclient.PullRequestMergeMethod_SQUASH
+		return MergeMethodSquash, nil
 	case "rebase", "":
-		mergeMethod = genclient.PullRequestMergeMethod_REBASE
+		return MergeMethodRebase, nil
 	default:
-		err = fmt.Errorf(
+		return "", fmt.Errorf(
 			`unknown merge method %q, choose from "merge", "squash", or "rebase"`,
 			c.Repo.MergeMethod,
 		)
 	}
-	return mergeMethod, err
 }

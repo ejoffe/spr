@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ejoffe/spr/forge"
 	"github.com/ejoffe/spr/git"
-	"github.com/ejoffe/spr/github"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTitle(t *testing.T) {
 	templatizer := NewStackTemplatizer(false)
-	info := &github.GitHubInfo{}
+	info := &forge.ForgeInfo{PRNumberPrefix: "#"}
 
 	tests := []struct {
 		name   string
@@ -70,8 +70,9 @@ func TestTitle(t *testing.T) {
 
 func TestBody_EmptyStack(t *testing.T) {
 	templatizer := NewStackTemplatizer(false)
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{},
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests:   []*forge.PullRequest{},
 	}
 
 	commit := git.Commit{
@@ -112,8 +113,9 @@ func TestBody_WithStack_NoTitles(t *testing.T) {
 		Body:     "Third body",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{
 				Number: 1,
 				Title:  "First commit",
@@ -189,8 +191,9 @@ func TestBody_WithStack_WithTitles(t *testing.T) {
 		Body:     "Third body",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{
 				Number: 1,
 				Title:  "First commit",
@@ -246,8 +249,9 @@ func TestBody_StackOrder(t *testing.T) {
 		Body:     "Body 3",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
 			{Number: 3, Commit: commit3},
@@ -296,8 +300,9 @@ func TestBody_CurrentCommitAtStart(t *testing.T) {
 		Body:     "Body 3",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
 			{Number: 3, Commit: commit3},
@@ -334,8 +339,9 @@ func TestBody_CurrentCommitAtEnd(t *testing.T) {
 		Body:     "Body 3",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit1},
 			{Number: 2, Commit: commit2},
 			{Number: 3, Commit: commit3},
@@ -362,8 +368,9 @@ func TestBody_EmptyBody(t *testing.T) {
 		Body:     "",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit},
 		},
 	}
@@ -374,6 +381,12 @@ func TestBody_EmptyBody(t *testing.T) {
 	assert.Contains(t, result, "#1")
 	assert.Contains(t, result, "⚠️")
 	assert.Contains(t, result, "Part of a stack created by [spr]")
+
+	// Body must not start with "---" (even after trimming whitespace),
+	// because Markdown renderers (especially GitLab) interpret leading
+	// "---" as YAML frontmatter, swallowing everything until the next "---".
+	assert.False(t, strings.HasPrefix(strings.TrimSpace(result), "---"),
+		"empty commit body must not produce output starting with --- (YAML frontmatter)")
 }
 
 func TestBody_SinglePRInStack(t *testing.T) {
@@ -385,8 +398,9 @@ func TestBody_SinglePRInStack(t *testing.T) {
 		Body:     "Single body",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 42, Commit: commit},
 		},
 	}
@@ -418,8 +432,9 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 		Body:     "Body 2",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Title: "First PR", Commit: commit1},
 			{Number: 2, Title: "Second PR", Commit: commit2},
 		},
@@ -454,8 +469,9 @@ func TestBody_Structure(t *testing.T) {
 		Body:     "Commit body content",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{Number: 1, Commit: commit},
 		},
 	}
@@ -492,8 +508,9 @@ func TestBody_RealWorldExample(t *testing.T) {
 		Body:     "Created POST /register endpoint",
 	}
 
-	info := &github.GitHubInfo{
-		PullRequests: []*github.PullRequest{
+	info := &forge.ForgeInfo{
+		PRNumberPrefix: "#",
+		PullRequests: []*forge.PullRequest{
 			{
 				Number: 10,
 				Title:  "Add authentication middleware",
@@ -554,31 +571,32 @@ It even includes some **markdown** formatting.`}
 	tests := []struct {
 		name     string
 		commit   git.Commit
-		info     *github.GitHubInfo
+		info     *forge.ForgeInfo
 		expected string
 	}{
 		{
 			name:   "EmptyStack",
 			commit: git.Commit{},
-			info: &github.GitHubInfo{
-				PullRequests: []*github.PullRequest{},
+			info: &forge.ForgeInfo{
+				PRNumberPrefix: "#",
+				PullRequests:   []*forge.PullRequest{},
 			},
-			expected: `
----
-**Stack**:
+			expected: `**Stack**:
 ---
 ⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
 		},
 		{
 			name:   "SinglePRStack",
 			commit: descriptiveCommit,
-			info: &github.GitHubInfo{
-				PullRequests: []*github.PullRequest{
+			info: &forge.ForgeInfo{
+				PRNumberPrefix: "#",
+				PullRequests: []*forge.PullRequest{
 					{Number: 2, Commit: descriptiveCommit},
 				},
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅
@@ -587,14 +605,16 @@ It even includes some **markdown** formatting.
 		},
 		{
 			name: "TwoPRStack",
-			info: &github.GitHubInfo{
-				PullRequests: []*github.PullRequest{
+			info: &forge.ForgeInfo{
+				PRNumberPrefix: "#",
+				PullRequests: []*forge.PullRequest{
 					{Number: 1, Commit: simpleCommit},
 					{Number: 2, Commit: descriptiveCommit},
 				},
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅
@@ -631,18 +651,18 @@ It even includes some **markdown** formatting.`}
 	tests := []struct {
 		description string
 		commit      git.Commit
-		stack       []*github.PullRequest
+		stack       []*forge.PullRequest
 	}{
 		{
 			description: "",
 			commit:      git.Commit{},
-			stack:       []*github.PullRequest{},
+			stack:       []*forge.PullRequest{},
 		},
 		{
 			description: `This body describes my nice PR.
 It even includes some **markdown** formatting.`,
 			commit: descriptiveCommit,
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 2, Commit: descriptiveCommit},
 			},
 		},
@@ -659,7 +679,7 @@ It even includes some **markdown** formatting.
 
 ⚠️ *Part of a stack created by [spr](https://github.com/ejoffe/spr). Do not merge manually using the UI - doing so may have unexpected results.*`,
 			commit: descriptiveCommit,
-			stack: []*github.PullRequest{
+			stack: []*forge.PullRequest{
 				{Number: 1, Commit: simpleCommit, Title: "Title A"},
 				{Number: 2, Commit: descriptiveCommit, Title: "Title B"},
 			},
@@ -680,7 +700,7 @@ func TestInsertBodyIntoPRTemplateHappyPath(t *testing.T) {
 		body                string
 		pullRequestTemplate string
 		repo                *config.RepoConfig
-		pr                  *github.PullRequest
+		pr                  *forge.PullRequest
 		expected            string
 	}{
 		{
@@ -726,7 +746,7 @@ inserted body
 				PRTemplateInsertStart: "## Description",
 				PRTemplateInsertEnd:   "## Checklist",
 			},
-			pr: &github.PullRequest{
+			pr: &forge.PullRequest{
 				Body: `
 ## Related Issues
 * Issue #1234
@@ -765,7 +785,7 @@ func TestInsertBodyIntoPRTemplateErrors(t *testing.T) {
 		body                string
 		pullRequestTemplate string
 		repo                *config.RepoConfig
-		pr                  *github.PullRequest
+		pr                  *forge.PullRequest
 		expected            string
 	}{
 		{

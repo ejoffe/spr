@@ -14,7 +14,7 @@ type remoteSource struct {
 	config *config.Config
 }
 
-func NewGitHubRemoteSource(config *config.Config, gitcmd git.GitInterface) *remoteSource {
+func NewRemoteSource(config *config.Config, gitcmd git.GitInterface) *remoteSource {
 	return &remoteSource{
 		gitcmd: gitcmd,
 		config: config,
@@ -28,11 +28,11 @@ func (s *remoteSource) Load(_ interface{}) {
 	lines := strings.Split(output, "\n")
 
 	for _, line := range lines {
-		githubHost, repoOwner, repoName, match := getRepoDetailsFromRemote(line)
+		forgeHost, repoOwner, repoName, match := getRepoDetailsFromRemote(line)
 		if match {
-			s.config.Repo.GitHubHost = githubHost
-			s.config.Repo.GitHubRepoOwner = repoOwner
-			s.config.Repo.GitHubRepoName = repoName
+			s.config.Repo.ForgeHost = forgeHost
+			s.config.Repo.RepoOwner = repoOwner
+			s.config.Repo.RepoName = repoName
 			break
 		}
 	}
@@ -45,7 +45,7 @@ func getRepoDetailsFromRemote(remote string) (string, string, string, bool) {
 	userFormat := `(git@)?`
 	// "/" is expected in "http://" or "ssh://" protocol, when no protocol given
 	// it should be ":"
-	repoFormat := `(?P<githubHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>[\w-]+)/(?P<repoName>[\w-]+)`
+	repoFormat := `(?P<forgeHost>[a-z0-9._\-]+)(/|:)(?P<repoOwner>[\w-]+(?:/[\w-]+)*)/(?P<repoName>[\w-]+)`
 	// This is neither required in https access nor in ssh one
 	suffixFormat := `(.git)?`
 	regexFormat := fmt.Sprintf(`^origin\s+%s%s%s%s \(push\)`,
@@ -53,10 +53,10 @@ func getRepoDetailsFromRemote(remote string) (string, string, string, bool) {
 	regex := regexp.MustCompile(regexFormat)
 	matches := regex.FindStringSubmatch(remote)
 	if matches != nil {
-		githubHostIndex := regex.SubexpIndex("githubHost")
+		forgeHostIndex := regex.SubexpIndex("forgeHost")
 		repoOwnerIndex := regex.SubexpIndex("repoOwner")
 		repoNameIndex := regex.SubexpIndex("repoName")
-		return matches[githubHostIndex], matches[repoOwnerIndex], matches[repoNameIndex], true
+		return matches[forgeHostIndex], matches[repoOwnerIndex], matches[repoNameIndex], true
 	}
 	return "", "", "", false
 }
