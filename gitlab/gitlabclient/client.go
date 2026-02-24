@@ -436,13 +436,13 @@ func (c *client) MergePullRequest(ctx context.Context,
 		}
 	}
 
-	// GitLab recalculates MR mergeability asynchronously after target branch
-	// changes and rebases. Retry on 405 (not yet mergeable) with backoff.
-	const maxAttempts = 15
+	// Try a direct merge first. GitLab recalculates MR mergeability
+	// asynchronously after target branch changes, so this may fail with
+	// 405 while a new pipeline is running.
+	const maxDirectAttempts = 5
 	const retryDelay = 2 * time.Second
 
-	var lastErr error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
+	for attempt := 1; attempt <= maxDirectAttempts; attempt++ {
 		_, resp, err := c.api.MergeRequests.AcceptMergeRequest(c.projectID, int64(pr.Number), opts)
 		if err == nil {
 			if c.config.User.LogGitHubCalls {
@@ -450,27 +450,40 @@ func (c *client) MergePullRequest(ctx context.Context,
 			}
 			return
 		}
-		lastErr = err
 
 		if resp == nil || resp.StatusCode != http.StatusMethodNotAllowed {
-			break
+			log.Fatal().
+				Str("id", pr.ID).
+				Int("number", pr.Number).
+				Str("title", pr.Title).
+				Err(err).
+				Msg("merge request merge failed")
 		}
 
-		if attempt < maxAttempts {
-			log.Debug().
-				Int("attempt", attempt).
-				Int("maxAttempts", maxAttempts).
-				Msg("merge request not yet mergeable, waiting")
+		if attempt < maxDirectAttempts {
 			time.Sleep(retryDelay)
 		}
 	}
 
-	log.Fatal().
-		Str("id", pr.ID).
-		Int("number", pr.Number).
-		Str("title", pr.Title).
-		Err(lastErr).
-		Msg("merge request merge failed")
+	// Direct merge is still blocked (likely a CI pipeline was triggered by
+	// the target branch change). Enable auto-merge so GitLab merges the MR
+	// as soon as the pipeline passes.
+	autoMerge := true
+	opts.AutoMerge = &autoMerge
+	_, _, err := c.api.MergeRequests.AcceptMergeRequest(c.projectID, int64(pr.Number), opts)
+	if err != nil {
+		log.Fatal().
+			Str("id", pr.ID).
+			Int("number", pr.Number).
+			Str("title", pr.Title).
+			Err(err).
+			Msg("merge request merge failed")
+	}
+
+	fmt.Printf("auto-merge enabled for !%d (waiting for CI pipeline)\n", pr.Number)
+	if c.config.User.LogGitHubCalls {
+		fmt.Printf("> gitlab auto-merge !%d : %s\n", pr.Number, pr.Title)
+	}
 }
 
 func (c *client) PullRequestURL(number int) string {
