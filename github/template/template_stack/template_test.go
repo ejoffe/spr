@@ -564,6 +564,7 @@ It even includes some **markdown** formatting.`}
 				PullRequests: []*github.PullRequest{},
 			},
 			expected: `
+
 ---
 **Stack**:
 ---
@@ -579,6 +580,7 @@ It even includes some **markdown** formatting.`}
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅
@@ -595,6 +597,7 @@ It even includes some **markdown** formatting.
 			},
 			expected: `This body describes my nice PR.
 It even includes some **markdown** formatting.
+
 ---
 **Stack**:
 - #2 ⬅
