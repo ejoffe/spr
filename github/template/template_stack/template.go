@@ -22,7 +22,7 @@ func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *
 	body := commit.Body
 
 	// Always show stack section and notice
-	body += "\n"
+	body += "\n\n"
 	body += "---\n"
 	body += "**Stack**:\n"
 	body += template.FormatStackMarkdown(commit, info.PullRequests, t.showPrTitlesInStack)
