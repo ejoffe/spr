@@ -33,6 +33,15 @@ sudo apt update
 sudo apt install spr
 ```
 
+### Nix
+```shell
+nix profile install github:ejoffe/spr
+```
+Or run without installing:
+```shell
+nix run github:ejoffe/spr
+```
+
 ### Manual
 Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to your bin path.
 
