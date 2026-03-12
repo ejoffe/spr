@@ -198,6 +198,7 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | noRebase             | bool | false   | when true spr update will not rebase on top of origin |
 | deleteMergedBranches | bool | false   | delete branches after prs are merged |
 | shortPRLink          | bool | false   | show pull request links as clickable PR-<number> instead of full URL |
+| showCommitID         | bool | false   | show first 8 characters of commit hash for each pull request |
 
 Happy Coding!
 -------------

@@ -198,6 +198,27 @@ func TestString(t *testing.T) {
 		},
 	}
 
+	cfgWithCommitID := &config.Config{
+		Repo: &config.RepoConfig{
+			RequireChecks:   true,
+			RequireApproval: true,
+		},
+		User: &config.UserConfig{
+			StatusBitsEmojis: false,
+			ShowCommitID:     true,
+		},
+	}
+
+	prWithHash := func(inQueue bool, commits int, hash string) *PullRequest {
+		return &PullRequest{
+			InQueue: inQueue,
+			Commits: make([]git.Commit, commits),
+			Title:   "Title",
+			Commit:  git.Commit{CommitHash: hash},
+			MergeStatus: PullRequestMergeStatus{},
+		}
+	}
+
 	tests := []testcase{
 		{expect: "[?xxx] .   0 : Title", pr: pr(true, 1), cfg: cfg},
 		{expect: "[?xxx] .   0 : Title", pr: pr(true, 2), cfg: cfg},
@@ -206,6 +227,12 @@ func TestString(t *testing.T) {
 		{expect: "[?xxx] . https://github.com/testowner/testrepo/pull/0 : Title", pr: pr(true, 1), cfg: cfgWithShowPRLink},
 		// ShortPRLink: clickable short link via OSC 8
 		{expect: "[?xxx] . \033]8;;https://github.com/testowner/testrepo/pull/0\033\\PR-0\033]8;;\033\\ : Title", pr: pr(true, 1), cfg: cfgWithShortPRLink},
+		// ShowCommitID: first 8 chars of commit hash shown
+		{expect: "[?xxx] . abcd1234   0 : Title", pr: prWithHash(true, 1, "abcd1234ef567890"), cfg: cfgWithCommitID},
+		// ShowCommitID with short hash (< 8 chars): full hash shown
+		{expect: "[?xxx] . abcd   0 : Title", pr: prWithHash(true, 1, "abcd"), cfg: cfgWithCommitID},
+		// ShowCommitID with empty hash: no hash shown
+		{expect: "[?xxx] .   0 : Title", pr: prWithHash(true, 1, ""), cfg: cfgWithCommitID},
 	}
 	for i, test := range tests {
 		assert.Equal(t, test.expect, test.pr.String(test.cfg), fmt.Sprintf("case %d failed", i))
