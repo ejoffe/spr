@@ -55,6 +55,7 @@ type UserConfig struct {
 	NoRebase             bool `default:"false" yaml:"noRebase"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
 	ShortPRLink          bool `default:"false" yaml:"shortPRLink"`
+	ShowCommitID         bool `default:"false" yaml:"showCommitID"`
 }
 
 type InternalState struct {

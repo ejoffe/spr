@@ -185,6 +185,12 @@ func (pr *PullRequest) String(config *config.Config) string {
 		prInfo = prURL
 	}
 
+	if config.User.ShowCommitID && len(pr.Commit.CommitHash) >= 8 {
+		prInfo = pr.Commit.CommitHash[:8] + " " + prInfo
+	} else if config.User.ShowCommitID && len(pr.Commit.CommitHash) > 0 {
+		prInfo = pr.Commit.CommitHash + " " + prInfo
+	}
+
 	var mq string
 	if len(pr.Commits) > 1 {
 		mq = statusBitIcons(config)["warning"]
