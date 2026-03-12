@@ -54,6 +54,7 @@ type UserConfig struct {
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
+	ShortPRLink          bool `default:"false" yaml:"shortPRLink"`
 }
 
 type InternalState struct {

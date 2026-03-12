@@ -176,9 +176,13 @@ func (pr *PullRequest) String(config *config.Config) string {
 	}
 
 	prInfo := fmt.Sprintf("%3d", pr.Number)
-	if config.User.ShowPRLink {
-		prInfo = fmt.Sprintf("https://%s/%s/%s/pull/%d",
-			config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+	prURL := fmt.Sprintf("https://%s/%s/%s/pull/%d",
+		config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+	if config.User.ShortPRLink {
+		// OSC 8 terminal hyperlink: \033]8;;URL\033\\TEXT\033]8;;\033\\
+		prInfo = fmt.Sprintf("\033]8;;%s\033\\PR-%d\033]8;;\033\\", prURL, pr.Number)
+	} else if config.User.ShowPRLink {
+		prInfo = prURL
 	}
 
 	var mq string
@@ -202,6 +206,11 @@ func (pr *PullRequest) String(config *config.Config) string {
 		terminalWidth = 1000
 	}
 	lineLength := utf8.RuneCountInString(line)
+	if config.User.ShortPRLink {
+		// OSC 8 escape sequences are invisible; subtract their length
+		// The escape overhead is: \033]8;; + URL + \033\\ + \033]8;;\033\\ = 12 + len(URL)
+		lineLength -= 12 + utf8.RuneCountInString(prURL)
+	}
 	if config.User.StatusBitsEmojis {
 		// each emoji consumes 2 chars in the terminal
 		lineLength += 4

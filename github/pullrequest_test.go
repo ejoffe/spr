@@ -170,10 +170,42 @@ func TestString(t *testing.T) {
 		}
 	}
 
+	cfgWithShowPRLink := &config.Config{
+		Repo: &config.RepoConfig{
+			RequireChecks:   true,
+			RequireApproval: true,
+			GitHubHost:      "github.com",
+			GitHubRepoOwner: "testowner",
+			GitHubRepoName:  "testrepo",
+		},
+		User: &config.UserConfig{
+			StatusBitsEmojis: false,
+			ShowPRLink:       true,
+		},
+	}
+
+	cfgWithShortPRLink := &config.Config{
+		Repo: &config.RepoConfig{
+			RequireChecks:   true,
+			RequireApproval: true,
+			GitHubHost:      "github.com",
+			GitHubRepoOwner: "testowner",
+			GitHubRepoName:  "testrepo",
+		},
+		User: &config.UserConfig{
+			StatusBitsEmojis: false,
+			ShortPRLink:      true,
+		},
+	}
+
 	tests := []testcase{
 		{expect: "[?xxx] .   0 : Title", pr: pr(true, 1), cfg: cfg},
 		{expect: "[?xxx] .   0 : Title", pr: pr(true, 2), cfg: cfg},
 		{expect: "[?xxx] !   0 : Title", pr: pr(false, 2), cfg: cfg},
+		// ShowPRLink: full URL is displayed
+		{expect: "[?xxx] . https://github.com/testowner/testrepo/pull/0 : Title", pr: pr(true, 1), cfg: cfgWithShowPRLink},
+		// ShortPRLink: clickable short link via OSC 8
+		{expect: "[?xxx] . \033]8;;https://github.com/testowner/testrepo/pull/0\033\\PR-0\033]8;;\033\\ : Title", pr: pr(true, 1), cfg: cfgWithShortPRLink},
 	}
 	for i, test := range tests {
 		assert.Equal(t, test.expect, test.pr.String(test.cfg), fmt.Sprintf("case %d failed", i))
