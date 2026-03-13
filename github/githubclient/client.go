@@ -292,11 +292,11 @@ func matchPullRequestStack(
 		}
 	}
 
-	// update pr commit hashes with local commit hashes so that
-	//  the displayed commit hash matches the local git log output
+	// store local commit hashes on PRs for display purposes
+	//  (the remote CommitHash is preserved for update detection in syncCommitStackToGitHub)
 	for _, c := range localCommitStack {
 		if pr, ok := pullRequestMap[c.CommitID]; ok && c.CommitHash != "" {
-			pr.Commit.CommitHash = c.CommitHash
+			pr.LocalCommitHash = c.CommitHash
 		}
 	}
 

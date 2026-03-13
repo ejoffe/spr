@@ -19,10 +19,11 @@ type PullRequest struct {
 	Title      string
 	Body       string
 
-	MergeStatus PullRequestMergeStatus
-	Merged      bool
-	Commits     []git.Commit
-	InQueue     bool
+	MergeStatus    PullRequestMergeStatus
+	Merged         bool
+	Commits        []git.Commit
+	InQueue        bool
+	LocalCommitHash string
 }
 
 type checkStatus int
@@ -185,10 +186,17 @@ func (pr *PullRequest) String(config *config.Config) string {
 		prInfo = prURL
 	}
 
-	if config.User.ShowCommitID && len(pr.Commit.CommitHash) >= 8 {
-		prInfo = pr.Commit.CommitHash[:8] + " " + prInfo
-	} else if config.User.ShowCommitID && len(pr.Commit.CommitHash) > 0 {
-		prInfo = pr.Commit.CommitHash + " " + prInfo
+	if config.User.ShowCommitID {
+		// Prefer the local commit hash (matches git log) over the remote hash
+		displayHash := pr.LocalCommitHash
+		if displayHash == "" {
+			displayHash = pr.Commit.CommitHash
+		}
+		if len(displayHash) >= 8 {
+			prInfo = displayHash[:8] + " " + prInfo
+		} else if len(displayHash) > 0 {
+			prInfo = displayHash + " " + prInfo
+		}
 	}
 
 	var mq string
