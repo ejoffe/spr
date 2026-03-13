@@ -292,6 +292,14 @@ func matchPullRequestStack(
 		}
 	}
 
+	// update pr commit hashes with local commit hashes so that
+	//  the displayed commit hash matches the local git log output
+	for _, c := range localCommitStack {
+		if pr, ok := pullRequestMap[c.CommitID]; ok && c.CommitHash != "" {
+			pr.Commit.CommitHash = c.CommitHash
+		}
+	}
+
 	var pullRequests []*github.PullRequest
 
 	// find top pr
