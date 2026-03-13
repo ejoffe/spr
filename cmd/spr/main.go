@@ -250,6 +250,25 @@ VERSION: fork of {{.Version}}
 				},
 			},
 		{
+			Name:    "amend",
+			Aliases: []string{"a"},
+			Usage:   "Amend a commit in the stack",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "update",
+					Aliases: []string{"u"},
+					Usage:   "Run spr update after amend",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				stackedpr.AmendCommit(ctx)
+				if c.Bool("update") {
+					stackedpr.UpdatePullRequests(ctx, nil, nil)
+				}
+				return nil
+			},
+		},
+		{
 			Name:    "edit",
 			Aliases: []string{"e"},
 			Usage:   "Edit a commit in the stack",
