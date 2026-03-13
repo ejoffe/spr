@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -83,6 +84,135 @@ func (sd *stackediff) AmendCommit(ctx context.Context) {
 	rebaseCmd := fmt.Sprintf("rebase -i --autosquash --autostash %s/%s",
 		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
 	sd.gitcmd.MustGit(rebaseCmd, nil)
+}
+
+func (sd *stackediff) editStatePath() string {
+	return filepath.Join(sd.gitcmd.RootDir(), ".git", "spr_edit_state")
+}
+
+func (sd *stackediff) isEditing() bool {
+	_, err := os.Stat(sd.editStatePath())
+	return err == nil
+}
+
+// EditCommit starts an interactive edit session on a commit in the stack.
+//
+//	The user picks a commit, and the tool starts a rebase with an edit stop
+//	at that commit. The user can then edit files and run `git spr edit --done`
+//	to amend and restore the stack.
+func (sd *stackediff) EditCommit(ctx context.Context) {
+	if sd.isEditing() {
+		fmt.Fprintf(sd.output, "Already editing a commit.\n")
+		fmt.Fprintf(sd.output, "Run 'git spr edit --done' to finish or 'git spr edit --abort' to cancel.\n")
+		return
+	}
+
+	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
+	if len(localCommits) == 0 {
+		fmt.Fprintf(sd.output, "No commits to edit\n")
+		return
+	}
+
+	for i := len(localCommits) - 1; i >= 0; i-- {
+		commit := localCommits[i]
+		fmt.Fprintf(sd.output, " %d : %s : %s\n", i+1, commit.CommitID[0:8], commit.Subject)
+	}
+
+	if len(localCommits) == 1 {
+		fmt.Fprintf(sd.output, "Commit to edit (%d): ", 1)
+	} else {
+		fmt.Fprintf(sd.output, "Commit to edit (%d-%d): ", 1, len(localCommits))
+	}
+
+	reader := bufio.NewReader(sd.input)
+	line, _ := reader.ReadString('\n')
+	line = strings.TrimSpace(line)
+	commitIndex, err := strconv.Atoi(line)
+	if err != nil || commitIndex < 1 || commitIndex > len(localCommits) {
+		fmt.Fprint(sd.output, "Invalid input\n")
+		return
+	}
+	commitIndex = commitIndex - 1
+
+	targetCommit := localCommits[commitIndex]
+
+	// Write state file so --done knows we're in an edit session
+	stateContent := fmt.Sprintf("commit_id=%s\ncommit_subject=%s\n", targetCommit.CommitID, targetCommit.Subject)
+	err = os.WriteFile(sd.editStatePath(), []byte(stateContent), 0644)
+	check(err)
+
+	// Use the spr binary itself as the sequence editor to rewrite 'pick' to 'edit'
+	// for the target commit. Git invokes the editor as: <editor> <todo-file>
+	exe, err := os.Executable()
+	check(err)
+	editorCmd := fmt.Sprintf("%s _edit-sequence %s", exe, targetCommit.CommitHash[:7])
+
+	rebaseCmd := fmt.Sprintf("rebase -i --autostash %s/%s",
+		sd.config.Repo.GitHubRemote, sd.config.Repo.GitHubBranch)
+	err = sd.gitcmd.GitWithEditor(rebaseCmd, nil, editorCmd)
+	if err != nil {
+		// Clean up state file on failure
+		os.Remove(sd.editStatePath())
+		fmt.Fprintf(sd.output, "Failed to start edit session: %s\n", err)
+		return
+	}
+
+	fmt.Fprintf(sd.output, "\nEditing commit %d: %s\n", commitIndex+1, targetCommit.Subject)
+	fmt.Fprintf(sd.output, "Make your changes, then run: git spr edit --done\n")
+	fmt.Fprintf(sd.output, "To cancel, run: git spr edit --abort\n")
+}
+
+// EditCommitDone finishes an edit session by amending the current commit
+//
+//	and continuing the rebase to restore the full stack.
+func (sd *stackediff) EditCommitDone(ctx context.Context, update bool) {
+	if !sd.isEditing() {
+		fmt.Fprintf(sd.output, "No edit session in progress.\n")
+		return
+	}
+
+	// Stage all changes
+	sd.gitcmd.MustGit("add -A", nil)
+
+	// Amend the current commit (no-edit keeps the original message)
+	err := sd.gitcmd.Git("commit --amend --no-edit", nil)
+	if err != nil {
+		fmt.Fprintf(sd.output, "Failed to amend commit: %s\n", err)
+		fmt.Fprintf(sd.output, "Resolve any issues and try again.\n")
+		return
+	}
+
+	// Continue the rebase to replay the remaining commits
+	err = sd.gitcmd.Git("rebase --continue", nil)
+	if err != nil {
+		fmt.Fprintf(sd.output, "Rebase conflict detected. Resolve conflicts and run 'git spr edit --done' again.\n")
+		return
+	}
+
+	// Clean up state file
+	os.Remove(sd.editStatePath())
+	fmt.Fprintf(sd.output, "Stack restored successfully.\n")
+
+	if update {
+		sd.UpdatePullRequests(ctx, nil, nil)
+	}
+}
+
+// EditCommitAbort aborts the current edit session and restores the original stack.
+func (sd *stackediff) EditCommitAbort(ctx context.Context) {
+	if !sd.isEditing() {
+		fmt.Fprintf(sd.output, "No edit session in progress.\n")
+		return
+	}
+
+	err := sd.gitcmd.Git("rebase --abort", nil)
+	if err != nil {
+		fmt.Fprintf(sd.output, "Failed to abort: %s\n", err)
+		return
+	}
+
+	os.Remove(sd.editStatePath())
+	fmt.Fprintf(sd.output, "Edit session aborted.\n")
 }
 
 func (sd *stackediff) addReviewers(ctx context.Context,

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ejoffe/rake"
 	"github.com/ejoffe/spr/config"
@@ -28,7 +30,45 @@ func init() {
 	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
+// handleEditSequence is an internal command used as a git sequence editor.
+// It rewrites 'pick <hash>' to 'edit <hash>' for a target commit in the rebase todo file.
+// Usage: spr _edit-sequence <commit-hash-prefix> <todo-file>
+func handleEditSequence() {
+	if len(os.Args) < 4 || os.Args[1] != "_edit-sequence" {
+		return
+	}
+	hashPrefix := os.Args[2]
+	todoFile := os.Args[3]
+
+	data, err := os.ReadFile(todoFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading todo file: %s\n", err)
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	var lines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "pick "+hashPrefix) {
+			line = strings.Replace(line, "pick ", "edit ", 1)
+		}
+		lines = append(lines, line)
+	}
+
+	err = os.WriteFile(todoFile, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error writing todo file: %s\n", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
 func main() {
+	// Handle internal _edit-sequence command before any git/config initialization.
+	// This is invoked by git as a sequence editor during 'spr edit'.
+	handleEditSequence()
+
 	gitcmd := realgit.NewGitCmd(config.DefaultConfig())
 	//  check that we are inside a git dir
 	var output string
@@ -209,14 +249,45 @@ VERSION: fork of {{.Version}}
 					},
 				},
 			},
-			{
-				Name:  "check",
-				Usage: "Run pre merge checks (configured by MergeCheck in repository config)",
-				Action: func(c *cli.Context) error {
-					stackedpr.RunMergeCheck(ctx)
-					return nil
+		{
+			Name:    "edit",
+			Aliases: []string{"e"},
+			Usage:   "Edit a commit in the stack",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "done",
+					Aliases: []string{"d"},
+					Usage:   "Finish editing and restore the stack",
+				},
+				&cli.BoolFlag{
+					Name:    "update",
+					Aliases: []string{"u"},
+					Usage:   "Run spr update after finishing edit (use with --done)",
+				},
+				&cli.BoolFlag{
+					Name:  "abort",
+					Usage: "Abort the current edit session",
 				},
 			},
+			Action: func(c *cli.Context) error {
+				if c.Bool("abort") {
+					stackedpr.EditCommitAbort(ctx)
+				} else if c.Bool("done") {
+					stackedpr.EditCommitDone(ctx, c.Bool("update"))
+				} else {
+					stackedpr.EditCommit(ctx)
+				}
+				return nil
+			},
+		},
+		{
+			Name:  "check",
+			Usage: "Run pre merge checks (configured by MergeCheck in repository config)",
+			Action: func(c *cli.Context) error {
+				stackedpr.RunMergeCheck(ctx)
+				return nil
+			},
+		},
 			{
 				Name:  "version",
 				Usage: "Show version info",
