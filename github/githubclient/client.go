@@ -202,7 +202,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	targetBranch := c.config.Repo.GitHubBranch
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
-	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, pullRequestConnection)
+	pullRequests := matchPullRequestStack(c.config.Repo, c.config.User.BranchPrefix, targetBranch, localCommitStack, pullRequestConnection)
 	for _, pr := range pullRequests {
 		if pr.Ready(c.config) {
 			pr.MergeStatus.Stacked = true
@@ -224,6 +224,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 
 func matchPullRequestStack(
 	repoConfig *config.RepoConfig,
+	branchPrefix string,
 	targetBranch string,
 	localCommitStack []git.Commit,
 	allPullRequests fezzik_types.PullRequestConnection) []*github.PullRequest {
@@ -260,7 +261,7 @@ func matchPullRequestStack(
 			InQueue:    node.MergeQueueEntry != nil,
 		}
 
-		matches := git.BranchNameRegex.FindStringSubmatch(node.HeadRefName)
+		matches := git.BranchNameRegex(branchPrefix).FindStringSubmatch(node.HeadRefName)
 		if matches != nil {
 			commit := (*node.Commits.Nodes)[len(*node.Commits.Nodes)-1].Commit
 			pullRequest.Commit = git.Commit{
@@ -329,7 +330,7 @@ func matchPullRequestStack(
 			break
 		}
 
-		matches := git.BranchNameRegex.FindStringSubmatch(currpr.ToBranch)
+		matches := git.BranchNameRegex(branchPrefix).FindStringSubmatch(currpr.ToBranch)
 		if matches == nil {
 			panic(fmt.Errorf("invalid base branch for pull request:%s", currpr.ToBranch))
 		}
