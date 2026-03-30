@@ -29,7 +29,7 @@ Commands
 | `git spr check`   |           | Run pre-merge checks (configured by `mergeCheck`) |
 | `git spr version` |           | Show version info |
 
-**Global flags:** `--detail` (show status bit headers), `--verbose` (log git commands and GitHub API calls), `--debug`, `--profile`
+**Global flags:** `--detail` (show status bit headers), `--verbose` (log git commands and GitHub API calls), `--no-jj` (disable jj mode), `--debug`, `--profile`
 
 Installation 
 ------------
@@ -230,9 +230,43 @@ User specific configuration is saved to .spr.yml in the user home directory.
 | createDraftPRs       | bool | false   | new pull requests are created as draft |
 | preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body |
 | noRebase             | bool | false   | when true spr update will not rebase on top of origin |
+| noJJ                 | bool | false   | disable jj (Jujutsu) mode even in jj-colocated repos (also `--no-jj` flag or `SPR_NOJJ` env var) |
 | deleteMergedBranches | bool | false   | delete branches after prs are merged |
 | shortPRLink          | bool | false   | show pull request links as clickable PR-<number> instead of full URL |
 | showCommitID         | bool | false   | show first 8 characters of commit hash for each pull request |
+
+Jujutsu (jj) Support
+--------------------
+spr supports [Jujutsu](https://jj-vcs.github.io/jj/) colocated repositories. When spr detects a `.jj/` directory in your repo root, it automatically uses jj-native commands for history-rewriting operations (`jj describe`, `jj rebase`, `jj squash`, `jj edit`) instead of `git rebase`. This preserves jj change IDs across all spr operations.
+
+Everything else (push, branch management, GitHub API calls) continues to use git, which works identically in colocated repos.
+
+**Setup:**
+```shell
+# 1. Initialize jj in your existing git repo (if not already)
+jj git init --colocate
+
+# 2. Register the jj alias so you can use "jj spr" instead of "git spr"
+git spr jj-setup
+```
+
+The `jj-setup` command adds a jj alias so spr can be invoked as `jj spr`:
+```shell
+jj spr update          # create/update PRs
+jj spr status          # show PR status
+jj spr merge           # merge PRs
+jj spr amend           # amend a commit in the stack
+```
+
+You can also set up the alias manually:
+```shell
+jj config set --user aliases.spr '["util", "exec", "--", "git-spr"]'
+```
+
+**Opt-out:** If you have a `.jj/` directory but want spr to use git mode:
+- CLI flag: `jj spr update --no-jj`
+- Environment variable: `SPR_NOJJ=true`
+- Config: add `noJJ: true` to `~/.spr.yml`
 
 Happy Coding!
 -------------
