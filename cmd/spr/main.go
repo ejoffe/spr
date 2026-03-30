@@ -13,6 +13,7 @@ import (
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
+	"github.com/ejoffe/spr/vcs"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -88,9 +89,21 @@ func main() {
 	}
 	gitcmd = realgit.NewGitCmd(cfg)
 
+	// Check for --no-jj flag or SPR_NOJJ env var before creating VCS operations.
+	// This must happen before app.Run() since vcsOps is created here.
+	for _, arg := range os.Args[1:] {
+		if arg == "--no-jj" {
+			cfg.User.NoJJ = true
+		}
+	}
+	if os.Getenv("SPR_NOJJ") == "true" {
+		cfg.User.NoJJ = true
+	}
+
 	ctx := context.Background()
 	client := githubclient.NewGitHubClient(ctx, cfg)
-	stackedpr := spr.NewStackedPR(cfg, client, gitcmd)
+	vcsOps := vcs.NewVCSOperations(cfg, gitcmd)
+	stackedpr := spr.NewStackedPR(cfg, client, gitcmd, vcsOps)
 
 	detailFlag := &cli.BoolFlag{
 		Name:  "detail",
@@ -145,6 +158,12 @@ VERSION: fork of {{.Version}}
 				Name:  "debug",
 				Value: false,
 				Usage: "Show runtime debug info",
+			},
+			&cli.BoolFlag{
+				Name:    "no-jj",
+				Value:   false,
+				Usage:   "Disable jj (Jujutsu) mode even in jj-colocated repos",
+				EnvVars: []string{"SPR_NOJJ"},
 			},
 		},
 		Before: func(c *cli.Context) error {
