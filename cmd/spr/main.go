@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/ejoffe/rake"
@@ -326,6 +327,25 @@ VERSION: fork of {{.Version}}
 				return nil
 			},
 		},
+			{
+				Name:  "jj-setup",
+				Usage: "Register 'jj spr' alias for use in Jujutsu repos",
+				Action: func(c *cli.Context) error {
+					cmd := exec.Command("jj", "config", "set", "--user",
+						"aliases.spr", `["util", "exec", "--", "git-spr"]`)
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					err := cmd.Run()
+					if err != nil {
+						return cli.Exit(fmt.Sprintf("Failed to set jj alias: %s", err), 1)
+					}
+					fmt.Println("jj alias registered. You can now use:")
+					fmt.Println("  jj spr update")
+					fmt.Println("  jj spr status")
+					fmt.Println("  jj spr merge")
+					return nil
+				},
+			},
 			{
 				Name:  "version",
 				Usage: "Show version info",
