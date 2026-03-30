@@ -48,10 +48,12 @@ func (j *JjOps) FetchAndRebase(cfg *config.Config) error {
 // If any commits lack commit-id trailers, adds them via jj describe.
 func (j *JjOps) GetLocalCommitStack(cfg *config.Config, gitcmd git.GitInterface) []git.Commit {
 	template := `commit_id ++ "\x1f" ++ change_id ++ "\x1f" ++ empty ++ "\x1f" ++ description ++ "\x1e"`
-	logCmd := fmt.Sprintf(`log --no-graph --reversed --color=never -r "trunk()..@" -T '%s'`, template)
 
 	var output string
-	j.jjcmd.MustJj(logCmd, &output)
+	err := j.jjcmd.JjArgs([]string{"log", "--no-graph", "--reversed", "--color=never", "-r", "trunk()..@", "-T", template}, &output)
+	if err != nil {
+		panic(err)
+	}
 
 	parsed, valid := parseJjLogOutput(output)
 
@@ -71,7 +73,10 @@ func (j *JjOps) GetLocalCommitStack(cfg *config.Config, gitcmd git.GitInterface)
 		}
 
 		// Re-read commit hashes since jj describe changes them
-		j.jjcmd.MustJj(logCmd, &output)
+		err = j.jjcmd.JjArgs([]string{"log", "--no-graph", "--reversed", "--color=never", "-r", "trunk()..@", "-T", template}, &output)
+		if err != nil {
+			panic(err)
+		}
 		reparsed, revalid := parseJjLogOutput(output)
 		if !revalid {
 			panic("unable to add commit-id trailers via jj describe")
@@ -198,7 +203,7 @@ func (j *JjOps) EditStatePath() string {
 // causing 'trunk()..@' to miss commits above @.
 func (j *JjOps) CheckStackCompleteness() string {
 	var output string
-	err := j.jjcmd.Jj(`log --no-graph --color=never -r "children(@) & trunk()..@+" -T 'change_id ++ "\n"'`, &output)
+	err := j.jjcmd.JjArgs([]string{"log", "--no-graph", "--color=never", "-r", "children(@) & trunk()..@+", "-T", `change_id ++ "\n"`}, &output)
 	if err != nil {
 		return ""
 	}

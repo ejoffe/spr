@@ -79,7 +79,7 @@ func (m *Mock) ExpectRebase(remote, branch string) {
 // ExpectLogAndRespond expects the jj log command and returns formatted output.
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
 	template := `commit_id ++ "\x1f" ++ change_id ++ "\x1f" ++ empty ++ "\x1f" ++ description ++ "\x1e"`
-	m.expect(fmt.Sprintf(`jj log --no-graph --reversed --color=never -r "trunk()..@" -T '%s'`, template)).
+	m.expect(fmt.Sprintf(`jj log --no-graph --reversed --color=never -r trunk()..@ -T %s`, template)).
 		respond(formatJjLogResponse(commits))
 }
 
@@ -121,7 +121,7 @@ func (m *Mock) ExpectLogAt(changeID string) {
 // ExpectCheckChildren expects the children(@) completeness check and responds
 // with the given output (empty string means no children, i.e. @ is at the top).
 func (m *Mock) ExpectCheckChildren(response string) {
-	m.expect(`jj log --no-graph --color=never -r "children(@) & trunk()..@+" -T 'change_id ++ "\n"'`).respond(response)
+	m.expect(`jj log --no-graph --color=never -r children(@) & trunk()..@+ -T change_id ++ "\n"`).respond(response)
 }
 
 func (m *Mock) expect(cmd string) *Mock {
