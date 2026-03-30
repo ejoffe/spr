@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
@@ -129,6 +130,26 @@ func (g *GitOps) IsEditing() bool {
 // EditStatePath returns the path to the edit state file.
 func (g *GitOps) EditStatePath() string {
 	return filepath.Join(g.gitcmd.RootDir(), ".git", "spr_edit_state")
+}
+
+// PushBranches force-pushes spr branches for updated commits via git.
+func (g *GitOps) PushBranches(cfg *config.Config, commits []git.Commit, individually bool) error {
+	var refNames []string
+	for _, commit := range commits {
+		branchName := git.BranchNameFromCommit(cfg, commit)
+		refNames = append(refNames, commit.CommitHash+":refs/heads/"+branchName)
+	}
+	if individually {
+		for _, refName := range refNames {
+			pushCommand := fmt.Sprintf("push --force %s %s", cfg.Repo.GitHubRemote, refName)
+			g.gitcmd.MustGit(pushCommand, nil)
+		}
+	} else {
+		pushCommand := fmt.Sprintf("push --force --atomic %s %s",
+			cfg.Repo.GitHubRemote, strings.Join(refNames, " "))
+		g.gitcmd.MustGit(pushCommand, nil)
+	}
+	return nil
 }
 
 // CheckStackCompleteness is a no-op for git. The detached-HEAD case is already

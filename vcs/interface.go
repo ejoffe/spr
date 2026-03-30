@@ -45,6 +45,11 @@ type VCSOperations interface {
 	// jj:  no-op (working copy is always a commit)
 	PrepareForPush() (cleanup func(), err error)
 
+	// PushBranches force-pushes spr branches for updated commits.
+	// Git: git push --force --atomic origin <hash>:refs/heads/<branch> ...
+	// jj:  jj bookmark set <branch> -r <hash> + jj git push --bookmark 'glob:spr/*'
+	PushBranches(cfg *config.Config, commits []git.Commit, individually bool) error
+
 	// IsEditing returns true if an edit session is in progress.
 	IsEditing() bool
 

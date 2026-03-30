@@ -40,6 +40,7 @@ type RepoConfig struct {
 	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
 
 	ShowPrTitlesInStack    bool `default:"false" yaml:"showPrTitlesInStack"`
+	ShowStackNumberInTitle bool `default:"false" yaml:"showStackNumberInTitle"`
 	BranchPushIndividually bool `default:"false" yaml:"branchPushIndividually"`
 }
 

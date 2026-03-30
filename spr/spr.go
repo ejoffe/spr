@@ -677,24 +677,9 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 		}
 	}
 
-	var refNames []string
-	for _, commit := range updatedCommits {
-		branchName := git.BranchNameFromCommit(sd.config, commit)
-		refNames = append(refNames,
-			commit.CommitHash+":refs/heads/"+branchName)
-	}
-
 	if len(updatedCommits) > 0 {
-		if sd.config.Repo.BranchPushIndividually {
-			for _, refName := range refNames {
-				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.GitHubRemote, refName)
-				sd.gitcmd.MustGit(pushCommand, nil)
-			}
-		} else {
-			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
-			pushCommand += strings.Join(refNames, " ")
-			sd.gitcmd.MustGit(pushCommand, nil)
-		}
+		err := sd.vcsOps.PushBranches(sd.config, updatedCommits, sd.config.Repo.BranchPushIndividually)
+		check(err)
 	}
 	sd.profiletimer.Step("SyncCommitStack::PushBranches")
 	return true

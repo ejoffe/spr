@@ -549,3 +549,43 @@ func TestGetInfoShouldAcceptLocalCommits(t *testing.T) {
 	require.True(t, ok,
 		"GetInfo should accept a localCommits []git.Commit parameter so jj mode can provide commits")
 }
+
+func TestFormatTitle_StackNumber(t *testing.T) {
+	prs := []*github.PullRequest{
+		{Commit: git.Commit{CommitID: "aaa"}},
+		{Commit: git.Commit{CommitID: "bbb"}},
+		{Commit: git.Commit{CommitID: "ccc"}},
+	}
+	info := &github.GitHubInfo{PullRequests: prs}
+
+	t.Run("disabled", func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		c := &client{config: cfg}
+		got := c.formatTitle("my title", git.Commit{CommitID: "bbb"}, info)
+		require.Equal(t, "my title", got)
+	})
+
+	t.Run("enabled_middle", func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		cfg.Repo.ShowStackNumberInTitle = true
+		c := &client{config: cfg}
+		got := c.formatTitle("my title", git.Commit{CommitID: "bbb"}, info)
+		require.Equal(t, "[Stack 2/3] my title", got)
+	})
+
+	t.Run("enabled_first", func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		cfg.Repo.ShowStackNumberInTitle = true
+		c := &client{config: cfg}
+		got := c.formatTitle("my title", git.Commit{CommitID: "aaa"}, info)
+		require.Equal(t, "[Stack 1/3] my title", got)
+	})
+
+	t.Run("enabled_new_commit", func(t *testing.T) {
+		cfg := config.EmptyConfig()
+		cfg.Repo.ShowStackNumberInTitle = true
+		c := &client{config: cfg}
+		got := c.formatTitle("my title", git.Commit{CommitID: "zzz"}, info)
+		require.Equal(t, "[Stack 4/4] my title", got)
+	})
+}

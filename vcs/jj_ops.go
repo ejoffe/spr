@@ -179,6 +179,21 @@ func (j *JjOps) EditAbort() error {
 	return nil
 }
 
+// PushBranches sets jj bookmarks for each updated commit and pushes via jj git push.
+// This ensures jj tracks the branches, keeping the commits mutable.
+func (j *JjOps) PushBranches(cfg *config.Config, commits []git.Commit, individually bool) error {
+	for _, commit := range commits {
+		branchName := git.BranchNameFromCommit(cfg, commit)
+		err := j.jjcmd.JjArgs([]string{"bookmark", "set", branchName, "-r", commit.CommitHash, "--allow-backwards"}, nil)
+		if err != nil {
+			return fmt.Errorf("failed to set bookmark %s: %w", branchName, err)
+		}
+	}
+	remote := cfg.Repo.GitHubRemote
+	branchGlob := "glob:spr/" + cfg.Repo.GitHubBranch + "/*"
+	return j.jjcmd.JjArgs([]string{"git", "push", "--remote", remote, "--bookmark", branchGlob}, nil)
+}
+
 // PrepareForPush is a no-op for jj — the working copy is always a commit.
 func (j *JjOps) PrepareForPush() (func(), error) {
 	return func() {}, nil

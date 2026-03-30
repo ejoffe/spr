@@ -2,7 +2,6 @@ package vcs
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -32,8 +31,6 @@ func (c *JjCmd) Jj(args string, output *string) error {
 	cmdArgs := strings.Fields(args)
 	cmd := exec.Command("jj", cmdArgs...)
 	cmd.Dir = c.rootdir
-	cmd.Env = append(os.Environ(), "JJ_CONFIG=")
-
 	out, err := cmd.CombinedOutput()
 	if output != nil {
 		*output = strings.TrimRight(string(out), "\n")
@@ -57,7 +54,6 @@ func (c *JjCmd) JjArgs(args []string, output *string) error {
 	log.Debug().Msgf("jj %v", args)
 	cmd := exec.Command("jj", args...)
 	cmd.Dir = c.rootdir
-	cmd.Env = append(os.Environ(), "JJ_CONFIG=")
 
 	out, err := cmd.CombinedOutput()
 	if output != nil {

@@ -378,6 +378,21 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 	return users
 }
 
+// formatTitle adds a [Stack N/M] prefix to the title if configured.
+func (c *client) formatTitle(title string, commit git.Commit, info *github.GitHubInfo) string {
+	if !c.config.Repo.ShowStackNumberInTitle {
+		return title
+	}
+	total := len(info.PullRequests)
+	for i, pr := range info.PullRequests {
+		if pr.Commit.CommitID == commit.CommitID {
+			return fmt.Sprintf("[Stack %d/%d] %s", i+1, total, title)
+		}
+	}
+	// Commit not yet in PR list (new PR being created) — count it
+	return fmt.Sprintf("[Stack %d/%d] %s", total+1, total+1, title)
+}
+
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
@@ -398,7 +413,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		RepositoryId: info.RepositoryID,
 		BaseRefName:  baseRefName,
 		HeadRefName:  headRefName,
-		Title:        templatizer.Title(info, commit),
+		Title:        c.formatTitle(templatizer.Title(info, commit), commit, info),
 		Body:         &body,
 		Draft:        &c.config.User.CreateDraftPRs,
 	})
@@ -445,7 +460,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 		Interface("PR", pr).Msg("UpdatePullRequest")
 
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
-	title := templatizer.Title(info, commit)
+	title := c.formatTitle(templatizer.Title(info, commit), commit, info)
 	body := templatizer.Body(info, commit, pr)
 	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
