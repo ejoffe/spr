@@ -79,6 +79,11 @@ func (m *Mock) ExpectFetch() {
 	m.expect("git rebase origin/master --autostash")
 }
 
+func (m *Mock) ExpectFetchTags() {
+	m.expect("git fetch --tags --force")
+	m.expect("git rebase origin/master --autostash")
+}
+
 func (m *Mock) ExpectDeleteBranch(branchName string) {
 	m.expect(fmt.Sprintf("git DeleteRemoteBranch(%s)", branchName))
 }

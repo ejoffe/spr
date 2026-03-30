@@ -10,6 +10,7 @@ import (
 	"github.com/ejoffe/spr/git/realgit"
 	"github.com/ejoffe/spr/github/githubclient"
 	"github.com/ejoffe/spr/spr"
+	"github.com/ejoffe/spr/vcs"
 	"github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -62,7 +63,8 @@ func main() {
 	client := githubclient.NewGitHubClient(ctx, cfg)
 	gitcmd = realgit.NewGitCmd(cfg)
 
-	sd := spr.NewStackedPR(cfg, client, gitcmd)
+	vcsOps := vcs.NewVCSOperations(cfg, gitcmd)
+	sd := spr.NewStackedPR(cfg, client, gitcmd, vcsOps)
 	sd.AmendCommit(ctx)
 
 	if opts.Update {
