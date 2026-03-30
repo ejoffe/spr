@@ -193,6 +193,23 @@ func (j *JjOps) EditStatePath() string {
 	return ""
 }
 
+// CheckStackCompleteness warns if @ is not at the top of the stack.
+// In jj, this happens when the user has done 'jj edit' to a mid-stack commit,
+// causing 'trunk()..@' to miss commits above @.
+func (j *JjOps) CheckStackCompleteness() string {
+	var output string
+	err := j.jjcmd.Jj(`log --no-graph --color=never -r "children(@) & trunk()..@+" -T 'change_id ++ "\n"'`, &output)
+	if err != nil {
+		return ""
+	}
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+	lines := strings.Split(output, "\n")
+	return fmt.Sprintf("warning: @ is not at the top of your stack — %d commit(s) above @ will be excluded from spr operations", len(lines))
+}
+
 // readEditState reads the key=value state file.
 func (j *JjOps) readEditState() (map[string]string, error) {
 	data, err := os.ReadFile(j.EditStatePath())

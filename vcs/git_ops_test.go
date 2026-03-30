@@ -74,3 +74,16 @@ func TestGitOpsEditStatePath(t *testing.T) {
 	// mockgit.RootDir() returns ""
 	assert.Contains(t, ops.EditStatePath(), "spr_edit_state")
 }
+
+// --- CheckStackCompleteness ---
+
+func TestGitOpsCheckStackCompleteness_Noop(t *testing.T) {
+	cfg := makeGitTestConfig()
+	gitmock := mockgit.NewMockGit(t)
+	ops := NewGitOps(cfg, gitmock)
+
+	// Git mode is a no-op — detached HEAD is caught by fetchAndGetGitHubInfo
+	warning := ops.CheckStackCompleteness()
+	assert.Equal(t, "", warning)
+	gitmock.ExpectationsMet()
+}

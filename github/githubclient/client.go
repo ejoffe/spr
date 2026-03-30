@@ -173,7 +173,7 @@ type client struct {
 	api    genclient.Client
 }
 
-func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
+func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface, localCommits []git.Commit) *github.GitHubInfo {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github fetch pull requests\n")
 	}
@@ -200,7 +200,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	}
 
 	targetBranch := c.config.Repo.GitHubBranch
-	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
+	localCommitStack := localCommits
 
 	pullRequests := matchPullRequestStack(c.config.Repo, targetBranch, localCommitStack, pullRequestConnection)
 	for _, pr := range pullRequests {

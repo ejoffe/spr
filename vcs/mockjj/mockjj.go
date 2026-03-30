@@ -118,6 +118,12 @@ func (m *Mock) ExpectLogAt(changeID string) {
 	m.expect("jj log --no-graph -r @ -T change_id").respond(changeID)
 }
 
+// ExpectCheckChildren expects the children(@) completeness check and responds
+// with the given output (empty string means no children, i.e. @ is at the top).
+func (m *Mock) ExpectCheckChildren(response string) {
+	m.expect(`jj log --no-graph --color=never -r "children(@) & trunk()..@+" -T 'change_id ++ "\n"'`).respond(response)
+}
+
 func (m *Mock) expect(cmd string) *Mock {
 	m.expectedCmd = append(m.expectedCmd, cmd)
 	m.response = append(m.response, &stringResponse{valid: false})

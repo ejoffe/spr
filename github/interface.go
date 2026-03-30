@@ -8,8 +8,9 @@ import (
 )
 
 type GitHubInterface interface {
-	// GetInfo returns the list of pull requests from GitHub which match the local stack of commits
-	GetInfo(ctx context.Context, gitcmd git.GitInterface) *GitHubInfo
+	// GetInfo returns the list of pull requests from GitHub which match the local stack of commits.
+	// localCommits is the commit stack provided by VCSOperations (git log or jj log).
+	GetInfo(ctx context.Context, gitcmd git.GitInterface, localCommits []git.Commit) *GitHubInfo
 
 	// GetAssignableUsers returns a list of valid GitHub users that can review the pull request
 	GetAssignableUsers(ctx context.Context) []RepoAssignee

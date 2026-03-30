@@ -247,6 +247,32 @@ func TestJjOpsPrepareForPush_IsNoop(t *testing.T) {
 	cleanup() // should not panic
 }
 
+// --- CheckStackCompleteness ---
+
+func TestJjOpsCheckStackCompleteness_AtTop(t *testing.T) {
+	cfg := makeJjTestConfig()
+	jjmock := mockjj.NewMockJj(t)
+	ops := NewJjOps(cfg, jjmock, nil)
+
+	jjmock.ExpectCheckChildren("")
+
+	warning := ops.CheckStackCompleteness()
+	assert.Equal(t, "", warning)
+	jjmock.ExpectationsMet()
+}
+
+func TestJjOpsCheckStackCompleteness_MidStack(t *testing.T) {
+	cfg := makeJjTestConfig()
+	jjmock := mockjj.NewMockJj(t)
+	ops := NewJjOps(cfg, jjmock, nil)
+
+	jjmock.ExpectCheckChildren("jjchange_above1\njjchange_above2")
+
+	warning := ops.CheckStackCompleteness()
+	assert.Contains(t, warning, "2 commit(s) above @")
+	jjmock.ExpectationsMet()
+}
+
 // --- mockRootDir implements git.GitInterface just for RootDir ---
 
 type mockRootDir struct {

@@ -1,6 +1,7 @@
 package githubclient
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ejoffe/spr/config"
@@ -527,4 +528,24 @@ func TestMatchPullRequestStack(t *testing.T) {
 			require.Equal(t, tc.expect, actual)
 		})
 	}
+}
+
+// TestGetInfoShouldAcceptLocalCommits verifies that GetInfo accepts a
+// localCommits parameter so the caller can provide commits from VCSOperations
+// (e.g. jj log) instead of GetInfo fetching them via git.GetLocalCommitStack.
+//
+// RED: currently GetInfo only takes (ctx, gitcmd) — no commits parameter.
+// GREEN: after fix, GetInfo takes (ctx, gitcmd, localCommits).
+func TestGetInfoShouldAcceptLocalCommits(t *testing.T) {
+	// Define the interface we expect GetInfo to satisfy after the fix.
+	type getInfoWithCommits interface {
+		GetInfo(ctx context.Context, gitcmd git.GitInterface, localCommits []git.Commit) *github.GitHubInfo
+	}
+
+	cfg := config.EmptyConfig()
+	c := &client{config: cfg}
+
+	_, ok := interface{}(c).(getInfoWithCommits)
+	require.True(t, ok,
+		"GetInfo should accept a localCommits []git.Commit parameter so jj mode can provide commits")
 }

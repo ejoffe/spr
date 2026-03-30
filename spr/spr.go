@@ -57,6 +57,22 @@ type stackediff struct {
 	synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
 }
 
+// confirmIfIncompleteStack checks whether the working copy position might cause
+// spr to see an incomplete stack, and if so, warns the user and asks for
+// confirmation. Returns true if the user wants to proceed (or no warning).
+func (sd *stackediff) confirmIfIncompleteStack() bool {
+	warning := sd.vcsOps.CheckStackCompleteness()
+	if warning == "" {
+		return true
+	}
+	fmt.Fprintf(sd.output, "%s\n", warning)
+	fmt.Fprintf(sd.output, "Continue anyway? [y/N] ")
+	reader := bufio.NewReader(sd.input)
+	line, _ := reader.ReadString('\n')
+	line = strings.TrimSpace(strings.ToLower(line))
+	return line == "y" || line == "yes"
+}
+
 // AmendCommit enables one to easily amend a commit in the middle of a stack
 //
 //	of commits. A list of commits is printed and one can be chosen to be amended.
@@ -240,6 +256,9 @@ func alignLocalCommits(commits []git.Commit, prs []*github.PullRequest) []git.Co
 //	In the case where commits are reordered, the corresponding pull requests
 //	 will also be reordered to match the commit stack order.
 func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string, count *uint) {
+	if !sd.confirmIfIncompleteStack() {
+		return
+	}
 	sd.profiletimer.Step("UpdatePullRequests::Start")
 	reviewers = append(sd.config.Repo.DefaultReviewers, reviewers...)
 	githubInfo := sd.fetchAndGetGitHubInfo(ctx)
@@ -388,13 +407,16 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 //	We than close all the pull requests which are below the merged request, as
 //	their commits have already been merged.
 func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
+	if !sd.confirmIfIncompleteStack() {
+		return
+	}
 	sd.profiletimer.Step("MergePullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	localCommits := sd.vcsOps.GetLocalCommitStack(sd.config, sd.gitcmd)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd, localCommits)
 	sd.profiletimer.Step("MergePullRequests::getGitHubInfo")
 
 	// MergeCheck
 	if sd.config.Repo.MergeCheck != "" {
-		localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 		if len(localCommits) > 0 {
 			lastCommit := localCommits[len(localCommits)-1]
 			checkedCommit, found := sd.config.State.MergeCheckCommit[githubInfo.Key()]
@@ -469,8 +491,12 @@ func (sd *stackediff) MergePullRequests(ctx context.Context, count *uint) {
 //	prints out the status of each. It does not make any updates locally or
 //	remotely on github.
 func (sd *stackediff) StatusPullRequests(ctx context.Context) {
+	if !sd.confirmIfIncompleteStack() {
+		return
+	}
 	sd.profiletimer.Step("StatusPullRequests::Start")
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	localCommits := sd.vcsOps.GetLocalCommitStack(sd.config, sd.gitcmd)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd, localCommits)
 
 	if len(githubInfo.PullRequests) == 0 {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
@@ -491,7 +517,8 @@ func (sd *stackediff) SyncStack(ctx context.Context) {
 	sd.profiletimer.Step("SyncStack::Start")
 	defer sd.profiletimer.Step("SyncStack::End")
 
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	localCommits := sd.vcsOps.GetLocalCommitStack(sd.config, sd.gitcmd)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd, localCommits)
 
 	if len(githubInfo.PullRequests) == 0 {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
@@ -513,13 +540,13 @@ func (sd *stackediff) RunMergeCheck(ctx context.Context) {
 		return
 	}
 
-	localCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
+	localCommits := sd.vcsOps.GetLocalCommitStack(sd.config, sd.gitcmd)
 	if len(localCommits) == 0 {
 		fmt.Println("no local commits - nothing to check")
 		return
 	}
 
-	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
+	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd, localCommits)
 
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
@@ -603,7 +630,8 @@ func (sd *stackediff) fetchAndGetGitHubInfo(ctx context.Context) *github.GitHubI
 	if err != nil {
 		return nil
 	}
-	info := sd.github.GetInfo(ctx, sd.gitcmd)
+	localCommits := sd.vcsOps.GetLocalCommitStack(sd.config, sd.gitcmd)
+	info := sd.github.GetInfo(ctx, sd.gitcmd, localCommits)
 	if git.BranchNameRegex.FindString(info.LocalBranch) != "" {
 		fmt.Printf("error: don't run spr in a remote pr branch\n")
 		fmt.Printf(" this could lead to weird duplicate pull requests getting created\n")

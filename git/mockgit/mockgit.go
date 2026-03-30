@@ -122,6 +122,7 @@ func (m *Mock) ExpectLocalBranch(name string) {
 	m.expect("git branch --no-color").respond(name)
 }
 
+
 func (m *Mock) expect(cmd string, args ...interface{}) *Mock {
 	m.expectedCmd = append(m.expectedCmd, fmt.Sprintf(cmd, args...))
 	m.response = append(m.response, &commitResponse{valid: false})

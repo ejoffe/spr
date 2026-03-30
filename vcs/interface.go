@@ -50,6 +50,12 @@ type VCSOperations interface {
 
 	// EditStatePath returns the path to the edit state file.
 	EditStatePath() string
+
+	// CheckStackCompleteness checks whether the current working copy position
+	// might cause spr to see an incomplete stack. Returns a non-empty warning
+	// string if there are commits that would be excluded (e.g. @ has descendants
+	// in jj, or HEAD is detached in git). Returns "" if everything looks fine.
+	CheckStackCompleteness() string
 }
 
 // NewVCSOperations creates a VCSOperations implementation appropriate for the

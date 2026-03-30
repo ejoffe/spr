@@ -131,3 +131,9 @@ func (g *GitOps) EditStatePath() string {
 	return filepath.Join(g.gitcmd.RootDir(), ".git", "spr_edit_state")
 }
 
+// CheckStackCompleteness is a no-op for git. The detached-HEAD case is already
+// caught by the branch name check in fetchAndGetGitHubInfo.
+func (g *GitOps) CheckStackCompleteness() string {
+	return ""
+}
+
