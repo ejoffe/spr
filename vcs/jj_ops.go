@@ -135,17 +135,23 @@ func (j *JjOps) EditStart(commit git.Commit) error {
 
 	// Save operation ID for abort
 	var opID string
-	j.jjcmd.MustJj("op log --no-graph -n 1 -T 'id.short(16)'", &opID)
+	err := j.jjcmd.JjArgs([]string{"op", "log", "--no-graph", "-n", "1", "-T", "id.short(16)"}, &opID)
+	if err != nil {
+		return fmt.Errorf("failed to get operation ID: %w", err)
+	}
 
 	// Save current @ for finish
 	var currentAt string
-	j.jjcmd.MustJj("log --no-graph -r @ -T change_id", &currentAt)
+	err = j.jjcmd.JjArgs([]string{"log", "--no-graph", "-r", "@", "-T", "change_id"}, &currentAt)
+	if err != nil {
+		return fmt.Errorf("failed to get current change ID: %w", err)
+	}
 
 	// Write state file
 	stateContent := fmt.Sprintf("vcs=jj\nchange_id=%s\noriginal_at=%s\nop_id=%s\ncommit_id=%s\ncommit_subject=%s\n",
 		commit.ChangeID, strings.TrimSpace(currentAt), strings.TrimSpace(opID),
 		commit.CommitID, commit.Subject)
-	err := os.WriteFile(j.EditStatePath(), []byte(stateContent), 0644)
+	err = os.WriteFile(j.EditStatePath(), []byte(stateContent), 0644)
 	if err != nil {
 		return err
 	}

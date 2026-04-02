@@ -109,7 +109,7 @@ func (m *Mock) ExpectNew(changeID string) {
 
 // ExpectOpLog expects a jj op log command and returns an operation ID.
 func (m *Mock) ExpectOpLog(opID string) {
-	m.expect("jj op log --no-graph -n 1 -T 'id.short(16)'").respond(opID)
+	m.expect("jj op log --no-graph -n 1 -T id.short(16)").respond(opID)
 }
 
 // ExpectOpRestore expects a jj op restore command.
