@@ -2,6 +2,7 @@ package vcs
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,6 +101,36 @@ func TestJjOpsGetLocalCommitStack_WIPCommit(t *testing.T) {
 	require.Len(t, commits, 1)
 	assert.True(t, commits[0].WIP)
 	jjmock.ExpectationsMet()
+}
+
+func TestJjOpsGetLocalCommitStack_ImmutableCommitError(t *testing.T) {
+	cfg := makeJjTestConfig()
+	jjmock := mockjj.NewMockJj(t)
+	ops := NewJjOps(cfg, jjmock, nil)
+	ops.genCommitID = func() string { return "deadbeef" }
+
+	// Commit without commit-id trailer — triggers jj describe attempt
+	c1 := &git.Commit{
+		CommitHash: "c100000000000000000000000000000000000000",
+		ChangeID:   "jjchangeimmutable",
+		Subject:    "feat: some old commit",
+		// No CommitID
+	}
+
+	jjmock.ExpectLogAndRespond([]*git.Commit{c1})
+	jjmock.ExpectDescribeAndFail("jjchangeimmutable",
+		"feat: some old commit\n\ncommit-id:deadbeef",
+		fmt.Errorf("Error: Commit abc123 is immutable"))
+
+	defer func() {
+		r := recover()
+		require.NotNil(t, r, "expected panic for immutable commit")
+		msg := fmt.Sprintf("%v", r)
+		assert.Contains(t, msg, "jjchangeimmutable")
+		assert.Contains(t, msg, "immutable")
+		assert.Contains(t, msg, "jj bookmark track")
+	}()
+	ops.GetLocalCommitStack(cfg, nil)
 }
 
 // --- AmendInto ---

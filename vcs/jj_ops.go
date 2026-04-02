@@ -14,14 +14,20 @@ import (
 // JjOps implements VCSOperations using jj (Jujutsu) commands.
 // Git commands are still used for push operations (via gitcmd).
 type JjOps struct {
-	cfg    *config.Config
-	jjcmd  JjInterface
-	gitcmd git.GitInterface
+	cfg         *config.Config
+	jjcmd       JjInterface
+	gitcmd      git.GitInterface
+	genCommitID func() string
 }
 
 // NewJjOps creates a jj-based VCSOperations implementation.
 func NewJjOps(cfg *config.Config, jjcmd JjInterface, gitcmd git.GitInterface) *JjOps {
-	return &JjOps{cfg: cfg, jjcmd: jjcmd, gitcmd: gitcmd}
+	return &JjOps{
+		cfg:         cfg,
+		jjcmd:       jjcmd,
+		gitcmd:      gitcmd,
+		genCommitID: func() string { return uuid.New().String()[:8] },
+	}
 }
 
 // FetchAndRebase fetches from remote and rebases using jj commands.
@@ -61,12 +67,21 @@ func (j *JjOps) GetLocalCommitStack(cfg *config.Config, gitcmd git.GitInterface)
 		// Add commit-id trailers to commits that lack them
 		for i, p := range parsed {
 			if p.sprCommitID == "" && !p.empty {
-				newID := uuid.New().String()[:8]
+				newID := j.genCommitID()
 				newDesc := strings.TrimRight(p.description, "\n")
 				newDesc += "\n\ncommit-id:" + newID
 				err := j.jjcmd.JjArgs([]string{"describe", "-r", p.changeID, "-m", newDesc}, nil)
 				if err != nil {
-					panic(fmt.Sprintf("failed to add commit-id to %s: %v", p.changeID, err))
+					panic(fmt.Sprintf(
+						"error: cannot add commit-id trailer to %s (%s) — commit is likely immutable\n\n"+
+							"This happens when an untracked remote bookmark points at this commit\n"+
+							"(or one of its descendants), making the entire chain immutable.\n\n"+
+							"To fix, track the remote bookmarks that cover this commit:\n"+
+							"  jj bookmark track <bookmark> --remote <remote>\n\n"+
+							"To find which bookmarks are involved:\n"+
+							"  jj log -r '%s::' -T 'change_id.short() ++ \" \" ++ remote_bookmarks ++ \"\\n\"'\n\n"+
+							"Underlying error: %v",
+						p.changeID, p.subject, p.changeID, err))
 				}
 				parsed[i].sprCommitID = newID
 			}

@@ -34,15 +34,19 @@ func (m *Mock) Jj(args string, output *string) error {
 	actual := "jj " + args
 	m.assert.Equal(expected, actual)
 
-	if m.response[0].Valid() {
+	resp := m.response[0]
+	m.expectedCmd = m.expectedCmd[1:]
+	m.response = m.response[1:]
+
+	if resp.Err() != nil {
+		return resp.Err()
+	}
+	if resp.Valid() {
 		m.assert.NotNil(output)
-		*output = m.response[0].Output()
+		*output = resp.Output()
 	} else if output != nil {
 		*output = ""
 	}
-
-	m.expectedCmd = m.expectedCmd[1:]
-	m.response = m.response[1:]
 
 	return nil
 }
@@ -137,9 +141,19 @@ func (m *Mock) respond(response string) {
 	}
 }
 
+func (m *Mock) respondWithError(err error) {
+	m.response[len(m.response)-1] = &errResponse{err: err}
+}
+
+// ExpectDescribeAndFail expects a jj describe command and returns an error.
+func (m *Mock) ExpectDescribeAndFail(changeID, message string, err error) {
+	m.expect(fmt.Sprintf("jj describe -r %s -m %s", changeID, message)).respondWithError(err)
+}
+
 type responder interface {
 	Valid() bool
 	Output() string
+	Err() error
 }
 
 type stringResponse struct {
@@ -147,8 +161,17 @@ type stringResponse struct {
 	output string
 }
 
-func (r *stringResponse) Valid() bool  { return r.valid }
+func (r *stringResponse) Valid() bool    { return r.valid }
 func (r *stringResponse) Output() string { return r.output }
+func (r *stringResponse) Err() error     { return nil }
+
+type errResponse struct {
+	err error
+}
+
+func (r *errResponse) Valid() bool    { return false }
+func (r *errResponse) Output() string { return "" }
+func (r *errResponse) Err() error     { return r.err }
 
 // formatJjLogResponse formats commits as jj log output with field/record separators.
 func formatJjLogResponse(commits []*git.Commit) string {
