@@ -1021,3 +1021,86 @@ func testAmendInvalidInput(t *testing.T, sync bool) {
 func uintptr(a uint) *uint {
 	return &a
 }
+
+// --- Edit command name tests ---
+
+// stubVcsOps is a minimal VCSOperations stub for testing user-facing messages.
+type stubVcsOps struct {
+	editing     bool
+	commandName string
+	commits     []git.Commit
+}
+
+func (s *stubVcsOps) FetchAndRebase(cfg *config.Config) error                              { return nil }
+func (s *stubVcsOps) GetLocalCommitStack(cfg *config.Config, gitcmd git.GitInterface) []git.Commit {
+	return s.commits
+}
+func (s *stubVcsOps) AmendInto(commit git.Commit) error          { return nil }
+func (s *stubVcsOps) EditStart(commit git.Commit) error          { return nil }
+func (s *stubVcsOps) EditFinish() error                          { return nil }
+func (s *stubVcsOps) EditAbort() error                           { return nil }
+func (s *stubVcsOps) PrepareForPush() (func(), error)            { return func() {}, nil }
+func (s *stubVcsOps) PushBranches(cfg *config.Config, commits []git.Commit, individually bool) error {
+	return nil
+}
+func (s *stubVcsOps) IsEditing() bool            { return s.editing }
+func (s *stubVcsOps) EditStatePath() string       { return "" }
+func (s *stubVcsOps) CheckStackCompleteness() string { return "" }
+func (s *stubVcsOps) CommandName() string         { return s.commandName }
+
+func TestEditCommit_AlreadyEditing_UsesCommandName(t *testing.T) {
+	tests := []struct {
+		name        string
+		commandName string
+		wantPrefix  string
+	}{
+		{"jj mode", "jj spr", "jj spr"},
+		{"git mode", "git spr", "git spr"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.EmptyConfig()
+			cfg.Repo.GitHubBranch = "master"
+			gitmock := mockgit.NewMockGit(t)
+			githubmock := mockclient.NewMockClient(t)
+			githubmock.Info = &github.GitHubInfo{UserName: "test", RepositoryID: "repo", LocalBranch: "master"}
+
+			stub := &stubVcsOps{editing: true, commandName: tt.commandName}
+			s := NewStackedPR(cfg, githubmock, gitmock, stub)
+			output := &bytes.Buffer{}
+			s.output = output
+
+			s.EditCommit(context.Background())
+
+			require.Contains(t, output.String(), tt.wantPrefix+" edit --done")
+			require.Contains(t, output.String(), tt.wantPrefix+" edit --abort")
+		})
+	}
+}
+
+func TestEditCommit_Success_UsesCommandName(t *testing.T) {
+	cfg := config.EmptyConfig()
+	cfg.Repo.GitHubBranch = "master"
+	gitmock := mockgit.NewMockGit(t)
+	githubmock := mockclient.NewMockClient(t)
+	githubmock.Info = &github.GitHubInfo{UserName: "test", RepositoryID: "repo", LocalBranch: "master"}
+
+	stub := &stubVcsOps{
+		editing:     false,
+		commandName: "jj spr",
+		commits: []git.Commit{
+			{CommitID: "00000001", CommitHash: "c100000000000000000000000000000000000000", Subject: "test commit"},
+		},
+	}
+	s := NewStackedPR(cfg, githubmock, gitmock, stub)
+	output := &bytes.Buffer{}
+	s.output = output
+	input := bytes.NewBufferString("1\n")
+	s.input = input
+
+	s.EditCommit(context.Background())
+
+	require.Contains(t, output.String(), "jj spr edit --done")
+	require.Contains(t, output.String(), "jj spr edit --abort")
+	require.NotContains(t, output.String(), "git spr")
+}

@@ -158,3 +158,7 @@ func (g *GitOps) CheckStackCompleteness() string {
 	return ""
 }
 
+func (g *GitOps) CommandName() string {
+	return "git spr"
+}
+

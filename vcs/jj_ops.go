@@ -251,6 +251,10 @@ func (j *JjOps) CheckStackCompleteness() string {
 	return fmt.Sprintf("warning: @ is not at the top of your stack — %d commit(s) above @ will be excluded from spr operations", len(lines))
 }
 
+func (j *JjOps) CommandName() string {
+	return "jj spr"
+}
+
 // readEditState reads the key=value state file.
 func (j *JjOps) readEditState() (map[string]string, error) {
 	data, err := os.ReadFile(j.EditStatePath())

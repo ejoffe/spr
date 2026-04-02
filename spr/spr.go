@@ -119,12 +119,13 @@ func (sd *stackediff) isEditing() bool {
 // EditCommit starts an interactive edit session on a commit in the stack.
 //
 //	The user picks a commit, and the tool starts a rebase with an edit stop
-//	at that commit. The user can then edit files and run `git spr edit --done`
+//	at that commit. The user can then edit files and run `spr edit --done`
 //	to amend and restore the stack.
 func (sd *stackediff) EditCommit(ctx context.Context) {
 	if sd.isEditing() {
 		fmt.Fprintf(sd.output, "Already editing a commit.\n")
-		fmt.Fprintf(sd.output, "Run 'git spr edit --done' to finish or 'git spr edit --abort' to cancel.\n")
+		fmt.Fprintf(sd.output, "Run '%s edit --done' to finish or '%s edit --abort' to cancel.\n",
+			sd.vcsOps.CommandName(), sd.vcsOps.CommandName())
 		return
 	}
 
@@ -164,8 +165,8 @@ func (sd *stackediff) EditCommit(ctx context.Context) {
 	}
 
 	fmt.Fprintf(sd.output, "\nEditing commit %d: %s\n", commitIndex+1, targetCommit.Subject)
-	fmt.Fprintf(sd.output, "Make your changes, then run: git spr edit --done\n")
-	fmt.Fprintf(sd.output, "To cancel, run: git spr edit --abort\n")
+	fmt.Fprintf(sd.output, "Make your changes, then run: %s edit --done\n", sd.vcsOps.CommandName())
+	fmt.Fprintf(sd.output, "To cancel, run: %s edit --abort\n", sd.vcsOps.CommandName())
 }
 
 // EditCommitDone finishes an edit session by amending the current commit

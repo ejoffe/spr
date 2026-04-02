@@ -61,6 +61,10 @@ type VCSOperations interface {
 	// string if there are commits that would be excluded (e.g. @ has descendants
 	// in jj, or HEAD is detached in git). Returns "" if everything looks fine.
 	CheckStackCompleteness() string
+
+	// CommandName returns the CLI command prefix for user-facing messages.
+	// Returns "git spr" for git mode or "jj spr" for jj mode.
+	CommandName() string
 }
 
 // NewVCSOperations creates a VCSOperations implementation appropriate for the
