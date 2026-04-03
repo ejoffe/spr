@@ -20,6 +20,10 @@ type Commit struct {
 	// CommitHash is the git commit hash, this gets updated everytime the commit is amended.
 	CommitHash string
 
+	// ChangeID is the jj (Jujutsu) change ID. Only populated in jj-colocated repos.
+	// Unlike CommitHash, the ChangeID is stable across rewrites done via jj commands.
+	ChangeID string
+
 	// Subject is the subject of the commit message.
 	Subject string
 

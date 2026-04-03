@@ -33,7 +33,7 @@ type MockClient struct {
 	Synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
 }
 
-func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
+func (c *MockClient) GetInfo(ctx context.Context, gitcmd git.GitInterface, localCommits []git.Commit) *github.GitHubInfo {
 	fmt.Printf("HUB: GetInfo\n")
 	c.verifyExpectation(expectation{
 		op: getInfoOP,

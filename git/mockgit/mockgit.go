@@ -79,6 +79,11 @@ func (m *Mock) ExpectFetch() {
 	m.expect("git rebase origin/master --autostash")
 }
 
+func (m *Mock) ExpectFetchTags() {
+	m.expect("git fetch --tags --force")
+	m.expect("git rebase origin/master --autostash")
+}
+
 func (m *Mock) ExpectDeleteBranch(branchName string) {
 	m.expect(fmt.Sprintf("git DeleteRemoteBranch(%s)", branchName))
 }
@@ -116,6 +121,7 @@ func (m *Mock) ExpectFixup(commitHash string) {
 func (m *Mock) ExpectLocalBranch(name string) {
 	m.expect("git branch --no-color").respond(name)
 }
+
 
 func (m *Mock) expect(cmd string, args ...interface{}) *Mock {
 	m.expectedCmd = append(m.expectedCmd, fmt.Sprintf(cmd, args...))

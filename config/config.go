@@ -40,6 +40,7 @@ type RepoConfig struct {
 	ForceFetchTags bool `default:"false" yaml:"forceFetchTags"`
 
 	ShowPrTitlesInStack    bool `default:"false" yaml:"showPrTitlesInStack"`
+	ShowStackNumberInTitle bool `default:"false" yaml:"showStackNumberInTitle"`
 	BranchPushIndividually bool `default:"false" yaml:"branchPushIndividually"`
 }
 
@@ -53,6 +54,7 @@ type UserConfig struct {
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
+	NoJJ                 bool `default:"false" yaml:"noJJ"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`
 	ShortPRLink          bool `default:"false" yaml:"shortPRLink"`
 	ShowCommitID         bool `default:"false" yaml:"showCommitID"`
