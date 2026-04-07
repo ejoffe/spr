@@ -17,6 +17,7 @@ import (
 	"github.com/ejoffe/spr/github/githubclient/gen/genclient"
 	"github.com/ejoffe/spr/github/template/config_fetcher"
 	"github.com/rs/zerolog/log"
+	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
@@ -90,7 +91,11 @@ func findToken(githubHost string) string {
 	} else {
 		for host, user := range *cfg {
 			if host == githubHost {
-				return user.OauthToken
+				secret, err := keyring.Get("gh:github.com", user.User)
+				if err != nil {
+					return user.OauthToken
+				}
+				return secret
 			}
 		}
 	}
