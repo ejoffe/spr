@@ -75,6 +75,11 @@ func (c *gitcmd) GitWithEditor(argStr string, output *string, editorCmd string) 
 	// runs a git command
 	//  if output is not nil it will be set to the output of the command
 
+	// Fetch disabled
+	if c.config.User.NoFetch && strings.HasPrefix(argStr, "fetch") {
+		return nil
+	}
+
 	// Rebase disabled
 	if (c.config.User.NoRebase) && strings.HasPrefix(argStr, "rebase") {
 		return nil
