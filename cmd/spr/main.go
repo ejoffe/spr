@@ -190,13 +190,16 @@ VERSION: fork of {{.Version}}
 				Name:    "update",
 				Aliases: []string{"u", "up"},
 				Usage:   "Update and create pull requests for updated commits in the stack",
-				Before: func(c *cli.Context) error {
-					// only override whatever was set in yaml if flag is explicitly present
-					if c.IsSet("no-rebase") {
-						cfg.User.NoRebase = c.Bool("no-rebase")
-					}
-					return nil
-				},
+			Before: func(c *cli.Context) error {
+				// only override whatever was set in yaml if flag is explicitly present
+				if c.IsSet("no-rebase") {
+					cfg.User.NoRebase = c.Bool("no-rebase")
+				}
+				if c.IsSet("no-fetch") {
+					cfg.User.NoFetch = c.Bool("no-fetch")
+				}
+				return nil
+			},
 				Action: func(c *cli.Context) error {
 					if c.IsSet("count") {
 						count := c.Uint("count")
@@ -218,14 +221,20 @@ VERSION: fork of {{.Version}}
 						Aliases: []string{"c"},
 						Usage:   "Update a specified number of pull requests from the bottom of the stack",
 					},
-					&cli.BoolFlag{
-						Name:    "no-rebase",
-						Aliases: []string{"nr"},
-						Usage:   "Disable rebasing",
-						// this env var is needed as previous versions used the env var itself to pass intent to logic
-						// layer ops so it is likely relied on as a feature by users at this point
-						EnvVars: []string{"SPR_NOREBASE"},
-					},
+				&cli.BoolFlag{
+					Name:    "no-rebase",
+					Aliases: []string{"nr"},
+					Usage:   "Disable rebasing",
+					// this env var is needed as previous versions used the env var itself to pass intent to logic
+					// layer ops so it is likely relied on as a feature by users at this point
+					EnvVars: []string{"SPR_NOREBASE"},
+				},
+				&cli.BoolFlag{
+					Name:    "no-fetch",
+					Aliases: []string{"nf"},
+					Usage:   "Disable fetch",
+					EnvVars: []string{"SPR_NOFETCH"},
+				},
 				},
 			},
 			{
