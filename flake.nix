@@ -23,7 +23,7 @@
 
             src = self;
 
-            vendorHash = "sha256-byl+MF0vlfa4V/3uPrv5Qlcvh5jIozEyUkKSSwlRWhs=";
+            vendorHash = "sha256-VB7OJ8UkZ0WhEM5l2wR3xA1yxZcr+G+FLt3MxNY83Tg=";
 
             subPackages = [
               "cmd/spr"
