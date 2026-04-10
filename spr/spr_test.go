@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -974,4 +976,251 @@ func testAmendInvalidInput(t *testing.T, sync bool) {
 
 func uintptr(a uint) *uint {
 	return &a
+}
+
+// setupEditTest creates test objects with a temp directory as the git root,
+// including the .git subdirectory, so edit state files can be written.
+func setupEditTest(t *testing.T) (
+	s *stackediff, gitmock *mockgit.Mock,
+	input *bytes.Buffer, output *bytes.Buffer, tmpDir string) {
+	t.Helper()
+	s, gitmock, _, input, output = makeTestObjects(t, true)
+	tmpDir = t.TempDir()
+	err := os.MkdirAll(filepath.Join(tmpDir, ".git"), 0755)
+	require.NoError(t, err)
+	gitmock.SetRootDir(tmpDir)
+	return
+}
+
+func TestEditCommitNoCommits(t *testing.T) {
+	s, gitmock, _, output, _ := setupEditTest(t)
+	ctx := context.Background()
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{})
+	s.EditCommit(ctx)
+	require.Equal(t, "No commits to edit\n", output.String())
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitSelectCommit(t *testing.T) {
+	s, gitmock, input, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+	c2 := git.Commit{
+		CommitID:   "00000002",
+		CommitHash: "c200000000000000000000000000000000000000",
+		Subject:    "test commit 2",
+	}
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c2, &c1})
+	gitmock.ExpectEditStart()
+
+	// Select commit 1 (bottom of stack)
+	input.WriteString("1\n")
+	s.EditCommit(ctx)
+
+	// Verify state file was created
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	_, err := os.Stat(stateFile)
+	require.NoError(t, err, "state file should exist after starting edit")
+
+	// Verify output includes editing message
+	require.Contains(t, output.String(), "Editing commit 1")
+	require.Contains(t, output.String(), "git spr edit --done")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitAlreadyEditing(t *testing.T) {
+	s, _, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// Create the state file to simulate an active edit session
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	s.EditCommit(ctx)
+	require.Contains(t, output.String(), "Already editing a commit")
+}
+
+func TestEditCommitInvalidInput(t *testing.T) {
+	s, gitmock, input, output, _ := setupEditTest(t)
+	ctx := context.Background()
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	input.WriteString("abc\n")
+	s.EditCommit(ctx)
+	require.Contains(t, output.String(), "Invalid input")
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitDoneNotEditing(t *testing.T) {
+	s, _, _, output, _ := setupEditTest(t)
+	ctx := context.Background()
+
+	// No state file exists — not editing
+	s.EditCommitDone(ctx, false)
+	require.Equal(t, "No edit session in progress.\n", output.String())
+}
+
+func TestEditCommitDoneHappyPath(t *testing.T) {
+	s, gitmock, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// Create state file to simulate active edit session
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	// No REBASE_HEAD — we're at the initial edit stop
+	gitmock.ExpectEditDoneAmend()
+
+	s.EditCommitDone(ctx, false)
+
+	require.Contains(t, output.String(), "Stack restored successfully")
+
+	// Verify state file was cleaned up
+	_, err = os.Stat(stateFile)
+	require.True(t, os.IsNotExist(err), "state file should be removed after successful done")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitDoneWithConflict(t *testing.T) {
+	s, gitmock, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// Create state file to simulate active edit session
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	// No REBASE_HEAD — initial edit stop, but rebase --continue will conflict
+	gitmock.ExpectEditDoneAmendWithConflict()
+
+	s.EditCommitDone(ctx, false)
+
+	require.Contains(t, output.String(), "Rebase conflict detected")
+
+	// State file should still exist (session not complete)
+	_, err = os.Stat(stateFile)
+	require.NoError(t, err, "state file should still exist after conflict")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitDoneConflictResolution(t *testing.T) {
+	s, gitmock, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// Create state file to simulate active edit session
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	// Create REBASE_HEAD to simulate that we're in a conflict resolution state.
+	// This is the critical distinction: REBASE_HEAD exists means git stopped due
+	// to a conflict, NOT at an edit point. The fix should NOT amend here.
+	rebaseHeadFile := filepath.Join(tmpDir, ".git", "REBASE_HEAD")
+	err = os.WriteFile(rebaseHeadFile, []byte("abc123\n"), 0644)
+	require.NoError(t, err)
+
+	// Expect the conflict resolution path: add -A then rebase --continue (NO amend)
+	gitmock.ExpectEditDoneConflictResolved()
+
+	s.EditCommitDone(ctx, false)
+
+	require.Contains(t, output.String(), "Stack restored successfully")
+
+	// Verify state file was cleaned up
+	_, err = os.Stat(stateFile)
+	require.True(t, os.IsNotExist(err), "state file should be removed after successful done")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitDoneConflictThenResolution(t *testing.T) {
+	// This tests the full scenario that was buggy:
+	// 1. User edits bottom commit, runs --done
+	// 2. Amend succeeds, but rebase --continue conflicts on a later commit
+	// 3. User resolves conflict, runs --done again
+	// 4. This time it should NOT amend — just rebase --continue
+
+	s, gitmock, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// --- Phase 1: Initial --done, rebase hits conflict ---
+
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	// No REBASE_HEAD — at the initial edit stop
+	gitmock.ExpectEditDoneAmendWithConflict()
+
+	s.EditCommitDone(ctx, false)
+	require.Contains(t, output.String(), "Rebase conflict detected")
+	gitmock.ExpectationsMet()
+	output.Reset()
+
+	// --- Phase 2: User resolves conflict, runs --done again ---
+
+	// Now REBASE_HEAD exists (git created it when the conflict occurred)
+	rebaseHeadFile := filepath.Join(tmpDir, ".git", "REBASE_HEAD")
+	err = os.WriteFile(rebaseHeadFile, []byte("abc123\n"), 0644)
+	require.NoError(t, err)
+
+	// Expect the conflict resolution path: NO amend, just rebase --continue
+	gitmock.ExpectEditDoneConflictResolved()
+
+	s.EditCommitDone(ctx, false)
+	require.Contains(t, output.String(), "Stack restored successfully")
+
+	// Verify state file was cleaned up
+	_, err = os.Stat(stateFile)
+	require.True(t, os.IsNotExist(err), "state file should be removed after final done")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitAbort(t *testing.T) {
+	s, gitmock, _, output, tmpDir := setupEditTest(t)
+	ctx := context.Background()
+
+	// Create state file
+	stateFile := filepath.Join(tmpDir, ".git", "spr_edit_state")
+	err := os.WriteFile(stateFile, []byte("commit_id=00000001\n"), 0644)
+	require.NoError(t, err)
+
+	gitmock.ExpectEditAbort()
+
+	s.EditCommitAbort(ctx)
+
+	require.Contains(t, output.String(), "Edit session aborted")
+
+	// Verify state file was cleaned up
+	_, err = os.Stat(stateFile)
+	require.True(t, os.IsNotExist(err), "state file should be removed after abort")
+
+	gitmock.ExpectationsMet()
+}
+
+func TestEditCommitAbortNotEditing(t *testing.T) {
+	s, _, _, output, _ := setupEditTest(t)
+	ctx := context.Background()
+
+	s.EditCommitAbort(ctx)
+	require.Equal(t, "No edit session in progress.\n", output.String())
 }
