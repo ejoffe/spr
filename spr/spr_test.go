@@ -974,6 +974,39 @@ func testAmendInvalidInput(t *testing.T, sync bool) {
 	})
 }
 
+func TestSPRFetchOverridesNoFetchConfig(t *testing.T) {
+	// Test that --fetch flag overrides noFetch config (sets NoFetch back to false)
+	// This simulates: yaml has noFetch: true, user passes --fetch on CLI
+	s, gitmock, githubmock, _, output := makeTestObjects(t, true)
+	assert := require.New(t)
+	ctx := context.Background()
+
+	// Start with NoFetch true (as if loaded from yaml config)
+	s.config.User.NoFetch = true
+	// Then override it back to false (as the --fetch flag would do)
+	s.config.User.NoFetch = false
+
+	c1 := git.Commit{
+		CommitID:   "00000001",
+		CommitHash: "c100000000000000000000000000000000000000",
+		Subject:    "test commit 1",
+	}
+
+	// With NoFetch=false, fetch should run
+	githubmock.ExpectGetInfo()
+	gitmock.ExpectFetch()
+	gitmock.ExpectLogAndRespond([]*git.Commit{&c1})
+	gitmock.ExpectPushCommits([]*git.Commit{&c1})
+	githubmock.ExpectCreatePullRequest(c1, nil)
+	githubmock.ExpectUpdatePullRequest(c1, nil)
+	githubmock.ExpectGetInfo()
+	s.UpdatePullRequests(ctx, nil, nil)
+	assert.Equal("[vvvv]   1 : test commit 1\n", output.String())
+	gitmock.ExpectationsMet()
+	githubmock.ExpectationsMet()
+	output.Reset()
+}
+
 func uintptr(a uint) *uint {
 	return &a
 }

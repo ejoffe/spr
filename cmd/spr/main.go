@@ -195,6 +195,12 @@ VERSION: fork of {{.Version}}
 				if c.IsSet("no-rebase") {
 					cfg.User.NoRebase = c.Bool("no-rebase")
 				}
+				if c.IsSet("fetch") && c.IsSet("no-fetch") {
+					return fmt.Errorf("cannot use both --fetch and --no-fetch")
+				}
+				if c.IsSet("fetch") {
+					cfg.User.NoFetch = !c.Bool("fetch")
+				}
 				if c.IsSet("no-fetch") {
 					cfg.User.NoFetch = c.Bool("no-fetch")
 				}
@@ -229,12 +235,18 @@ VERSION: fork of {{.Version}}
 					// layer ops so it is likely relied on as a feature by users at this point
 					EnvVars: []string{"SPR_NOREBASE"},
 				},
-				&cli.BoolFlag{
-					Name:    "no-fetch",
-					Aliases: []string{"nf"},
-					Usage:   "Disable fetch",
-					EnvVars: []string{"SPR_NOFETCH"},
-				},
+			&cli.BoolFlag{
+				Name:    "fetch",
+				Aliases: []string{"f"},
+				Usage:   "Enable fetch (overrides noFetch config)",
+				EnvVars: []string{"SPR_FETCH"},
+			},
+			&cli.BoolFlag{
+				Name:    "no-fetch",
+				Aliases: []string{"nf"},
+				Usage:   "Disable fetch",
+				EnvVars: []string{"SPR_NOFETCH"},
+			},
 				},
 			},
 			{
