@@ -2,6 +2,7 @@ package mockgit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,8 +14,14 @@ import (
 // NewMockGit creates and new mock git instance
 func NewMockGit(t *testing.T) *Mock {
 	return &Mock{
-		assert: require.New(t),
+		assert:  require.New(t),
+		rootdir: "",
 	}
+}
+
+// SetRootDir sets the root directory returned by RootDir()
+func (m *Mock) SetRootDir(dir string) {
+	m.rootdir = dir
 }
 
 func (m *Mock) GitWithEditor(args string, output *string, editorCmd string) error {
@@ -37,10 +44,13 @@ func (m *Mock) Git(args string, output *string) error {
 		m.assert.Nil(output)
 	}
 
+	err := m.errors[0]
+
 	m.expectedCmd = m.expectedCmd[1:]
 	m.response = m.response[1:]
+	m.errors = m.errors[1:]
 
-	return nil
+	return err
 }
 
 func (m *Mock) DeleteRemoteBranch(ctx context.Context, branch string) error {
@@ -50,6 +60,7 @@ func (m *Mock) DeleteRemoteBranch(ctx context.Context, branch string) error {
 func (m *Mock) ExpectationsMet() {
 	m.assert.Empty(m.expectedCmd, fmt.Sprintf("expected additional git commands: %v", m.expectedCmd))
 	m.assert.Empty(m.response, fmt.Sprintf("expected additional git responses: %v", m.response))
+	m.assert.Empty(m.errors, fmt.Sprintf("expected additional git errors: %v", m.errors))
 }
 
 func (m *Mock) MustGit(argStr string, output *string) {
@@ -60,13 +71,15 @@ func (m *Mock) MustGit(argStr string, output *string) {
 }
 
 func (m *Mock) RootDir() string {
-	return ""
+	return m.rootdir
 }
 
 type Mock struct {
 	assert      *require.Assertions
 	expectedCmd []string
 	response    []responder
+	errors      []error
+	rootdir     string
 }
 
 type responder interface {
@@ -85,6 +98,36 @@ func (m *Mock) ExpectNoFetch() {
 
 func (m *Mock) ExpectDeleteBranch(branchName string) {
 	m.expect(fmt.Sprintf("git DeleteRemoteBranch(%s)", branchName))
+}
+
+// ExpectEditStart expects the interactive rebase command used to start an edit session
+func (m *Mock) ExpectEditStart() {
+	m.expect("git rebase -i --autostash origin/master")
+}
+
+// ExpectEditDoneAmend expects the amend + rebase continue sequence for a successful edit --done
+func (m *Mock) ExpectEditDoneAmend() {
+	m.expect("git add -A")
+	m.expect("git commit --amend --no-edit")
+	m.expect("git rebase --continue")
+}
+
+// ExpectEditDoneAmendWithConflict expects amend succeeds but rebase --continue fails (conflict)
+func (m *Mock) ExpectEditDoneAmendWithConflict() {
+	m.expect("git add -A")
+	m.expect("git commit --amend --no-edit")
+	m.expectError("git rebase --continue", errors.New("conflict"))
+}
+
+// ExpectEditDoneConflictResolved expects the conflict resolution path (no amend, just rebase continue)
+func (m *Mock) ExpectEditDoneConflictResolved() {
+	m.expect("git add -A")
+	m.expect("git rebase --continue")
+}
+
+// ExpectEditAbort expects the rebase abort command
+func (m *Mock) ExpectEditAbort() {
+	m.expect("git rebase --abort")
 }
 
 func (m *Mock) ExpectLogAndRespond(commits []*git.Commit) {
@@ -124,6 +167,14 @@ func (m *Mock) ExpectLocalBranch(name string) {
 func (m *Mock) expect(cmd string, args ...interface{}) *Mock {
 	m.expectedCmd = append(m.expectedCmd, fmt.Sprintf(cmd, args...))
 	m.response = append(m.response, &commitResponse{valid: false})
+	m.errors = append(m.errors, nil)
+	return m
+}
+
+func (m *Mock) expectError(cmd string, err error) *Mock {
+	m.expectedCmd = append(m.expectedCmd, cmd)
+	m.response = append(m.response, &commitResponse{valid: false})
+	m.errors = append(m.errors, err)
 	return m
 }
 

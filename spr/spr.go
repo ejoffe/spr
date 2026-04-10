@@ -174,19 +174,40 @@ func (sd *stackediff) EditCommitDone(ctx context.Context, update bool) {
 	// Stage all changes
 	sd.gitcmd.MustGit("add -A", nil)
 
-	// Amend the current commit (no-edit keeps the original message)
-	err := sd.gitcmd.Git("commit --amend --no-edit", nil)
-	if err != nil {
-		fmt.Fprintf(sd.output, "Failed to amend commit: %s\n", err)
-		fmt.Fprintf(sd.output, "Resolve any issues and try again.\n")
-		return
-	}
+	// Check if we're resolving a rebase conflict or at the initial edit stop.
+	// Git creates .git/REBASE_HEAD when a rebase stops due to a conflict,
+	// but NOT when it stops at an 'edit' point.
+	rebaseHeadPath := filepath.Join(sd.gitcmd.RootDir(), ".git", "REBASE_HEAD")
+	_, rebaseHeadErr := os.Stat(rebaseHeadPath)
+	isConflictResolution := rebaseHeadErr == nil
 
-	// Continue the rebase to replay the remaining commits
-	err = sd.gitcmd.Git("rebase --continue", nil)
-	if err != nil {
-		fmt.Fprintf(sd.output, "Rebase conflict detected. Resolve conflicts and run 'git spr edit --done' again.\n")
-		return
+	if isConflictResolution {
+		// We're resolving a conflict that occurred while replaying commits
+		// above the edited commit. Just continue the rebase — git will
+		// create the proper commit from the staged conflict resolution.
+		// Do NOT amend here, as that would squash this commit's changes
+		// into the previous commit.
+		err := sd.gitcmd.Git("rebase --continue", nil)
+		if err != nil {
+			fmt.Fprintf(sd.output, "Rebase conflict detected. Resolve conflicts and run 'git spr edit --done' again.\n")
+			return
+		}
+	} else {
+		// We're at the initial edit stop. Amend the target commit with
+		// the user's changes, then continue the rebase to replay the
+		// remaining commits on top.
+		err := sd.gitcmd.Git("commit --amend --no-edit", nil)
+		if err != nil {
+			fmt.Fprintf(sd.output, "Failed to amend commit: %s\n", err)
+			fmt.Fprintf(sd.output, "Resolve any issues and try again.\n")
+			return
+		}
+
+		err = sd.gitcmd.Git("rebase --continue", nil)
+		if err != nil {
+			fmt.Fprintf(sd.output, "Rebase conflict detected. Resolve conflicts and run 'git spr edit --done' again.\n")
+			return
+		}
 	}
 
 	// Clean up state file
