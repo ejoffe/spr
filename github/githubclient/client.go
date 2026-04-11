@@ -437,10 +437,6 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, pullRequests []*github.PullRequest, pr *github.PullRequest,
 	commit git.Commit, prevCommit *git.Commit) {
 
-	if c.config.User.LogGitHubCalls {
-		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
-	}
-
 	baseRefName := c.config.Repo.GitHubBranch
 	if prevCommit != nil {
 		baseRefName = git.BranchNameFromCommit(c.config, *prevCommit)
@@ -453,6 +449,26 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 	title := templatizer.Title(info, commit)
 	body := templatizer.Body(info, commit, pr)
+
+	// Skip the API call if nothing has actually changed. This avoids
+	// triggering a spurious pull_request "edited" event on GitHub which
+	// would cause a second (duplicate) Actions run after the force-push
+	// already triggered a "synchronize" event.
+	titleUnchanged := c.config.User.PreserveTitleAndBody || title == pr.Title
+	bodyUnchanged := c.config.User.PreserveTitleAndBody || body == pr.Body
+	baseUnchanged := pr.InQueue || baseRefName == pr.ToBranch
+	if titleUnchanged && bodyUnchanged && baseUnchanged {
+		log.Debug().Int("number", pr.Number).Msg("UpdatePullRequest: skipping, nothing changed")
+		if c.config.User.LogGitHubCalls {
+			fmt.Printf("> github update %d : %s (skipped, no changes)\n", pr.Number, pr.Title)
+		}
+		return
+	}
+
+	if c.config.User.LogGitHubCalls {
+		fmt.Printf("> github update %d : %s\n", pr.Number, pr.Title)
+	}
+
 	input := genclient.UpdatePullRequestInput{
 		PullRequestId: pr.ID,
 		Title:         &title,
