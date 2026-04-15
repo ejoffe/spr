@@ -237,6 +237,13 @@ func (pr *PullRequest) String(config *config.Config) string {
 	return line
 }
 
+// TextString returns a plain text representation of the pull request: "<url> : <title>"
+func (pr *PullRequest) TextString(config *config.Config) string {
+	prURL := fmt.Sprintf("https://%s/%s/%s/pull/%d",
+		config.Repo.GitHubHost, config.Repo.GitHubRepoOwner, config.Repo.GitHubRepoName, pr.Number)
+	return fmt.Sprintf("%s : %s", prURL, pr.Title)
+}
+
 func (cs checkStatus) String(config *config.Config) string {
 	icons := statusBitIcons(config)
 	if config.Repo.RequireChecks {

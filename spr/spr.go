@@ -42,6 +42,7 @@ type stackediff struct {
 	gitcmd        git.GitInterface
 	profiletimer  profiletimer.Timer
 	DetailEnabled bool
+	TextEnabled   bool
 
 	output       io.Writer
 	input        io.Reader
@@ -517,7 +518,12 @@ func (sd *stackediff) StatusPullRequests(ctx context.Context) {
 	sd.profiletimer.Step("StatusPullRequests::Start")
 	githubInfo := sd.github.GetInfo(ctx, sd.gitcmd)
 
-	if len(githubInfo.PullRequests) == 0 {
+	if sd.TextEnabled {
+		for i := len(githubInfo.PullRequests) - 1; i >= 0; i-- {
+			pr := githubInfo.PullRequests[i]
+			fmt.Fprintf(sd.output, "%s\n", pr.TextString(sd.config))
+		}
+	} else if len(githubInfo.PullRequests) == 0 {
 		fmt.Fprintf(sd.output, "pull request stack is empty\n")
 	} else {
 		if sd.DetailEnabled {

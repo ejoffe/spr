@@ -98,6 +98,13 @@ func main() {
 		Usage: "Show detailed status bits output",
 	}
 
+	textFlag := &cli.BoolFlag{
+		Name:    "text",
+		Aliases: []string{"t"},
+		Value:   false,
+		Usage:   "Show plain text output (URL : title)",
+	}
+
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 
@@ -170,12 +177,16 @@ VERSION: fork of {{.Version}}
 				Name:    "status",
 				Aliases: []string{"s", "st"},
 				Usage:   "Show status of open pull requests",
-				Action: func(c *cli.Context) error {
-					stackedpr.StatusPullRequests(ctx)
-					return nil
-				},
+			Action: func(c *cli.Context) error {
+				if c.IsSet("text") {
+					stackedpr.TextEnabled = true
+				}
+				stackedpr.StatusPullRequests(ctx)
+				return nil
+			},
 				Flags: []cli.Flag{
 					detailFlag,
+					textFlag,
 				},
 			},
 			{
