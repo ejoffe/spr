@@ -241,3 +241,26 @@ func TestString(t *testing.T) {
 		assert.Equal(t, test.expect, test.pr.String(test.cfg), fmt.Sprintf("case %d failed", i))
 	}
 }
+
+func TestTextString(t *testing.T) {
+	cfg := &config.Config{
+		Repo: &config.RepoConfig{
+			GitHubHost:      "github.com",
+			GitHubRepoOwner: "testowner",
+			GitHubRepoName:  "testrepo",
+		},
+		User: &config.UserConfig{},
+	}
+
+	pr := &PullRequest{
+		Number: 42,
+		Title:  "Add new feature",
+	}
+	assert.Equal(t, "https://github.com/testowner/testrepo/pull/42 : Add new feature", pr.TextString(cfg))
+
+	pr2 := &PullRequest{
+		Number: 7,
+		Title:  "Fix bug in parser",
+	}
+	assert.Equal(t, "https://github.com/testowner/testrepo/pull/7 : Fix bug in parser", pr2.TextString(cfg))
+}

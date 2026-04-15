@@ -1257,3 +1257,43 @@ func TestEditCommitAbortNotEditing(t *testing.T) {
 	s.EditCommitAbort(ctx)
 	require.Equal(t, "No edit session in progress.\n", output.String())
 }
+
+func TestStatusPullRequestsTextMode(t *testing.T) {
+	s, _, githubmock, _, output := makeTestObjects(t, true)
+	assert := require.New(t)
+	ctx := context.Background()
+	s.TextEnabled = true
+
+	s.config.Repo.GitHubHost = "github.com"
+	s.config.Repo.GitHubRepoOwner = "testowner"
+	s.config.Repo.GitHubRepoName = "testrepo"
+
+	// Text mode with empty stack should print nothing
+	githubmock.ExpectGetInfo()
+	s.StatusPullRequests(ctx)
+	assert.Equal("", output.String())
+	githubmock.ExpectationsMet()
+	output.Reset()
+
+	// Text mode with PRs should print "<url> : <title>" for each PR
+	githubmock.Info.PullRequests = []*github.PullRequest{
+		{
+			Number: 1,
+			Title:  "first PR",
+			Commit: git.Commit{CommitID: "00000001"},
+		},
+		{
+			Number: 2,
+			Title:  "second PR",
+			Commit: git.Commit{CommitID: "00000002"},
+		},
+	}
+	githubmock.ExpectGetInfo()
+	s.StatusPullRequests(ctx)
+	lines := strings.Split(strings.TrimRight(output.String(), "\n"), "\n")
+	assert.Equal(2, len(lines))
+	// PRs are printed in reverse order (top of stack first)
+	assert.Equal("https://github.com/testowner/testrepo/pull/2 : second PR", lines[0])
+	assert.Equal("https://github.com/testowner/testrepo/pull/1 : first PR", lines[1])
+	githubmock.ExpectationsMet()
+}
