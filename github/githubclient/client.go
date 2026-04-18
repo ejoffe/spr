@@ -1,8 +1,11 @@
 package githubclient
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -152,8 +155,9 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 	tc := oauth2.NewClient(ctx, ts)
 
 	var api genclient.Client
+	var endpoint string
 	if strings.HasSuffix(config.Repo.GitHubHost, "github.com") {
-		api = genclient.NewClient("https://api.github.com/graphql", tc)
+		endpoint = "https://api.github.com/graphql"
 	} else {
 		var scheme, host string
 		gitHubRemoteUrl, err := url.Parse(config.Repo.GitHubHost)
@@ -165,17 +169,22 @@ func NewGitHubClient(ctx context.Context, config *config.Config) *client {
 			host = gitHubRemoteUrl.Host
 			scheme = gitHubRemoteUrl.Scheme
 		}
-		api = genclient.NewClient(fmt.Sprintf("%s://%s/api/graphql", scheme, host), tc)
+		endpoint = fmt.Sprintf("%s://%s/api/graphql", scheme, host)
 	}
+	api = genclient.NewClient(endpoint, tc)
 	return &client{
-		config: config,
-		api:    api,
+		config:          config,
+		api:             api,
+		graphqlEndpoint: endpoint,
+		httpClient:      tc,
 	}
 }
 
 type client struct {
-	config *config.Config
-	api    genclient.Client
+	config          *config.Config
+	api             genclient.Client
+	graphqlEndpoint string
+	httpClient      *http.Client
 }
 
 func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.GitHubInfo {
@@ -208,6 +217,20 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	localCommitStack := git.GetLocalCommitStack(c.config, gitcmd)
 
 	pullRequests := matchPullRequestStack(c.config.Repo, c.config.User.BranchPrefix, targetBranch, localCommitStack, pullRequestConnection)
+
+	// When RequireChecks is enabled, fetch per-check isRequired status so that
+	// non-required check failures don't cause the status to show as failed.
+	if c.config.Repo.RequireChecks && len(pullRequests) > 0 {
+		requiredStatus := c.fetchRequiredChecksStatus(ctx, pullRequests)
+		if requiredStatus != nil {
+			for _, pr := range pullRequests {
+				if status, ok := requiredStatus[pr.Number]; ok {
+					pr.MergeStatus.ChecksPass = status
+				}
+			}
+		}
+	}
+
 	for _, pr := range pullRequests {
 		if pr.Ready(c.config) {
 			pr.MergeStatus.Stacked = true
@@ -590,6 +613,213 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	if c.config.User.LogGitHubCalls {
 		fmt.Printf("> github close %d : %s\n", pr.Number, pr.Title)
 	}
+}
+
+// Response types for the raw GraphQL query that fetches check contexts with isRequired.
+// These are used instead of fezzik-generated types because fezzik does not support
+// inline fragments on union types (StatusCheckRollupContext = CheckRun | StatusContext).
+
+type checkContextNode struct {
+	TypeName   string  `json:"__typename"`
+	Name       string  `json:"name"`       // CheckRun
+	Conclusion *string `json:"conclusion"` // CheckRun (nil when not completed)
+	Status     string  `json:"status"`     // CheckRun: COMPLETED, IN_PROGRESS, QUEUED, etc.
+	Context    string  `json:"context"`    // StatusContext
+	State      string  `json:"state"`      // StatusContext: SUCCESS, FAILURE, PENDING, etc.
+	IsRequired bool    `json:"isRequired"`
+}
+
+type checkContextsResult struct {
+	Number  int `json:"number"`
+	Commits struct {
+		Nodes []struct {
+			Commit struct {
+				StatusCheckRollup *struct {
+					Contexts struct {
+						Nodes []checkContextNode `json:"nodes"`
+					} `json:"contexts"`
+				} `json:"statusCheckRollup"`
+			} `json:"commit"`
+		} `json:"nodes"`
+	} `json:"commits"`
+}
+
+type graphqlRequest struct {
+	Query string `json:"query"`
+}
+
+type graphqlResponse struct {
+	Data   map[string]json.RawMessage `json:"data"`
+	Errors []struct {
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+
+// fetchRequiredChecksStatus makes a single batched GraphQL query to fetch
+// check contexts with isRequired for all given pull requests. It returns a map
+// from PR number to the computed required-checks status.
+func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*github.PullRequest) map[int]github.CheckStatus {
+	if len(pullRequests) == 0 {
+		return nil
+	}
+
+	if c.config.User.LogGitHubCalls {
+		fmt.Printf("> github fetch required check status\n")
+	}
+
+	// Build a single GraphQL query with one aliased field per PR.
+	// Each alias fetches the check contexts with isRequired for that specific PR.
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString("query {")
+	for _, pr := range pullRequests {
+		fmt.Fprintf(&queryBuilder, `
+  pr_%d: node(id: %q) {
+    ... on PullRequest {
+      number
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              contexts(first: 100) {
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    name
+                    conclusion
+                    status
+                    isRequired(pullRequestNumber: %d)
+                  }
+                  ... on StatusContext {
+                    context
+                    state
+                    isRequired(pullRequestNumber: %d)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }`, pr.Number, pr.ID, pr.Number, pr.Number)
+	}
+	queryBuilder.WriteString("\n}")
+
+	reqBody, err := json.Marshal(graphqlRequest{
+		Query: queryBuilder.String(),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to marshal required checks query")
+		return nil
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.graphqlEndpoint, bytes.NewReader(reqBody))
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to create required checks request")
+		return nil
+	}
+	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
+	httpReq.Header.Set("Accept", "application/json; charset=utf-8")
+
+	httpResp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to fetch required checks status")
+		return nil
+	}
+	defer httpResp.Body.Close()
+
+	var gqlResp graphqlResponse
+	if err := json.NewDecoder(httpResp.Body).Decode(&gqlResp); err != nil {
+		log.Warn().Err(err).Msg("failed to decode required checks response")
+		return nil
+	}
+	if len(gqlResp.Errors) > 0 {
+		log.Warn().Str("error", gqlResp.Errors[0].Message).Msg("graphql error fetching required checks")
+		return nil
+	}
+
+	result := make(map[int]github.CheckStatus)
+	for _, pr := range pullRequests {
+		alias := fmt.Sprintf("pr_%d", pr.Number)
+		raw, ok := gqlResp.Data[alias]
+		if !ok {
+			continue
+		}
+		var prResult checkContextsResult
+		if err := json.Unmarshal(raw, &prResult); err != nil {
+			log.Warn().Err(err).Int("pr", pr.Number).Msg("failed to unmarshal check contexts for PR")
+			continue
+		}
+		if len(prResult.Commits.Nodes) == 0 {
+			continue
+		}
+		commit := prResult.Commits.Nodes[0].Commit
+		if commit.StatusCheckRollup == nil {
+			// No checks configured — treat as pass
+			result[pr.Number] = github.CheckStatusPass
+			continue
+		}
+		result[pr.Number] = computeRequiredCheckStatus(commit.StatusCheckRollup.Contexts.Nodes)
+	}
+
+	return result
+}
+
+// computeRequiredCheckStatus determines the aggregate check status considering
+// only required checks. If no checks are required, the result is CheckStatusPass
+// (consistent with GitHub's merge behavior).
+func computeRequiredCheckStatus(contexts []checkContextNode) github.CheckStatus {
+	hasRequired := false
+	hasPending := false
+	hasFail := false
+
+	for _, ctx := range contexts {
+		if !ctx.IsRequired {
+			continue
+		}
+		hasRequired = true
+
+		switch ctx.TypeName {
+		case "CheckRun":
+			switch ctx.Status {
+			case "COMPLETED":
+				if ctx.Conclusion == nil {
+					hasFail = true
+				} else {
+					switch *ctx.Conclusion {
+					case "SUCCESS", "NEUTRAL", "SKIPPED":
+						// pass
+					default:
+						hasFail = true
+					}
+				}
+			default:
+				// IN_PROGRESS, QUEUED, REQUESTED, WAITING, PENDING
+				hasPending = true
+			}
+		case "StatusContext":
+			switch ctx.State {
+			case "SUCCESS":
+				// pass
+			case "PENDING", "EXPECTED":
+				hasPending = true
+			default:
+				hasFail = true
+			}
+		}
+	}
+
+	if !hasRequired {
+		// No required checks — treat as pass (GitHub allows merge)
+		return github.CheckStatusPass
+	}
+	if hasFail {
+		return github.CheckStatusFail
+	}
+	if hasPending {
+		return github.CheckStatusPending
+	}
+	return github.CheckStatusPass
 }
 
 func check(err error) {

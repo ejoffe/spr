@@ -26,11 +26,12 @@ type PullRequest struct {
 	LocalCommitHash string
 }
 
-type checkStatus int
+// CheckStatus represents the aggregate status of GitHub checks on a pull request
+type CheckStatus int
 
 const (
 	// CheckStatusUnknown
-	CheckStatusUnknown checkStatus = iota
+	CheckStatusUnknown CheckStatus = iota
 
 	// CheckStatusPending when checks are still running
 	CheckStatusPending
@@ -45,7 +46,7 @@ const (
 // PullRequestMergeStatus is the merge status of a pull request
 type PullRequestMergeStatus struct {
 	// ChecksPass is the status of GitHub checks
-	ChecksPass checkStatus
+	ChecksPass CheckStatus
 
 	// ReviewApproved is true when a pull request is approved by a fellow reviewer
 	ReviewApproved bool
@@ -244,7 +245,7 @@ func (pr *PullRequest) TextString(config *config.Config) string {
 	return fmt.Sprintf("%s : %s", prURL, pr.Title)
 }
 
-func (cs checkStatus) String(config *config.Config) string {
+func (cs CheckStatus) String(config *config.Config) string {
 	icons := statusBitIcons(config)
 	if config.Repo.RequireChecks {
 		switch cs {
