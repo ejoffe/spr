@@ -528,3 +528,175 @@ func TestMatchPullRequestStack(t *testing.T) {
 		})
 	}
 }
+
+func TestComputeRequiredCheckStatus(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+
+	tests := []struct {
+		name     string
+		contexts []checkContextNode
+		expect   github.CheckStatus
+	}{
+		{
+			name:     "NoChecks",
+			contexts: []checkContextNode{},
+			expect:   github.CheckStatusPass,
+		},
+		{
+			name: "NoRequiredChecks_AllPass",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: false},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "NonRequiredFails_NoRequired",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "NonRequiredFails_RequiredPasses",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "RequiredCheckFails",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "RequiredCheckPending",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "IN_PROGRESS", IsRequired: true},
+			},
+			expect: github.CheckStatusPending,
+		},
+		{
+			name: "RequiredCheckQueued",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "QUEUED", IsRequired: true},
+			},
+			expect: github.CheckStatusPending,
+		},
+		{
+			name: "RequiredNeutralPasses",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "info-check", Status: "COMPLETED", Conclusion: strPtr("NEUTRAL"), IsRequired: true},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "RequiredSkippedPasses",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "conditional", Status: "COMPLETED", Conclusion: strPtr("SKIPPED"), IsRequired: true},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "RequiredTimedOut",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "slow-test", Status: "COMPLETED", Conclusion: strPtr("TIMED_OUT"), IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "RequiredCancelled",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("CANCELLED"), IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "StatusContext_RequiredSuccess",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "StatusContext_RequiredFailure",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE", IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "StatusContext_RequiredPending",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/build", State: "PENDING", IsRequired: true},
+			},
+			expect: github.CheckStatusPending,
+		},
+		{
+			name: "StatusContext_RequiredExpected",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/build", State: "EXPECTED", IsRequired: true},
+			},
+			expect: github.CheckStatusPending,
+		},
+		{
+			name: "StatusContext_NonRequiredFails_RequiredPasses",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
+				{TypeName: "StatusContext", Context: "optional/lint", State: "FAILURE", IsRequired: false},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "MixedTypes_NonRequiredFails_RequiredPasses",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
+				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
+				{TypeName: "StatusContext", Context: "optional/coverage", State: "FAILURE", IsRequired: false},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "MixedTypes_RequiredFails",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE", IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "FailTakesPrecedenceOverPending",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci-2", Status: "IN_PROGRESS", IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+		{
+			name: "AllRequiredPass_MultipleChecks",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci-2", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci-3", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+			},
+			expect: github.CheckStatusPass,
+		},
+		{
+			name: "CompletedWithNilConclusion",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "weird", Status: "COMPLETED", Conclusion: nil, IsRequired: true},
+			},
+			expect: github.CheckStatusFail,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := computeRequiredCheckStatus(tc.contexts)
+			require.Equal(t, tc.expect, actual)
+		})
+	}
+}

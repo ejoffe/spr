@@ -25,7 +25,7 @@ func TestMergable(t *testing.T) {
 		}
 	}
 
-	pr := func(checks checkStatus, approved bool, noConflics bool, stacked bool) *PullRequest {
+	pr := func(checks CheckStatus, approved bool, noConflics bool, stacked bool) *PullRequest {
 		return &PullRequest{
 			MergeStatus: PullRequestMergeStatus{
 				ChecksPass:     checks,
@@ -69,7 +69,7 @@ func TestReady(t *testing.T) {
 		}
 	}
 
-	pr := func(checks checkStatus, wip bool, approved bool, noConflics bool, stacked bool) *PullRequest {
+	pr := func(checks CheckStatus, wip bool, approved bool, noConflics bool, stacked bool) *PullRequest {
 		return &PullRequest{
 			MergeStatus: PullRequestMergeStatus{
 				ChecksPass:     checks,
@@ -117,7 +117,7 @@ func TestStatusString(t *testing.T) {
 		}
 	}
 
-	pr := func(checks checkStatus, approved bool, noConflics bool, stacked bool) *PullRequest {
+	pr := func(checks CheckStatus, approved bool, noConflics bool, stacked bool) *PullRequest {
 		return &PullRequest{
 			MergeStatus: PullRequestMergeStatus{
 				ChecksPass:     checks,
