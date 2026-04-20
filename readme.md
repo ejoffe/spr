@@ -1,22 +1,45 @@
 ![logo](docs/git_spr_logo.png)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build](https://github.com/ejoffe/spr/actions/workflows/ci.yml/badge.svg)](https://github.com/ejoffe/spr/actions/workflows/ci.yml)
-[![ReportCard](https://goreportcard.com/badge/github.com/ejoffe/spr)](https://goreportcard.com/report/github.com/ejoffe/spr)
-[![Doc](https://godoc.org/github.com/ejoffe/spr?status.svg)](https://godoc.org/github.com/ejoffe/spr)
-[![Release](https://img.shields.io/github/release/ejoffe/spr.svg)](https://GitHub.com/ejoffe/spr/releases/) 
-[![Join the chat at https://gitter.im/ejoffe-spr/community](https://badges.gitter.im/ejoffe-spr/community.svg)](https://gitter.im/ejoffe-spr/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Release](https://img.shields.io/github/release/ejoffe/spr.svg)](https://GitHub.com/ejoffe/spr/releases/)
+
+**Each commit becomes a pull request. Stop juggling branches.**
+
+`git spr` manages stacked pull requests on GitHub so you don't have to. Write commits on a single branch, and spr turns each one into its own pull request -- kept in sync, correctly ordered, and ready to merge.
 
 ![terminal cast](docs/git_spr_cast.gif)
 
-# Stacked Pull Requests on GitHub
+## Why stacked PRs?
 
-Easily manage stacks of pull requests on GitHub. 
-`git spr` is a client side tool that achieves a simple streamlined stacked diff workflow using github pull requests and branches. `git spr` manages your pull request stacks for you, so you don't have to. 
+- **Small PRs get reviewed faster.** A 50-line change gets meaningful feedback; a 500-line change gets "looks good."
+- **No more branch gymnastics.** Stop creating `feature-part-1`, `feature-part-2`, rebasing one onto the other, and resolving conflicts between them.
+- **Ship incrementally.** Land the database migration today, the API tomorrow, the UI the day after -- each reviewed and merged independently.
+- **Works with native GitHub.** No extra services, no custom merge bots. Just pull requests and branches, managed for you.
 
-With `git spr` each commit becomes a pull request, and each branch becomes a stack of pull requests. This allows for multiple commits to be stacked on top of each other in a single branch, avoiding the overhead of starting a new branch for every new change or feature. Small changes and pull requests are easy and fast to achieve. One doesn't have to worry about stacked branches on top of each other and managing complicated pull request stacks. The end result is a more streamlined faster software development cycle.
+## Quick Start
 
-Commands
---------
+Install via brew, nix, or [download a binary](https://github.com/ejoffe/spr/releases):
+
+```shell
+brew install ejoffe/tap/spr        # macOS/Linux
+nix profile install github:ejoffe/spr   # Nix
+```
+
+Then use it like normal git -- just replace `git push` + manual PR creation with `git spr update`:
+
+```shell
+git commit -m "Add user authentication"
+git commit -m "Add login page"
+git commit -m "Add session management"
+
+git spr update   # creates 3 pull requests, stacked in order
+git spr status   # show status of your stack
+git spr merge    # merge everything that's ready
+```
+
+That's it. Each commit is a PR. Amend a commit and run `git spr update` again to sync changes.
+
+## Commands
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -31,20 +54,12 @@ Commands
 
 **Global flags:** `--detail` (show status bit headers), `--verbose` (log git commands and GitHub API calls), `--debug`, `--profile`
 
-Installation 
-------------
+## Installation
 
 ### Brew
 ```shell
 brew tap ejoffe/homebrew-tap
 brew install ejoffe/tap/spr
-```
-
-### Apt
-```shell
-echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" | sudo tee /etc/apt/sources.list.d/inigolabs.list
-sudo apt update 
-sudo apt install spr
 ```
 
 ### Nix
@@ -56,37 +71,45 @@ Or run without installing:
 nix run github:ejoffe/spr
 ```
 
-### Manual
-Download the pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases) and copy to your bin path.
+### Apt
+```shell
+echo "deb [trusted=yes] https://apt.fury.io/inigolabs/ /" | sudo tee /etc/apt/sources.list.d/inigolabs.list
+sudo apt update
+sudo apt install spr
+```
+
+### Binary
+Download pre-compiled binaries from the [releases page](https://github.com/ejoffe/spr/releases).
 
 ### From source
-Install [goreleaser](https://goreleaser.com/) and run make. Binaries can be found in the **dist** directory.
 ```shell
-make bin
+make bin   # requires goreleaser; binaries output to dist/
 ```
 
-Workflow
---------
-Commit your changes to a branch as you normally do. Note that every commit will end up becoming a pull request.
+## Usage Guide
+
+### Workflow
+
+Commit your changes to a branch as you normally do. Every commit becomes a pull request.
+
 ```shell
-> touch feature_1
-> git add feature_1
-> git commit -m "Feature 1"
-> touch feature_2
-> git add feature_2
-> git commit -m "Feature 2"
-> touch feature_3
-> git add feature_3
-> git commit -m "Feature 3"
+git add feature_1.go
+git commit -m "Feature 1"
+git add feature_2.go
+git commit -m "Feature 2"
+git add feature_3.go
+git commit -m "Feature 3"
+
+git spr update
 ```
 
-The subject of the commit message will be the title of the pull request, and the body of the message will be the body of the pull request.
-If you have a work in progress change that you want to commit, but don't want to create a pull request yet, start the commit message with all caps **WIP**. The spr script will not create a pull request for any commit which starts with WIP, when you are ready to create a pull request remove the WIP.
-There is no need to create new branches for every change, and you don't have to call git push to get your code to github. Instead just call `git spr update`.
+The commit subject becomes the PR title; the commit body becomes the PR description. There's no need to create branches or call `git push` -- `git spr update` handles everything.
 
-Managing Pull Requests
-----------------------
-Run `git spr update` to sync your whole commit stack to github and create pull requests for each new commit in the stack. If a commit was amended the pull request will be updated automatically. The command outputs a list of your open pull requests and their status. `git spr update` pushes your commits to github and creates pull requests for you, so you don't need to call git push or open pull requests manually in the UI.
+**Work in progress:** Prefix a commit message with **WIP** to skip PR creation for that commit. Remove the prefix when you're ready.
+
+### Updating pull requests
+
+Run `git spr update` to sync your entire stack. New commits get new PRs; amended commits update existing PRs automatically.
 
 ```shell
 > git spr update
@@ -101,13 +124,12 @@ Run `git spr update` to sync your whole commit stack to github and create pull r
 | `--reviewer`  | `-r` | Add reviewers to newly created pull requests |
 | `--no-rebase` | `--nr` | Disable rebasing (also supports `SPR_NOREBASE` env var) |
 
-Amending Commits
-----------------
-When you need to update a commit, either to fix tests, update code based on review comments, or just need to change something because you feel like it. You should amend the commit. 
-Use `git amend` to easily amend your changes anywhere in the stack. Stage the files you want to amend, and instead of calling git commit, use `git amend` and choose the commit you want to amend when prompted.  
+### Amending commits
+
+Stage your changes, then use `git spr amend` to pick which commit to amend:
+
 ```shell
-> touch feature_2
-> git add feature_2
+> git add feature_2.go
 > git spr amend
  3 : 5cba235d : Feature 3
  2 : 4dc2c5b2 : Feature 2
@@ -117,9 +139,9 @@ Commit to amend [1-3]: 2
 
 Use `--update` (`-u`) to automatically run `git spr update` after amending.
 
-Editing Commits
----------------
-Use `git spr edit` to interactively edit a commit in the stack. This starts an interactive rebase session where you can make changes to the selected commit.
+### Editing commits
+
+Use `git spr edit` to start an interactive rebase session on a specific commit:
 
 ```shell
 > git spr edit
@@ -129,41 +151,15 @@ Use `git spr edit` to interactively edit a commit in the stack. This starts an i
 Commit to edit [1-3]: 2
 ```
 
-Once you've made your changes, finish the session with `git spr edit --done`. Use `--update` (`-u`) with `--done` to also run `git spr update` afterwards. If you need to cancel, use `git spr edit --abort`.
+Finish with `git spr edit --done` (add `-u` to also update). Cancel with `git spr edit --abort`.
 
-Syncing Your Stack
-------------------
-Use `git spr sync` to synchronize your local stack with the remote. This is useful when pull requests have been updated on GitHub (e.g., after a merge) and you need to bring your local commits in line with the remote state.
+### Syncing
 
-Merge Status Bits
------------------
-Each pull request has four merge status bits signifying the request's ability to be merged. For a request to be merged, all required status bits need to show ✅.
+Use `git spr sync` to pull remote changes into your local stack. Useful after PRs have been merged or updated on GitHub.
 
-| Bit | ⌛ | ❌ | ✅ | ➖ |
-|-----|---|---|---|---|
-| 1. Checks  | pending   | failed         | pass         | not required |
-| 2. Approval | —        | not approved   | approved     | not required |
-| 3. Conflicts | —      | has conflicts  | no conflicts | —           |
-| 4. Stack   | —         | blocked below  | all clear    | —           |
+### Merging
 
-Checks and approval requirements can be configured via `requireChecks` and `requireApproval` in `.spr.yml`.
-
-Show Current Pull Requests
---------------------------
-Use `git spr status` to see the status of your pull request stack. In the following case three pull requests are all green and ready to be merged, and one pull request is waiting for review approval. 
-
-```shell
-> git spr status
-[✅❌✅✅] 61: Feature 4
-[✅✅✅✅] 60: Feature 3
-[✅✅✅✅] 59: Feature 2
-[✅✅✅✅] 58: Feature 1
-```
-
-Merging Pull Requests
----------------------
-Your pull requests are stacked. Don't use the GitHub UI to merge pull requests, if you do it in the wrong order, you'll end up pushing one pull request into another, which is probably not what you want. Instead just use `git spr merge` and you can merge all the pull requests that are mergeable in one shot. Status for the remaining pull requests will be printed after the merged requests.
-In order to merge all pull requests in one shot without causing extra github checks to trigger, spr finds the top mergeable pull request. It then combines all the commits up to this pull request into one single pull request, merges this request, and closes the rest of the pull requests. This is a bit surprising at first, and has some side effects, but no better solution has been found to date. 
+Use `git spr merge` instead of the GitHub UI to merge in the correct order:
 
 ```shell
 > git spr merge
@@ -173,74 +169,113 @@ MERGED #60 Feature 3
 [✅❌✅✅] 61: Feature 4
 ```
 
-To merge only part of the stack use the `--count` flag with the number of pull requests in the stack that you would like to merge. Pull requests will be merged from the bottom of the stack upwards. 
+spr finds the top mergeable PR in the stack, combines all commits up to it into a single PR, merges it, and closes the intermediate PRs. This avoids triggering redundant CI runs.
 
-```shell
-> git spr merge --count 2
-MERGED #58 Feature 1
-MERGED #59 Feature 2
+Use `--count N` to merge only the bottom N pull requests.
+
+### Merge status bits
+
+Each PR shows four status bits:
+
+```
 [✅❌✅✅] 61: Feature 4
-[✅✅✅✅] 60: Feature 3
+ │  │  │  └─ stack: all PRs below are ready
+ │  │  └──── conflicts: no merge conflicts
+ │  └─────── approval: PR is approved
+ └────────── checks: CI checks pass
 ```
 
-By default merges are done using the rebase merge method, this can be changed using the `mergeMethod` configuration.
+| Bit | ⌛ | ❌ | ✅ | ➖ |
+|-----|---|---|---|---|
+| Checks   | pending | failed       | pass       | not required |
+| Approval | --      | not approved | approved   | not required |
+| Conflicts| --      | has conflicts| no conflicts| --          |
+| Stack    | --      | blocked below| all clear  | --           |
 
-Running Pre-Merge Checks
--------------------------
-Use `git spr check` to run a pre-merge check command configured via the `mergeCheck` repository setting. This lets you enforce that tests or linters pass before merging.
+Configure check and approval requirements with `requireChecks`, `requiredChecks`, and `requireApproval` in `.spr.yml`. When `requiredChecks` lists specific check names, only those checks are evaluated -- all others are ignored. This is useful when optional checks (e.g. linters, deploy previews) would otherwise cause the status to show as failed.
 
-Starting a New Stack
----------------------
-Starting a new stack works by creating a new branch. For example, if you want to start a new stack from the latest pushed state of your current branch, use `git checkout -b new_branch @{push}`.
+### Starting a new stack
 
-Configuration
--------------
-When the script is run for the first time two config files are created.
-Repository configuration is saved to .spr.yml in the repository base directory. 
-User specific configuration is saved to .spr.yml in the user home directory.
+Create a new branch from the latest pushed state:
 
-| Repository Config       | Type | Default    | Description                                                                       |
-|-------------------------| ---- |------------|-----------------------------------------------------------------------------------|
-| requireChecks           | bool | true       | require checks to pass in order to merge |
-| requireApproval         | bool | true       | require pull request approval in order to merge |
-| githubRepoOwner         | str  |            | name of the github owner (fetched from git remote config) |
-| githubRepoName          | str  |            | name of the github repository (fetched from git remote config) |
-| githubRemote            | str  | origin     | github remote name to use |
-| githubBranch            | str  | main       | github branch for pull request target |
-| githubHost              | str  | github.com | github host, can be updated for github enterprise use case |
-| mergeMethod             | str  | rebase     | merge method, valid values: [rebase, squash, merge] |
-| mergeQueue              | bool | false      | use GitHub merge queue to merge pull requests |
-| prTemplateType          | str  | stack      | PR template type, valid values: [stack, basic, why_what, custom]. If prTemplatePath is provided, this is automatically set to "custom" |
-| prTemplatePath          | str  |            | path to PR template file (e.g. .github/PULL_REQUEST_TEMPLATE/pull_request_template.md). When provided, prTemplateType is automatically set to "custom" |
-| prTemplateInsertStart   | str  |            | text marker in PR template that determines where to insert commit body (used with custom template type) |
-| prTemplateInsertEnd     | str  |            | text marker in PR template that determines where to end commit body insertion (used with custom template type) |
-| mergeCheck              | str  |            | enforce a pre-merge check using 'git spr check' |
-| forceFetchTags          | bool | false      | also fetch tags when running 'git spr update' |
-| showPrTitlesInStack     | bool | false      | show PR titles in stack description within pull request body |
-| branchPushIndividually  | bool | false      | push branches individually instead of atomically (only enable to avoid timeouts) |
-| defaultReviewers        | list |            | default reviewers to add to each pull request |
+```shell
+git checkout -b new_stack @{push}
+```
 
-| User Config          | Type | Default | Description                                                     |
-| -------------------- | ---- | ------- | --------------------------------------------------------------- |
-| showPRLink           | bool | true    | show full pull request http link |
-| logGitCommands       | bool | false   | log git commands to stdout (enabled by `--verbose`) |
-| logGitHubCalls       | bool | false   | log GitHub API calls to stdout (enabled by `--verbose`) |
-| statusBitsHeader     | bool | true    | show status bits type headers |
-| statusBitsEmojis     | bool | true    | show status bits using fancy emojis |
-| createDraftPRs       | bool | false   | new pull requests are created as draft |
-| preserveTitleAndBody | bool | false   | updating pull requests will not overwrite the pr title and body |
-| noRebase             | bool | false   | when true spr update will not rebase on top of origin |
-| deleteMergedBranches | bool | false   | delete branches after prs are merged |
-| shortPRLink          | bool | false   | show pull request links as clickable PR-<number> instead of full URL |
-| showCommitID         | bool | false   | show first 8 characters of commit hash for each pull request |
+## Configuration
 
-Happy Coding!
--------------
-If you find a bug, feel free to open an issue. Pull requests are welcome.
+Configuration is created automatically on first run. Repository config lives in `.spr.yml` at the repo root; user config lives in `~/.spr.yml`.
 
-If you find this tool as useful as I do, add a **star** and tell your fellow GitHubbers.
+<details>
+<summary><strong>Repository configuration</strong> (.spr.yml)</summary>
 
-License
--------
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `requireChecks` | bool | `true` | Require checks to pass in order to merge |
+| `requiredChecks` | list | | List of check names that must pass. When set, only these checks are evaluated; all others are ignored |
+| `requireApproval` | bool | `true` | Require PR approval in order to merge |
+| `githubRepoOwner` | str | | GitHub owner (auto-detected from git remote) |
+| `githubRepoName` | str | | GitHub repository name (auto-detected from git remote) |
+| `githubRemote` | str | `origin` | Git remote name to use |
+| `githubBranch` | str | `main` | Target branch for pull requests |
+| `githubHost` | str | `github.com` | GitHub host (update for GitHub Enterprise) |
+| `mergeMethod` | str | `rebase` | Merge method: `rebase`, `squash`, or `merge` |
+| `mergeQueue` | bool | `false` | Use GitHub merge queue |
+| `prTemplateType` | str | `stack` | PR template: `stack`, `basic`, `why_what`, or `custom` |
+| `prTemplatePath` | str | | Path to custom PR template file (auto-sets type to `custom`) |
+| `prTemplateInsertStart` | str | | Marker in custom template for commit body insertion start |
+| `prTemplateInsertEnd` | str | | Marker in custom template for commit body insertion end |
+| `mergeCheck` | str | | Command to run with `git spr check` before merging |
+| `forceFetchTags` | bool | `false` | Fetch tags during `git spr update` |
+| `showPrTitlesInStack` | bool | `false` | Show PR titles in stack description within PR body |
+| `branchPushIndividually` | bool | `false` | Push branches one at a time instead of atomically |
+| `defaultReviewers` | list | | Reviewers to add to every new pull request |
 
-- [MIT License](LICENSE)
+Example `.spr.yml`:
+
+```yaml
+requireChecks: true
+requiredChecks:
+  - "ci/test"
+  - "ci/build"
+requireApproval: true
+mergeMethod: squash
+defaultReviewers:
+  - teammate
+```
+
+</details>
+
+<details>
+<summary><strong>User configuration</strong> (~/.spr.yml)</summary>
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `showPRLink` | bool | `true` | Show full pull request URL |
+| `shortPRLink` | bool | `false` | Show clickable `PR-<number>` instead of full URL |
+| `showCommitID` | bool | `false` | Show first 8 characters of commit hash |
+| `logGitCommands` | bool | `false` | Log git commands to stdout |
+| `logGitHubCalls` | bool | `false` | Log GitHub API calls to stdout |
+| `statusBitsHeader` | bool | `true` | Show status bit type headers |
+| `statusBitsEmojis` | bool | `true` | Use emoji status bits |
+| `createDraftPRs` | bool | `false` | Create new PRs as drafts |
+| `preserveTitleAndBody` | bool | `false` | Don't overwrite PR title and body on update |
+| `noRebase` | bool | `false` | Skip rebasing on `git spr update` |
+| `deleteMergedBranches` | bool | `false` | Delete branches after PRs are merged |
+| `branchPrefix` | str | `spr` | Prefix for spr-managed branch names |
+
+</details>
+
+## How it compares
+
+spr is similar to [Graphite](https://graphite.dev), [ghstack](https://github.com/ezyang/ghstack), and [Gerrit](https://www.gerritcodereview.com/)'s stacked review model -- but works purely with GitHub's native pull requests. No extra service, no custom merge bot, no lock-in.
+
+## Contributing
+
+Found a bug? [Open an issue.](https://github.com/ejoffe/spr/issues) Pull requests are welcome.
+
+If you find spr useful, a star helps others discover it.
+
+## License
+
+[MIT License](LICENSE)
