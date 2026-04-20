@@ -172,8 +172,9 @@ func (sd *stackediff) EditCommitDone(ctx context.Context, update bool) {
 		return
 	}
 
-	// Stage all changes
-	sd.gitcmd.MustGit("add -A", nil)
+	// Stage modifications and deletions to tracked files only.
+	// Using -u instead of -A avoids accidentally staging untracked files.
+	sd.gitcmd.MustGit("add -u", nil)
 
 	// Check if we're resolving a rebase conflict or at the initial edit stop.
 	// Git creates .git/REBASE_HEAD when a rebase stops due to a conflict,

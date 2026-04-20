@@ -107,21 +107,21 @@ func (m *Mock) ExpectEditStart() {
 
 // ExpectEditDoneAmend expects the amend + rebase continue sequence for a successful edit --done
 func (m *Mock) ExpectEditDoneAmend() {
-	m.expect("git add -A")
+	m.expect("git add -u")
 	m.expect("git commit --amend --no-edit")
 	m.expect("git rebase --continue")
 }
 
 // ExpectEditDoneAmendWithConflict expects amend succeeds but rebase --continue fails (conflict)
 func (m *Mock) ExpectEditDoneAmendWithConflict() {
-	m.expect("git add -A")
+	m.expect("git add -u")
 	m.expect("git commit --amend --no-edit")
 	m.expectError("git rebase --continue", errors.New("conflict"))
 }
 
 // ExpectEditDoneConflictResolved expects the conflict resolution path (no amend, just rebase continue)
 func (m *Mock) ExpectEditDoneConflictResolved() {
-	m.expect("git add -A")
+	m.expect("git add -u")
 	m.expect("git rebase --continue")
 }
 
