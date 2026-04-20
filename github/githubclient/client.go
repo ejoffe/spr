@@ -218,9 +218,11 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 
 	pullRequests := matchPullRequestStack(c.config.Repo, c.config.User.BranchPrefix, targetBranch, localCommitStack, pullRequestConnection)
 
-	// When RequireChecks is enabled, fetch per-check isRequired status so that
-	// non-required check failures don't cause the status to show as failed.
-	if c.config.Repo.RequireChecks && len(pullRequests) > 0 {
+	// When RequiredChecks is explicitly configured, fetch individual check contexts
+	// and only evaluate the listed checks. This allows non-required check failures
+	// to be ignored. When RequiredChecks is not set, the statusCheckRollup.state
+	// from the fezzik query is used as-is (all checks matter).
+	if c.config.Repo.RequireChecks && len(c.config.Repo.RequiredChecks) > 0 && len(pullRequests) > 0 {
 		requiredStatus := c.fetchRequiredChecksStatus(ctx, pullRequests)
 		if requiredStatus != nil {
 			for _, pr := range pullRequests {
@@ -615,7 +617,7 @@ func (c *client) ClosePullRequest(ctx context.Context, pr *github.PullRequest) {
 	}
 }
 
-// Response types for the raw GraphQL query that fetches check contexts with isRequired.
+// Response types for the raw GraphQL query that fetches individual check contexts.
 // These are used instead of fezzik-generated types because fezzik does not support
 // inline fragments on union types (StatusCheckRollupContext = CheckRun | StatusContext).
 
@@ -626,7 +628,6 @@ type checkContextNode struct {
 	Status     string  `json:"status"`     // CheckRun: COMPLETED, IN_PROGRESS, QUEUED, etc.
 	Context    string  `json:"context"`    // StatusContext
 	State      string  `json:"state"`      // StatusContext: SUCCESS, FAILURE, PENDING, etc.
-	IsRequired bool    `json:"isRequired"`
 }
 
 type checkContextsResult struct {
@@ -656,8 +657,9 @@ type graphqlResponse struct {
 }
 
 // fetchRequiredChecksStatus makes a single batched GraphQL query to fetch
-// check contexts with isRequired for all given pull requests. It returns a map
-// from PR number to the computed required-checks status.
+// individual check contexts for all given pull requests. It evaluates only
+// the checks listed in config.Repo.RequiredChecks and returns a map from
+// PR number to the computed status.
 func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*github.PullRequest) map[int]github.CheckStatus {
 	if len(pullRequests) == 0 {
 		return nil
@@ -668,7 +670,6 @@ func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*
 	}
 
 	// Build a single GraphQL query with one aliased field per PR.
-	// Each alias fetches the check contexts with isRequired for that specific PR.
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString("query {")
 	for _, pr := range pullRequests {
@@ -687,12 +688,10 @@ func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*
                     name
                     conclusion
                     status
-                    isRequired(pullRequestNumber: %d)
                   }
                   ... on StatusContext {
                     context
                     state
-                    isRequired(pullRequestNumber: %d)
                   }
                 }
               }
@@ -701,7 +700,7 @@ func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*
         }
       }
     }
-  }`, pr.Number, pr.ID, pr.Number, pr.Number)
+  }`, pr.Number, pr.ID)
 	}
 	queryBuilder.WriteString("\n}")
 
@@ -738,6 +737,12 @@ func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*
 		return nil
 	}
 
+	// Build the set of required check names from config.
+	requiredSet := make(map[string]bool, len(c.config.Repo.RequiredChecks))
+	for _, name := range c.config.Repo.RequiredChecks {
+		requiredSet[name] = true
+	}
+
 	result := make(map[int]github.CheckStatus)
 	for _, pr := range pullRequests {
 		alias := fmt.Sprintf("pr_%d", pr.Number)
@@ -759,25 +764,37 @@ func (c *client) fetchRequiredChecksStatus(ctx context.Context, pullRequests []*
 			result[pr.Number] = github.CheckStatusPass
 			continue
 		}
-		result[pr.Number] = computeRequiredCheckStatus(commit.StatusCheckRollup.Contexts.Nodes)
+		result[pr.Number] = computeRequiredCheckStatus(commit.StatusCheckRollup.Contexts.Nodes, requiredSet)
 	}
 
 	return result
 }
 
+// contextName returns the display name for a check context node.
+// For CheckRun nodes this is the Name field; for StatusContext nodes it's the Context field.
+func contextName(ctx checkContextNode) string {
+	if ctx.TypeName == "StatusContext" {
+		return ctx.Context
+	}
+	return ctx.Name
+}
+
 // computeRequiredCheckStatus determines the aggregate check status considering
-// only required checks. If no checks are required, the result is CheckStatusPass
-// (consistent with GitHub's merge behavior).
-func computeRequiredCheckStatus(contexts []checkContextNode) github.CheckStatus {
-	hasRequired := false
+// only the checks whose name/context appears in requiredChecks.
+// If a required check hasn't reported yet (not present in contexts), it is
+// treated as pending.
+func computeRequiredCheckStatus(contexts []checkContextNode, requiredChecks map[string]bool) github.CheckStatus {
+	// Track which required checks we've seen
+	seen := make(map[string]bool, len(requiredChecks))
 	hasPending := false
 	hasFail := false
 
 	for _, ctx := range contexts {
-		if !ctx.IsRequired {
+		name := contextName(ctx)
+		if !requiredChecks[name] {
 			continue
 		}
-		hasRequired = true
+		seen[name] = true
 
 		switch ctx.TypeName {
 		case "CheckRun":
@@ -809,10 +826,13 @@ func computeRequiredCheckStatus(contexts []checkContextNode) github.CheckStatus 
 		}
 	}
 
-	if !hasRequired {
-		// No required checks — treat as pass (GitHub allows merge)
-		return github.CheckStatusPass
+	// Any required check that hasn't reported yet is pending
+	for name := range requiredChecks {
+		if !seen[name] {
+			hasPending = true
+		}
 	}
+
 	if hasFail {
 		return github.CheckStatusFail
 	}
