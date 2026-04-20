@@ -24,6 +24,7 @@ type RepoConfig struct {
 	GitHubBranch string `default:"main" yaml:"githubBranch"`
 
 	RequireChecks    bool     `default:"true" yaml:"requireChecks"`
+	RequiredChecks   []string `yaml:"requiredChecks"`
 	RequireApproval  bool     `default:"true" yaml:"requireApproval"`
 	DefaultReviewers []string `yaml:"defaultReviewers"`
 

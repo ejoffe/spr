@@ -25,6 +25,13 @@ var (
 	date    = "unknown"
 )
 
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}
+
 func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -124,7 +131,7 @@ VERSION: fork of {{.Version}}
 		Name:                 "spr",
 		Usage:                "Stacked Pull Requests on GitHub",
 		HideVersion:          true,
-		Version:              fmt.Sprintf("%s : %s : %s\n", version, date, commit[:8]),
+		Version:              fmt.Sprintf("%s : %s : %s\n", version, date, truncate(commit, 8)),
 		EnableBashCompletion: true,
 		Authors: []*cli.Author{
 			{

@@ -533,169 +533,222 @@ func TestComputeRequiredCheckStatus(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 
 	tests := []struct {
-		name     string
-		contexts []checkContextNode
-		expect   github.CheckStatus
+		name           string
+		contexts       []checkContextNode
+		requiredChecks map[string]bool
+		expect         github.CheckStatus
 	}{
+		// === Basic cases ===
 		{
-			name:     "NoChecks",
-			contexts: []checkContextNode{},
-			expect:   github.CheckStatusPass,
+			name:           "NoContexts_NoRequired",
+			contexts:       []checkContextNode{},
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPending, // required check hasn't reported yet
 		},
 		{
-			name: "NoRequiredChecks_AllPass",
+			name:           "NoContexts_EmptyRequired",
+			contexts:       []checkContextNode{},
+			requiredChecks: map[string]bool{},
+			expect:         github.CheckStatusPass,
+		},
+
+		// === CheckRun states ===
+		{
+			name: "CheckRun_RequiredPasses",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: false},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
-			name: "NonRequiredFails_NoRequired",
+			name: "CheckRun_RequiredFails",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("FAILURE")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
-			name: "NonRequiredFails_RequiredPasses",
+			name: "CheckRun_RequiredPending",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
-				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
+				{TypeName: "CheckRun", Name: "ci", Status: "IN_PROGRESS"},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPending,
 		},
 		{
-			name: "RequiredCheckFails",
+			name: "CheckRun_RequiredQueued",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "QUEUED"},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPending,
 		},
 		{
-			name: "RequiredCheckPending",
+			name: "CheckRun_NeutralPasses",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "IN_PROGRESS", IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("NEUTRAL")},
 			},
-			expect: github.CheckStatusPending,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
-			name: "RequiredCheckQueued",
+			name: "CheckRun_SkippedPasses",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "QUEUED", IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("SKIPPED")},
 			},
-			expect: github.CheckStatusPending,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
-			name: "RequiredNeutralPasses",
+			name: "CheckRun_TimedOut",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "info-check", Status: "COMPLETED", Conclusion: strPtr("NEUTRAL"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("TIMED_OUT")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
-			name: "RequiredSkippedPasses",
+			name: "CheckRun_Cancelled",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "conditional", Status: "COMPLETED", Conclusion: strPtr("SKIPPED"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("CANCELLED")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
-			name: "RequiredTimedOut",
+			name: "CheckRun_NilConclusion",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "slow-test", Status: "COMPLETED", Conclusion: strPtr("TIMED_OUT"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: nil},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"ci": true},
+			expect:         github.CheckStatusFail,
 		},
-		{
-			name: "RequiredCancelled",
-			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "ci", Status: "COMPLETED", Conclusion: strPtr("CANCELLED"), IsRequired: true},
-			},
-			expect: github.CheckStatusFail,
-		},
+
+		// === StatusContext states ===
 		{
 			name: "StatusContext_RequiredSuccess",
 			contexts: []checkContextNode{
-				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS"},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci/build": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
 			name: "StatusContext_RequiredFailure",
 			contexts: []checkContextNode{
-				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE", IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE"},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"ci/build": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
 			name: "StatusContext_RequiredPending",
 			contexts: []checkContextNode{
-				{TypeName: "StatusContext", Context: "ci/build", State: "PENDING", IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "PENDING"},
 			},
-			expect: github.CheckStatusPending,
+			requiredChecks: map[string]bool{"ci/build": true},
+			expect:         github.CheckStatusPending,
 		},
 		{
 			name: "StatusContext_RequiredExpected",
 			contexts: []checkContextNode{
-				{TypeName: "StatusContext", Context: "ci/build", State: "EXPECTED", IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/build", State: "EXPECTED"},
 			},
-			expect: github.CheckStatusPending,
+			requiredChecks: map[string]bool{"ci/build": true},
+			expect:         github.CheckStatusPending,
 		},
+
+		// === Filtering: non-required checks are ignored ===
 		{
-			name: "StatusContext_NonRequiredFails_RequiredPasses",
+			name: "NonRequiredFails_RequiredPasses",
 			contexts: []checkContextNode{
-				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
-				{TypeName: "StatusContext", Context: "optional/lint", State: "FAILURE", IsRequired: false},
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"required-ci": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
 			name: "MixedTypes_NonRequiredFails_RequiredPasses",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
-				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS", IsRequired: true},
-				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: false},
-				{TypeName: "StatusContext", Context: "optional/coverage", State: "FAILURE", IsRequired: false},
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+				{TypeName: "StatusContext", Context: "ci/build", State: "SUCCESS"},
+				{TypeName: "CheckRun", Name: "optional-lint", Status: "COMPLETED", Conclusion: strPtr("FAILURE")},
+				{TypeName: "StatusContext", Context: "optional/coverage", State: "FAILURE"},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"required-ci": true, "ci/build": true},
+			expect:         github.CheckStatusPass,
 		},
 		{
 			name: "MixedTypes_RequiredFails",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
-				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE", IsRequired: true},
+				{TypeName: "CheckRun", Name: "required-ci", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+				{TypeName: "StatusContext", Context: "ci/build", State: "FAILURE"},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"required-ci": true, "ci/build": true},
+			expect:         github.CheckStatusFail,
 		},
+
+		// === Precedence ===
 		{
 			name: "FailTakesPrecedenceOverPending",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("FAILURE"), IsRequired: true},
-				{TypeName: "CheckRun", Name: "ci-2", Status: "IN_PROGRESS", IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("FAILURE")},
+				{TypeName: "CheckRun", Name: "ci-2", Status: "IN_PROGRESS"},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"ci-1": true, "ci-2": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
 			name: "AllRequiredPass_MultipleChecks",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
-				{TypeName: "CheckRun", Name: "ci-2", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
-				{TypeName: "CheckRun", Name: "ci-3", Status: "COMPLETED", Conclusion: strPtr("SUCCESS"), IsRequired: true},
+				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+				{TypeName: "CheckRun", Name: "ci-2", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+				{TypeName: "CheckRun", Name: "ci-3", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
 			},
-			expect: github.CheckStatusPass,
+			requiredChecks: map[string]bool{"ci-1": true, "ci-2": true, "ci-3": true},
+			expect:         github.CheckStatusPass,
+		},
+
+		// === Missing required check (not yet reported) ===
+		{
+			name: "RequiredCheckNotReportedYet",
+			contexts: []checkContextNode{
+				{TypeName: "CheckRun", Name: "ci-1", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+			},
+			requiredChecks: map[string]bool{"ci-1": true, "ci-2": true},
+			expect:         github.CheckStatusPending,
+		},
+
+		// === Real-world scenario: Semaphore + GitHub Actions ===
+		{
+			name: "RealWorld_SemaphoreFails_OnlyItRequired",
+			contexts: []checkContextNode{
+				{TypeName: "StatusContext", Context: "ci/semaphoreci/pr: test", State: "FAILURE"},
+				{TypeName: "CheckRun", Name: "PR Policy Review", Status: "COMPLETED", Conclusion: strPtr("NEUTRAL")},
+				{TypeName: "CheckRun", Name: "review", Status: "COMPLETED", Conclusion: strPtr("CANCELLED")},
+				{TypeName: "CheckRun", Name: "repl-controller", Status: "COMPLETED", Conclusion: strPtr("SUCCESS")},
+			},
+			requiredChecks: map[string]bool{"ci/semaphoreci/pr: test": true},
+			expect:         github.CheckStatusFail,
 		},
 		{
-			name: "CompletedWithNilConclusion",
+			name: "RealWorld_SemaphorePasses_OthersFail",
 			contexts: []checkContextNode{
-				{TypeName: "CheckRun", Name: "weird", Status: "COMPLETED", Conclusion: nil, IsRequired: true},
+				{TypeName: "StatusContext", Context: "ci/semaphoreci/pr: test", State: "SUCCESS"},
+				{TypeName: "CheckRun", Name: "review", Status: "COMPLETED", Conclusion: strPtr("CANCELLED")},
+				{TypeName: "CheckRun", Name: "optional", Status: "COMPLETED", Conclusion: strPtr("FAILURE")},
 			},
-			expect: github.CheckStatusFail,
+			requiredChecks: map[string]bool{"ci/semaphoreci/pr: test": true},
+			expect:         github.CheckStatusPass,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := computeRequiredCheckStatus(tc.contexts)
+			actual := computeRequiredCheckStatus(tc.contexts, tc.requiredChecks)
 			require.Equal(t, tc.expect, actual)
 		})
 	}
