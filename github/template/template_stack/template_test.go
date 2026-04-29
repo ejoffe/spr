@@ -7,6 +7,7 @@ import (
 	"github.com/ejoffe/spr/git"
 	"github.com/ejoffe/spr/github"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTitle(t *testing.T) {
@@ -79,7 +80,7 @@ func TestBody_EmptyStack(t *testing.T) {
 		Body:    "Commit body text",
 	}
 
-	result := templatizer.Body(info, commit, nil)
+	result := templatizer.Body(info, info.PullRequests,commit, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Commit body text")
@@ -133,7 +134,7 @@ func TestBody_WithStack_NoTitles(t *testing.T) {
 	}
 
 	// Test with commit2 (middle of stack)
-	result := templatizer.Body(info, commit2, nil)
+	result := templatizer.Body(info, info.PullRequests,commit2, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Second body")
@@ -210,7 +211,7 @@ func TestBody_WithStack_WithTitles(t *testing.T) {
 	}
 
 	// Test with commit2 (middle of stack)
-	result := templatizer.Body(info, commit2, nil)
+	result := templatizer.Body(info, info.PullRequests,commit2, nil)
 
 	// Should contain the commit body
 	assert.Contains(t, result, "Second body")
@@ -254,7 +255,7 @@ func TestBody_StackOrder(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit2, nil)
+	result := templatizer.Body(info, info.PullRequests,commit2, nil)
 
 	// Stack should be in reverse order (3, 2, 1)
 	// Find the stack section
@@ -305,7 +306,7 @@ func TestBody_CurrentCommitAtStart(t *testing.T) {
 	}
 
 	// Test with commit3 (last in stack, first in reverse order)
-	result := templatizer.Body(info, commit3, nil)
+	result := templatizer.Body(info, info.PullRequests,commit3, nil)
 
 	// Should have arrow on #3
 	assert.Contains(t, result, "#3 ⬅")
@@ -343,7 +344,7 @@ func TestBody_CurrentCommitAtEnd(t *testing.T) {
 	}
 
 	// Test with commit1 (first in stack, last in reverse order)
-	result := templatizer.Body(info, commit1, nil)
+	result := templatizer.Body(info, info.PullRequests,commit1, nil)
 
 	// Should have arrow on #1
 	assert.Contains(t, result, "#1 ⬅")
@@ -368,7 +369,7 @@ func TestBody_EmptyBody(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit, nil)
+	result := templatizer.Body(info, info.PullRequests,commit, nil)
 
 	// Should still contain stack and notice
 	assert.Contains(t, result, "#1")
@@ -391,7 +392,7 @@ func TestBody_SinglePRInStack(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit, nil)
+	result := templatizer.Body(info, info.PullRequests,commit, nil)
 
 	// Should contain the body
 	assert.Contains(t, result, "Single body")
@@ -427,7 +428,7 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 
 	// Test without titles
 	templatizerNoTitles := NewStackTemplatizer(false)
-	resultNoTitles := templatizerNoTitles.Body(info, commit2, nil)
+	resultNoTitles := templatizerNoTitles.Body(info, info.PullRequests, commit2, nil)
 
 	// Should NOT contain PR titles
 	assert.NotContains(t, resultNoTitles, "First PR")
@@ -438,7 +439,7 @@ func TestBody_WithTitlesVsWithoutTitles(t *testing.T) {
 
 	// Test with titles
 	templatizerWithTitles := NewStackTemplatizer(true)
-	resultWithTitles := templatizerWithTitles.Body(info, commit2, nil)
+	resultWithTitles := templatizerWithTitles.Body(info, info.PullRequests, commit2, nil)
 
 	// Should contain PR titles
 	assert.Contains(t, resultWithTitles, "First PR #1")
@@ -460,7 +461,7 @@ func TestBody_Structure(t *testing.T) {
 		},
 	}
 
-	result := templatizer.Body(info, commit, nil)
+	result := templatizer.Body(info, info.PullRequests,commit, nil)
 
 	// Verify structure: body + \n\n + stack + \n\n + notice
 	// The body should come first
@@ -513,7 +514,7 @@ func TestBody_RealWorldExample(t *testing.T) {
 	}
 
 	// Test with middle commit
-	result := templatizer.Body(info, commit2, nil)
+	result := templatizer.Body(info, info.PullRequests,commit2, nil)
 
 	// Should contain commit body
 	assert.Contains(t, result, "Created POST /login endpoint")
@@ -611,12 +612,69 @@ It even includes some **markdown** formatting.
 	templatizer := NewStackTemplatizer(false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			body := templatizer.Body(tc.info, tc.commit, nil)
+			body := templatizer.Body(tc.info, tc.info.PullRequests, tc.commit, nil)
 			if body != tc.expected {
 				t.Fatalf("expected: '%v', actual: '%v'", tc.expected, body)
 			}
 		})
 	}
+}
+
+// TestBody_StackArgOverridesInfoOrder reproduces the bug where the rendered
+// stack section followed info.PullRequests' insertion order instead of the
+// logical stack order computed by the caller.
+//
+// Scenario mirrors what spr.UpdatePullRequests produces after a reorder +
+// new commits are inserted: the existing PR (#65362, top of new stack) is
+// kept at index 0 of info.PullRequests by an append-loop, while the
+// freshly-created PRs (#65417, #65418, #65419) are appended after it.
+// The caller already computed the correctly-sorted stack and passes it via
+// the `stack` argument; the body must reflect that stack, not info's order.
+func TestBody_StackArgOverridesInfoOrder(t *testing.T) {
+	templatizer := NewStackTemplatizer(false)
+
+	cBottom := git.Commit{CommitID: "65417", Subject: "C", Body: "C body"}
+	cMid1 := git.Commit{CommitID: "65418", Subject: "D", Body: "D body"}
+	cMid2 := git.Commit{CommitID: "65419", Subject: "E", Body: "E body"}
+	cTop := git.Commit{CommitID: "65362", Subject: "B", Body: "B body"}
+
+	prBottom := &github.PullRequest{Number: 65417, Commit: cBottom}
+	prMid1 := &github.PullRequest{Number: 65418, Commit: cMid1}
+	prMid2 := &github.PullRequest{Number: 65419, Commit: cMid2}
+	prTop := &github.PullRequest{Number: 65362, Commit: cTop}
+
+	// info.PullRequests is in append/insertion order — the buggy state.
+	// The pre-existing prTop sits at index 0; the newly-created PRs were
+	// appended after it.
+	info := &github.GitHubInfo{
+		PullRequests: []*github.PullRequest{prTop, prBottom, prMid1, prMid2},
+	}
+
+	// stack carries the logical order: bottom -> top.
+	stack := []*github.PullRequest{prBottom, prMid1, prMid2, prTop}
+
+	// Render the body for the bottom PR (#65417, the current PR).
+	body := templatizer.Body(info, stack, cBottom, prBottom)
+
+	// FormatStackMarkdown lists the stack from top down, so we expect:
+	//   - #65362
+	//   - #65419
+	//   - #65418
+	//   - #65417 ⬅
+	idxTop := strings.Index(body, "#65362")
+	idxMid2 := strings.Index(body, "#65419")
+	idxMid1 := strings.Index(body, "#65418")
+	idxBot := strings.Index(body, "#65417 ⬅")
+
+	require.NotEqual(t, -1, idxTop, "should contain #65362")
+	require.NotEqual(t, -1, idxMid2, "should contain #65419")
+	require.NotEqual(t, -1, idxMid1, "should contain #65418")
+	require.NotEqual(t, -1, idxBot, "current PR #65417 should carry the arrow")
+
+	// top first, current PR last
+	require.Less(t, idxTop, idxMid2, "#65362 (top) must precede #65419")
+	require.Less(t, idxMid2, idxMid1, "#65419 must precede #65418")
+	require.Less(t, idxMid1, idxBot, "#65418 must precede #65417 (current/bottom)")
 }
 
 /*

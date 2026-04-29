@@ -20,7 +20,7 @@ func (t *WhyWhatTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) s
 	return commit.Subject
 }
 
-func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, stack []*github.PullRequest, commit git.Commit, pr *github.PullRequest) string {
 	// Split commit body by empty lines and filter out empty sections
 	sections := splitByEmptyLines(commit.Body)
 
@@ -67,7 +67,7 @@ func (t *WhyWhatTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr
 	body += "\n"
 	body += "---\n"
 	body += "**Stack**:\n"
-	body += template.FormatStackMarkdown(commit, info.PullRequests, true)
+	body += template.FormatStackMarkdown(commit, stack, true)
 	body += "---\n"
 	body += template.ManualMergeNotice()
 	return body

@@ -212,7 +212,7 @@ func TestBody(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := templatizer.Body(info, tt.commit, nil)
+			got := templatizer.Body(info, info.PullRequests,tt.commit, nil)
 
 			// Check that all required strings are present
 			for _, wantStr := range tt.contains {
@@ -320,7 +320,7 @@ func TestBodyTemplateStructure(t *testing.T) {
 		Body:    "Why section\n\nWhat changed section\n\nTest plan section",
 	}
 
-	result := templatizer.Body(info, commit, nil)
+	result := templatizer.Body(info, info.PullRequests,commit, nil)
 
 	// Verify sections appear in correct order
 	whyIndex := strings.Index(result, "Why\n===")
@@ -381,7 +381,7 @@ Manual review of the docs.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := templatizer.Body(info, tt.commit, nil)
+			result := templatizer.Body(info, info.PullRequests,tt.commit, nil)
 
 			// Should always contain the required sections
 			assert.Contains(t, result, "Why\n===")

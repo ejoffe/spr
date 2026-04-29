@@ -18,14 +18,14 @@ func (t *StackTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) str
 	return commit.Subject
 }
 
-func (t *StackTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *StackTemplatizer) Body(info *github.GitHubInfo, stack []*github.PullRequest, commit git.Commit, pr *github.PullRequest) string {
 	body := commit.Body
 
 	// Always show stack section and notice
 	body += "\n\n"
 	body += "---\n"
 	body += "**Stack**:\n"
-	body += template.FormatStackMarkdown(commit, info.PullRequests, t.showPrTitlesInStack)
+	body += template.FormatStackMarkdown(commit, stack, t.showPrTitlesInStack)
 	body += "---\n"
 	body += template.ManualMergeNotice()
 	return body

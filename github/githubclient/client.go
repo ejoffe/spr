@@ -424,7 +424,7 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 
-	body := templatizer.Body(info, commit, nil)
+	body := templatizer.Body(info, info.PullRequests, commit, nil)
 	resp, err := c.api.CreatePullRequest(ctx, genclient.CreatePullRequestInput{
 		RepositoryId: info.RepositoryID,
 		BaseRefName:  baseRefName,
@@ -473,7 +473,7 @@ func (c *client) UpdatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 	title := templatizer.Title(info, commit)
-	body := templatizer.Body(info, commit, pr)
+	body := templatizer.Body(info, pullRequests, commit, pr)
 
 	// Skip the API call if nothing has actually changed. This avoids
 	// triggering a spurious pull_request "edited" event on GitHub which

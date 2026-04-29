@@ -16,7 +16,8 @@ func (t *BasicTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) str
 	return commit.Subject
 }
 
-func (t *BasicTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
+func (t *BasicTemplatizer) Body(info *github.GitHubInfo, stack []*github.PullRequest, commit git.Commit, pr *github.PullRequest) string {
+	_ = stack // basic template doesn't render the stack section
 	body := commit.Body
 	body += "\n\n"
 	body += template.ManualMergeNotice()
