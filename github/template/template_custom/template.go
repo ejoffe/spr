@@ -36,8 +36,8 @@ func (t *CustomTemplatizer) Title(info *github.GitHubInfo, commit git.Commit) st
 	return commit.Subject
 }
 
-func (t *CustomTemplatizer) Body(info *github.GitHubInfo, commit git.Commit, pr *github.PullRequest) string {
-	body := t.formatBody(commit, info.PullRequests)
+func (t *CustomTemplatizer) Body(info *github.GitHubInfo, stack []*github.PullRequest, commit git.Commit, pr *github.PullRequest) string {
+	body := t.formatBody(commit, stack)
 	pullRequestTemplate, err := t.readPRTemplate()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to read PR template")
