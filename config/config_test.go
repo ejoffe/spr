@@ -35,6 +35,7 @@ func TestDefaultConfig(t *testing.T) {
 			PRTemplateInsertStart: "",
 			PRTemplateInsertEnd:   "",
 			ShowPrTitlesInStack:   false,
+			OnRemoteDivergence:    "ask",
 		},
 		User: &UserConfig{
 			ShowPRLink:       true,

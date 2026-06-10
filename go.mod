@@ -13,8 +13,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/pretty v1.2.0
 	github.com/urfave/cli/v2 v2.8.1
+	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.29.0
+	golang.org/x/term v0.28.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -61,7 +63,6 @@ require (
 	github.com/wundergraph/graphql-go-tools v1.53.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	github.com/zalando/go-keyring v0.2.8 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
