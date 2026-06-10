@@ -47,6 +47,17 @@ type stackediff struct {
 	output       io.Writer
 	input        io.Reader
 	synchronized bool // When true code is executed without goroutines. Allows test to be deterministic
+
+	// divergencePromptFn, when non-nil, replaces the default
+	// TTY-detecting interactive divergence prompt. Production code leaves
+	// it nil; tests inject a scripted decider.
+	divergencePromptFn func([]git.Divergence) DivergenceAction
+
+	// foldMessageWriter, when non-nil, replaces the default os.CreateTemp
+	// helper used by the merge-policy fold to materialise a commit
+	// message file. Tests inject a function that returns a fixed path so
+	// mockgit assertions stay deterministic.
+	foldMessageWriter func(content string) (path string, cleanup func(), err error)
 }
 
 // AmendCommit enables one to easily amend a commit in the middle of a stack
@@ -294,8 +305,24 @@ func (sd *stackediff) UpdatePullRequests(ctx context.Context, reviewers []string
 		return
 	}
 	sd.profiletimer.Step("UpdatePullRequests::FetchAndGetGitHubInfo")
-	localCommits := alignLocalCommits(git.GetLocalCommitStack(sd.config, sd.gitcmd), githubInfo.PullRequests)
+	rawLocalCommits := git.GetLocalCommitStack(sd.config, sd.gitcmd)
 	sd.profiletimer.Step("UpdatePullRequests::GetLocalCommitStack")
+
+	// Maintainer-edit detection: before force-pushing, look for PR head
+	// branches that the remote has moved (e.g. a maintainer pushed a
+	// suggestion). On refusal, bail with the user message already
+	// printed. Done on the raw local stack — alignLocalCommits below
+	// filters non-head commits, but we want to see divergence on every
+	// commit that has a corresponding remote head ref. The
+	// `--force-with-lease` flag below is the secondary safety net for
+	// races between detection and push.
+	if !sd.checkRemoteDivergence(ctx, githubInfo, rawLocalCommits) {
+		return
+	}
+	sd.profiletimer.Step("UpdatePullRequests::CheckRemoteDivergence")
+
+	localCommits := alignLocalCommits(rawLocalCommits, githubInfo.PullRequests)
+	sd.profiletimer.Step("UpdatePullRequests::AlignLocalCommits")
 
 	// close prs for deleted commits
 	var validPullRequests []*github.PullRequest
@@ -720,13 +747,21 @@ func (sd *stackediff) syncCommitStackToGitHub(ctx context.Context,
 	}
 
 	if len(updatedCommits) > 0 {
+		// --force-with-lease (no explicit expected value) protects against
+		// silently overwriting a remote ref whose tip has moved since our
+		// last fetch — e.g. a maintainer pushing to the head branch
+		// concurrently with this `spr update`. The explicit per-ref fetch
+		// in checkRemoteDivergence keeps the local remote-tracking refs
+		// up to date so the lease succeeds in the common case.
 		if sd.config.Repo.BranchPushIndividually {
 			for _, refName := range refNames {
-				pushCommand := fmt.Sprintf("push --force %s %s", sd.config.Repo.GitHubRemote, refName)
+				pushCommand := fmt.Sprintf("push --force-with-lease %s %s",
+					sd.config.Repo.GitHubRemote, refName)
 				sd.gitcmd.MustGit(pushCommand, nil)
 			}
 		} else {
-			pushCommand := fmt.Sprintf("push --force --atomic %s ", sd.config.Repo.GitHubRemote)
+			pushCommand := fmt.Sprintf("push --force-with-lease --atomic %s ",
+				sd.config.Repo.GitHubRemote)
 			pushCommand += strings.Join(refNames, " ")
 			sd.gitcmd.MustGit(pushCommand, nil)
 		}

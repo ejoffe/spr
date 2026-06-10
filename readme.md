@@ -230,6 +230,7 @@ Configuration is created automatically on first run. Repository config lives in 
 | `showPrTitlesInStack` | bool | `false` | Show PR titles in stack description within PR body |
 | `branchPushIndividually` | bool | `false` | Push branches one at a time instead of atomically |
 | `defaultReviewers` | list | | Reviewers to add to every new pull request |
+| `onRemoteDivergence` | str | `ask` | What `spr update` does when a maintainer pushed commits to a PR head branch. `ask`: prompt (refuse on non-TTY); `drop`: silently force-push local (pre-fix behavior); `merge`: cherry-pick the maintainer's commits into the matching local commit and re-stack, refusing on conflict. See [Maintainer edits to PR head branches](#maintainer-edits-to-pr-head-branches) |
 
 Example `.spr.yml`:
 
@@ -265,6 +266,18 @@ defaultReviewers:
 | `branchPrefix` | str | `spr` | Prefix for spr-managed branch names |
 
 </details>
+
+### Maintainer edits to PR head branches
+
+GitHub's "Allow edits by maintainers" lets upstream maintainers (or anyone with write access to the head branch) push commits directly to a PR. Previously `spr update` would silently force-push your local stack over those commits, wiping them. From this version, spr detects the divergence and applies the policy you choose via the `onRemoteDivergence` config:
+
+- **`ask`** (default): if running on a TTY, spr summarises the divergent PRs, prints copy-pasteable git commands to fold the maintainer's commits into your local commit, and asks whether to **[d]rop** (force-push local) or **[a]bort**. On non-TTY (CI, scripts, hooks), it always refuses and prints the same guide — refusing to silently lose data.
+- **`drop`**: skip the prompt; silently force-push your local stack. This is the pre-fix behavior, kept as an explicit opt-in for users who genuinely don't want maintainer edits incorporated.
+- **`merge`**: for each PR with foreign commits, spr detaches at the matching local commit, cherry-picks the maintainer's diffs onto it, amends the commit with the original message plus one `Co-authored-by: Name <email>` trailer per unique maintainer (preserving the `commit-id:` trailer), then `git rebase --onto` re-applies the rest of the stack on top. After a successful fold spr posts a comment on the corresponding PR naming the absorbed commits and telling the maintainer not to `git push --force` (which would undo the integration). Per-PR atomic: any failure rolls HEAD back before the next divergence is attempted. If anything is refused (cherry-pick conflict, rebase conflict, or non-foldable reason), spr refuses to push the update so the user can resolve manually.
+
+Detection is stateless: spr walks back from each remote head looking for the local commit's `commit-id:` trailer; any commits above it (without the trailer) are flagged as the maintainer's contribution. Push uses `git push --force-with-lease` so a race between detection and push doesn't silently overwrite.
+
+**Known limitation (tracked for a follow-up):** if a maintainer changes a PR's *base* branch (via the GitHub UI), `spr update` silently resets it to spr's expected base on the next run. This is the same flavour of bug as the head-branch wipe, but rarer in practice — it will be addressed in a separate change.
 
 ## How it compares
 

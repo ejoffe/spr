@@ -26,7 +26,16 @@ jobs:
     - name: Check goreleaser file
       uses: goreleaser/goreleaser-action@v6.2.1
       with:
-        version: latest
+        # Pinned: goreleaser v2.16.0 (2026-05-24) started treating the
+        # deprecated `brews:` key in .goreleaser.yml as a hard error,
+        # breaking CI on every push. v2.15.4 (2026-04-21, the last
+        # release before the strict check) still accepts `brews:` with
+        # only a warning AND understands the current `formats:` syntax
+        # under `archives.format_overrides`. Unpin once .goreleaser.yml
+        # is updated (likely either drop the brews block or migrate it
+        # to whatever goreleaser eventually settles on as the homebrew
+        # successor).
+        version: 'v2.15.4'
         args: check
 
     #- name: Upload coverage

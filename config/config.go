@@ -42,7 +42,25 @@ type RepoConfig struct {
 
 	ShowPrTitlesInStack    bool `default:"false" yaml:"showPrTitlesInStack"`
 	BranchPushIndividually bool `default:"false" yaml:"branchPushIndividually"`
+
+	// OnRemoteDivergence controls what `spr update` does when a PR head
+	// branch on the remote has commits the local stack doesn't (e.g. a
+	// maintainer pushed a suggestion). Values:
+	//   "ask"   — interactive prompt per PR; on non-TTY, refuse and print
+	//             a resolution guide. (default)
+	//   "drop"  — silently force-push the local version, wiping the
+	//             remote commits (the pre-fix behavior; explicit opt-in).
+	//   "merge" — fold the remote commits into the matching local commit
+	//             (Stage 2, not yet implemented — behaves as "ask").
+	OnRemoteDivergence string `default:"ask" yaml:"onRemoteDivergence"`
 }
+
+// OnRemoteDivergence policy values.
+const (
+	OnRemoteDivergenceAsk   = "ask"
+	OnRemoteDivergenceDrop  = "drop"
+	OnRemoteDivergenceMerge = "merge"
+)
 
 type UserConfig struct {
 	ShowPRLink       bool `default:"true" yaml:"showPRLink"`
