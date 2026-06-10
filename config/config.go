@@ -53,6 +53,10 @@ type UserConfig struct {
 
 	CreateDraftPRs       bool `default:"false" yaml:"createDraftPRs"`
 	PreserveTitleAndBody bool `default:"false" yaml:"preserveTitleAndBody"`
+	// MaintainerCanModify is passed to GitHub when opening cross-fork PRs.
+	// When true (the default) upstream maintainers can push to the PR head
+	// branch on the fork. Has no effect for same-fork PRs.
+	MaintainerCanModify  bool `default:"true" yaml:"maintainerCanModify"`
 	NoRebase             bool `default:"false" yaml:"noRebase"`
 	NoFetch              bool `default:"false" yaml:"noFetch"`
 	DeleteMergedBranches bool `default:"false" yaml:"deleteMergedBranches"`

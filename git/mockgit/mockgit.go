@@ -155,6 +155,12 @@ func (m *Mock) ExpectRemote(remote string) {
 	m.expect("git remote -v").respond(response)
 }
 
+// ExpectRemoteGetURL queues an expectation for `git remote get-url <name>`
+// and a canned URL response.
+func (m *Mock) ExpectRemoteGetURL(remoteName, url string) {
+	m.expect("git remote get-url " + remoteName).respond(url + "\n")
+}
+
 func (m *Mock) ExpectFixup(commitHash string) {
 	m.expect("git commit --fixup " + commitHash)
 	m.expect("git rebase -i --autosquash --autostash origin/master")

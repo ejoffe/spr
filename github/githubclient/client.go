@@ -242,14 +242,67 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 	}
 
 	info := &github.GitHubInfo{
-		UserName:     loginName,
-		RepositoryID: repoID,
-		LocalBranch:  git.GetLocalBranchName(gitcmd),
-		PullRequests: pullRequests,
+		UserName:         loginName,
+		RepositoryID:     repoID,
+		HeadRepositoryID: resolveHeadRepositoryID(ctx, gitcmd, c.config.Repo, repoID, c.starGetRepoLookup),
+		LocalBranch:      git.GetLocalBranchName(gitcmd),
+		PullRequests:     pullRequests,
 	}
 
 	log.Debug().Interface("Info", info).Msg("GetInfo")
 	return info
+}
+
+// repoIDLookup resolves an (owner, name) pair to the repo's GitHub node ID.
+// Extracted as a separate type so resolveHeadRepositoryID is testable without
+// stubbing the full genclient.Client interface.
+type repoIDLookup func(ctx context.Context, owner, name string) (string, error)
+
+// resolveHeadRepositoryID returns the fork's GitHub node ID when spr is
+// configured for cross-fork PRs (i.e. the URL of GitHubRemote points at a
+// different (owner, name) than the configured GitHubRepoOwner/Name target).
+// Returns "" for same-fork operation or when fork detection fails — in the
+// latter case spr falls back to same-fork behavior and GitHub will surface
+// any resulting error on the CreatePullRequest call.
+func resolveHeadRepositoryID(ctx context.Context, gitcmd git.GitInterface,
+	repoCfg *config.RepoConfig, upstreamRepoID string, lookup repoIDLookup) string {
+	remoteURL, err := git.GetRemoteURL(gitcmd, repoCfg.GitHubRemote)
+	if err != nil {
+		log.Warn().Err(err).Str("remote", repoCfg.GitHubRemote).
+			Msg("cross-fork detection: failed to read remote URL")
+		return ""
+	}
+	_, headOwner, headName, ok := git.ParseRepoURL(remoteURL)
+	if !ok {
+		log.Warn().Str("remote", repoCfg.GitHubRemote).Str("url", remoteURL).
+			Msg("cross-fork detection: unparseable remote URL")
+		return ""
+	}
+	if headOwner == repoCfg.GitHubRepoOwner && headName == repoCfg.GitHubRepoName {
+		return ""
+	}
+	headRepoID, err := lookup(ctx, headOwner, headName)
+	if err != nil {
+		log.Warn().Err(err).Str("owner", headOwner).Str("name", headName).
+			Msg("cross-fork detection: failed to resolve fork repo ID")
+		return ""
+	}
+	if headRepoID == "" || headRepoID == upstreamRepoID {
+		return ""
+	}
+	return headRepoID
+}
+
+// starGetRepoLookup adapts the genclient StarGetRepo call to a repoIDLookup.
+func (c *client) starGetRepoLookup(ctx context.Context, owner, name string) (string, error) {
+	resp, err := c.api.StarGetRepo(ctx, owner, name)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil || resp.Repository == nil {
+		return "", nil
+	}
+	return resp.Repository.Id, nil
 }
 
 func matchPullRequestStack(
@@ -409,6 +462,26 @@ func (c *client) GetAssignableUsers(ctx context.Context) []github.RepoAssignee {
 	return users
 }
 
+// buildCreatePullRequestInput assembles the GraphQL input for opening a PR.
+// Routes through the fork via HeadRepositoryId when GitHubInfo signals
+// cross-fork mode (HeadRepositoryID set and different from RepositoryID).
+func buildCreatePullRequestInput(info *github.GitHubInfo, user *config.UserConfig,
+	headRefName, baseRefName, title, body string) genclient.CreatePullRequestInput {
+	input := genclient.CreatePullRequestInput{
+		RepositoryId: info.RepositoryID,
+		BaseRefName:  baseRefName,
+		HeadRefName:  headRefName,
+		Title:        title,
+		Body:         &body,
+		Draft:        &user.CreateDraftPRs,
+	}
+	if info.HeadRepositoryID != "" && info.HeadRepositoryID != info.RepositoryID {
+		input.HeadRepositoryId = &info.HeadRepositoryID
+		input.MaintainerCanModify = &user.MaintainerCanModify
+	}
+	return input
+}
+
 func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	info *github.GitHubInfo, commit git.Commit, prevCommit *git.Commit) *github.PullRequest {
 
@@ -425,14 +498,9 @@ func (c *client) CreatePullRequest(ctx context.Context, gitcmd git.GitInterface,
 	templatizer := config_fetcher.PRTemplatizer(c.config, gitcmd)
 
 	body := templatizer.Body(info, commit, nil)
-	resp, err := c.api.CreatePullRequest(ctx, genclient.CreatePullRequestInput{
-		RepositoryId: info.RepositoryID,
-		BaseRefName:  baseRefName,
-		HeadRefName:  headRefName,
-		Title:        templatizer.Title(info, commit),
-		Body:         &body,
-		Draft:        &c.config.User.CreateDraftPRs,
-	})
+	input := buildCreatePullRequestInput(info, c.config.User, headRefName, baseRefName,
+		templatizer.Title(info, commit), body)
+	resp, err := c.api.CreatePullRequest(ctx, input)
 	check(err)
 
 	pr := &github.PullRequest{

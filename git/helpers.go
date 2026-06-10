@@ -34,6 +34,47 @@ func BranchNameRegex(branchPrefix string) *regexp.Regexp {
 	return regexp.MustCompile(regexp.QuoteMeta(branchPrefix) + `/([a-zA-Z0-9_\-/\.]+)/([a-f0-9]{8})$`)
 }
 
+// repoURLRegex matches the supported forms of a GitHub-style remote URL and
+// captures the host, owner, and name. Used by ParseRepoURL.
+//
+// Forms accepted:
+//   - https://host/owner/name[.git]
+//   - ssh://[git@]host/owner/name[.git]
+//   - [git@]host:owner/name[.git]
+var repoURLRegex = regexp.MustCompile(
+	`^` +
+		`(?:https://|ssh://)?` +
+		`(?:git@)?` +
+		`(?P<host>[a-z0-9._\-]+)` +
+		`(?:/|:)` +
+		`(?P<owner>[\w-]+)/(?P<name>[\w-]+)` +
+		`(?:\.git)?` +
+		`/?$`,
+)
+
+// ParseRepoURL extracts (host, owner, name) from a git remote URL.
+// Returns ok=false if the URL is not recognizable as a GitHub-style repo URL.
+func ParseRepoURL(remoteURL string) (host, owner, name string, ok bool) {
+	matches := repoURLRegex.FindStringSubmatch(strings.TrimSpace(remoteURL))
+	if matches == nil {
+		return "", "", "", false
+	}
+	return matches[repoURLRegex.SubexpIndex("host")],
+		matches[repoURLRegex.SubexpIndex("owner")],
+		matches[repoURLRegex.SubexpIndex("name")],
+		true
+}
+
+// GetRemoteURL returns the push URL for the given git remote, or an error if
+// the remote is not configured.
+func GetRemoteURL(gitcmd GitInterface, remoteName string) (string, error) {
+	var output string
+	if err := gitcmd.Git("remote get-url "+remoteName, &output); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output), nil
+}
+
 // GetLocalTopCommit returns the top unmerged commit in the stack
 //
 // return nil if there are no unmerged commits in the stack

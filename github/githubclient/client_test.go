@@ -1,10 +1,13 @@
 package githubclient
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/ejoffe/spr/config"
 	"github.com/ejoffe/spr/git"
+	"github.com/ejoffe/spr/git/mockgit"
 	"github.com/ejoffe/spr/github"
 	"github.com/ejoffe/spr/github/githubclient/fezzik_types"
 	"github.com/stretchr/testify/require"
@@ -752,4 +755,180 @@ func TestComputeRequiredCheckStatus(t *testing.T) {
 			require.Equal(t, tc.expect, actual)
 		})
 	}
+}
+
+func TestBuildCreatePullRequestInput(t *testing.T) {
+	const (
+		upstreamID = "upstream-repo-id"
+		forkID     = "fork-repo-id"
+		headRef    = "spr/master/deadbeef"
+		baseRef    = "master"
+		title      = "feat: thing"
+		body       = "body text"
+	)
+
+	t.Run("same-fork omits HeadRepositoryId and MaintainerCanModify", func(t *testing.T) {
+		info := &github.GitHubInfo{RepositoryID: upstreamID}
+		user := &config.UserConfig{CreateDraftPRs: false, MaintainerCanModify: true}
+
+		input := buildCreatePullRequestInput(info, user, headRef, baseRef, title, body)
+
+		require.Equal(t, upstreamID, input.RepositoryId)
+		require.Equal(t, headRef, input.HeadRefName)
+		require.Equal(t, baseRef, input.BaseRefName)
+		require.Equal(t, title, input.Title)
+		require.NotNil(t, input.Body)
+		require.Equal(t, body, *input.Body)
+		require.Nil(t, input.HeadRepositoryId, "same-fork must not set HeadRepositoryId")
+		require.Nil(t, input.MaintainerCanModify, "same-fork must not set MaintainerCanModify")
+	})
+
+	t.Run("cross-fork sets HeadRepositoryId and MaintainerCanModify", func(t *testing.T) {
+		info := &github.GitHubInfo{RepositoryID: upstreamID, HeadRepositoryID: forkID}
+		user := &config.UserConfig{CreateDraftPRs: false, MaintainerCanModify: true}
+
+		input := buildCreatePullRequestInput(info, user, headRef, baseRef, title, body)
+
+		require.Equal(t, upstreamID, input.RepositoryId)
+		require.NotNil(t, input.HeadRepositoryId)
+		require.Equal(t, forkID, *input.HeadRepositoryId)
+		require.Equal(t, headRef, input.HeadRefName,
+			"HeadRefName stays bare — cross-fork is encoded via HeadRepositoryId, not owner: prefix")
+		require.NotNil(t, input.MaintainerCanModify)
+		require.True(t, *input.MaintainerCanModify)
+	})
+
+	t.Run("cross-fork honours MaintainerCanModify=false", func(t *testing.T) {
+		info := &github.GitHubInfo{RepositoryID: upstreamID, HeadRepositoryID: forkID}
+		user := &config.UserConfig{MaintainerCanModify: false}
+
+		input := buildCreatePullRequestInput(info, user, headRef, baseRef, title, body)
+
+		require.NotNil(t, input.MaintainerCanModify)
+		require.False(t, *input.MaintainerCanModify)
+	})
+
+	t.Run("HeadRepositoryID equal to RepositoryID is treated as same-fork", func(t *testing.T) {
+		info := &github.GitHubInfo{RepositoryID: upstreamID, HeadRepositoryID: upstreamID}
+		user := &config.UserConfig{MaintainerCanModify: true}
+
+		input := buildCreatePullRequestInput(info, user, headRef, baseRef, title, body)
+
+		require.Nil(t, input.HeadRepositoryId)
+		require.Nil(t, input.MaintainerCanModify)
+	})
+}
+
+func TestResolveHeadRepositoryID(t *testing.T) {
+	const (
+		upstreamID = "upstream-repo-id"
+		forkID     = "fork-repo-id"
+	)
+
+	upstreamCfg := func() *config.RepoConfig {
+		return &config.RepoConfig{
+			GitHubRepoOwner: "ejoffe",
+			GitHubRepoName:  "spr",
+			GitHubRemote:    "origin",
+		}
+	}
+
+	// trackingLookup wraps a repoIDLookup and records whether it was called.
+	type lookupCall struct {
+		owner, name string
+	}
+	trackingLookup := func(returnID string, returnErr error) (repoIDLookup, *[]lookupCall) {
+		calls := &[]lookupCall{}
+		fn := func(_ context.Context, owner, name string) (string, error) {
+			*calls = append(*calls, lookupCall{owner, name})
+			return returnID, returnErr
+		}
+		return fn, calls
+	}
+
+	t.Run("same fork: no lookup, returns empty", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "git@github.com:ejoffe/spr.git")
+		lookup, calls := trackingLookup(forkID, nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Empty(t, got)
+		require.Empty(t, *calls, "same-fork must skip the lookup call")
+		mock.ExpectationsMet()
+	})
+
+	t.Run("cross-fork: looks up and returns fork ID", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "git@github.com:jucor/spr.git")
+		lookup, calls := trackingLookup(forkID, nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Equal(t, forkID, got)
+		require.Equal(t, []lookupCall{{owner: "jucor", name: "spr"}}, *calls)
+		mock.ExpectationsMet()
+	})
+
+	t.Run("lookup returns upstream ID: defensive empty", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "git@github.com:jucor/spr.git")
+		// Pathological case: GitHub returns the upstream's ID when asked for the fork.
+		// Treat as same-fork so we don't accidentally pass HeadRepositoryId=upstream.
+		lookup, _ := trackingLookup(upstreamID, nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Empty(t, got)
+		mock.ExpectationsMet()
+	})
+
+	t.Run("lookup errors: falls back to empty", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "git@github.com:jucor/spr.git")
+		lookup, calls := trackingLookup("", errors.New("graphql 403"))
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Empty(t, got, "lookup error must not panic; falls back to same-fork")
+		require.Len(t, *calls, 1)
+		mock.ExpectationsMet()
+	})
+
+	t.Run("lookup returns empty ID: empty result", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "git@github.com:jucor/spr.git")
+		lookup, _ := trackingLookup("", nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Empty(t, got)
+		mock.ExpectationsMet()
+	})
+
+	t.Run("unparseable URL: no lookup, returns empty", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("origin", "not a real url")
+		lookup, calls := trackingLookup(forkID, nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, upstreamCfg(), upstreamID, lookup)
+
+		require.Empty(t, got)
+		require.Empty(t, *calls, "unparseable URL must skip the lookup call")
+		mock.ExpectationsMet()
+	})
+
+	t.Run("respects non-default GitHubRemote name", func(t *testing.T) {
+		mock := mockgit.NewMockGit(t)
+		mock.ExpectRemoteGetURL("myfork", "https://github.com/jucor/spr")
+		cfg := upstreamCfg()
+		cfg.GitHubRemote = "myfork"
+		lookup, calls := trackingLookup(forkID, nil)
+
+		got := resolveHeadRepositoryID(context.Background(), mock, cfg, upstreamID, lookup)
+
+		require.Equal(t, forkID, got)
+		require.Equal(t, []lookupCall{{owner: "jucor", name: "spr"}}, *calls)
+		mock.ExpectationsMet()
+	})
 }

@@ -36,8 +36,14 @@ type GitHubInterface interface {
 type GitHubInfo struct {
 	UserName     string
 	RepositoryID string
-	LocalBranch  string
-	PullRequests []*PullRequest
+	// HeadRepositoryID is the GitHub node ID of the repository that owns the
+	// PR head branches (the fork). Empty for same-fork PRs, in which case
+	// branches live in RepositoryID. When non-empty and different from
+	// RepositoryID, spr is operating in cross-fork mode: branches are pushed
+	// to the fork and PRs are opened against RepositoryID (the upstream).
+	HeadRepositoryID string
+	LocalBranch      string
+	PullRequests     []*PullRequest
 }
 
 type RepoAssignee struct {

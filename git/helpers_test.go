@@ -47,6 +47,42 @@ func TestBranchNameRegexNoMatch(t *testing.T) {
 	}
 }
 
+func TestParseRepoURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		host     string
+		owner    string
+		repoName string
+		ok       bool
+	}{
+		{name: "https with .git", url: "https://github.com/r2/d2.git", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "https without .git", url: "https://github.com/r2/d2", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "ssh form", url: "git@github.com:r2/d2.git", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "ssh form no suffix", url: "git@github.com:r2/d2", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "ssh:// protocol", url: "ssh://git@github.com/r2/d2.git", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "enterprise host", url: "git@gh.enterprise.com:r2/d2.git", host: "gh.enterprise.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "dashes in owner and name", url: "https://github.com/r-2/d-2.git", host: "github.com", owner: "r-2", repoName: "d-2", ok: true},
+		{name: "underscores in name", url: "https://github.com/r2/d2_a.git", host: "github.com", owner: "r2", repoName: "d2_a", ok: true},
+		{name: "case sensitive", url: "https://github.com/R2/D2.git", host: "github.com", owner: "R2", repoName: "D2", ok: true},
+		{name: "trailing slash", url: "https://github.com/r2/d2/", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+		{name: "leading and trailing whitespace", url: "  https://github.com/r2/d2.git\n", host: "github.com", owner: "r2", repoName: "d2", ok: true},
+
+		{name: "empty", url: "", ok: false},
+		{name: "garbage", url: "not a url", ok: false},
+		{name: "missing owner", url: "https://github.com//d2.git", ok: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			host, owner, name, ok := ParseRepoURL(tc.url)
+			assert.Equal(t, tc.ok, ok)
+			assert.Equal(t, tc.host, host)
+			assert.Equal(t, tc.owner, owner)
+			assert.Equal(t, tc.repoName, name)
+		})
+	}
+}
+
 func TestBranchNameFromCommit(t *testing.T) {
 	tests := []struct {
 		name     string

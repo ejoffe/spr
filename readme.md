@@ -214,9 +214,9 @@ Configuration is created automatically on first run. Repository config lives in 
 | `requireChecks` | bool | `true` | Require checks to pass in order to merge |
 | `requiredChecks` | list | | List of check names that must pass. When set, only these checks are evaluated; all others are ignored |
 | `requireApproval` | bool | `true` | Require PR approval in order to merge |
-| `githubRepoOwner` | str | | GitHub owner (auto-detected from git remote) |
-| `githubRepoName` | str | | GitHub repository name (auto-detected from git remote) |
-| `githubRemote` | str | `origin` | Git remote name to use |
+| `githubRepoOwner` | str | | GitHub owner of the **PR target** (auto-detected from the git remote; override to open cross-fork PRs — see [Working from a fork](#working-from-a-fork)) |
+| `githubRepoName` | str | | GitHub repository name of the **PR target** (auto-detected from the git remote; override for cross-fork PRs) |
+| `githubRemote` | str | `origin` | Git remote name spr pushes branches to (may be the fork) |
 | `githubBranch` | str | `main` | Target branch for pull requests |
 | `githubHost` | str | `github.com` | GitHub host (update for GitHub Enterprise) |
 | `mergeMethod` | str | `rebase` | Merge method: `rebase`, `squash`, or `merge` |
@@ -260,11 +260,40 @@ defaultReviewers:
 | `statusBitsEmojis` | bool | `true` | Use emoji status bits |
 | `createDraftPRs` | bool | `false` | Create new PRs as drafts |
 | `preserveTitleAndBody` | bool | `false` | Don't overwrite PR title and body on update |
+| `maintainerCanModify` | bool | `true` | For cross-fork PRs, allow upstream maintainers to push to the head branch on the fork. No effect for same-fork PRs |
 | `noRebase` | bool | `false` | Skip rebasing on `git spr update` |
 | `deleteMergedBranches` | bool | `false` | Delete branches after PRs are merged |
 | `branchPrefix` | str | `spr` | Prefix for spr-managed branch names |
 
 </details>
+
+### Working from a fork
+
+spr supports opening PRs from a fork into an upstream repository (e.g. you've cloned `your-org/their-project` as `you/their-project` and want to submit PRs back). Branches are pushed to the fork; PRs are opened against the upstream.
+
+Point `githubRepoOwner` / `githubRepoName` at the **upstream** in `.spr.yml`, and leave `githubRemote` at the fork (the default `origin` if that's how you cloned). spr detects that the two differ and routes the PR through GitHub's `headRepository` field.
+
+Example: clone of `jucor/spr` (a fork of `ejoffe/spr`) targeting upstream master:
+
+```yaml
+# .spr.yml
+githubRepoOwner: ejoffe   # PR target
+githubRepoName: spr       # PR target
+githubRemote: origin      # pushes go to your fork
+githubBranch: master
+```
+
+```
+$ git remote -v
+origin    git@github.com:jucor/spr.git (push)
+upstream  git@github.com:ejoffe/spr.git (push)
+```
+
+You need push access to the fork (you do — it's yours). GitHub allows anyone who can push to a fork to open a PR against the parent, so no special permission on the upstream is required. The `maintainerCanModify` user-config flag (default `true`) lets upstream maintainers push to the PR head branch on your fork.
+
+If owner/name match the remote URL, spr operates in same-fork mode (the previous behavior, unchanged).
+
+**Trade-off when stacking PRs cross-fork:** GitHub requires a PR's base branch to live in the same repo where the PR is filed. In same-fork mode (the only mode before this change) spr stacks PRs by setting each PR's base to the previous PR's head branch — that gives every PR a single-commit "Files changed" view. In cross-fork mode the previous PR's head lives in your fork, not in the upstream, so it can't be a valid base; every PR in the stack has to base on the upstream's target branch (usually `master`). The visible consequence: **each subsequent PR's "Files changed" tab shows the cumulative diff** from all predecessors, not just its own commit. The commits tab still shows commits individually. Code-review bots (e.g. Copilot) review the cumulative diff and may re-flag earlier-PR issues — for an N-deep stack expect roughly N× the review noise. Each PR collapses back to its own commit once its predecessor lands at upstream, so the noise window is bounded by your merge cadence. The only way to recover single-commit diffs across forks before merge is for the upstream maintainer to grant the contributor write access to the upstream repo, which lets the contributor push branches there directly — independent of (and orthogonal to) the `maintainerCanModify` flag above.
 
 ## How it compares
 
