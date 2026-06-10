@@ -230,6 +230,7 @@ Configuration is created automatically on first run. Repository config lives in 
 | `showPrTitlesInStack` | bool | `false` | Show PR titles in stack description within PR body |
 | `branchPushIndividually` | bool | `false` | Push branches one at a time instead of atomically |
 | `defaultReviewers` | list | | Reviewers to add to every new pull request |
+| `onRemoteDivergence` | str | `ask` | What `spr update` does when a maintainer pushed commits to a PR head branch. `ask`: prompt (refuse on non-TTY); `drop`: silently force-push local (pre-fix behavior); `merge`: reserved for a follow-up — currently behaves as `ask`. See [Maintainer edits to PR head branches](#maintainer-edits-to-pr-head-branches) |
 
 Example `.spr.yml`:
 
@@ -265,6 +266,18 @@ defaultReviewers:
 | `branchPrefix` | str | `spr` | Prefix for spr-managed branch names |
 
 </details>
+
+### Maintainer edits to PR head branches
+
+GitHub's "Allow edits by maintainers" lets upstream maintainers (or anyone with write access to the head branch) push commits directly to a PR. Previously `spr update` would silently force-push your local stack over those commits, wiping them. From this version, spr detects the divergence and applies the policy you choose via the `onRemoteDivergence` config:
+
+- **`ask`** (default): if running on a TTY, spr summarises the divergent PRs, prints copy-pasteable git commands to fold the maintainer's commits into your local commit, and asks whether to **[d]rop** (force-push local) or **[a]bort**. On non-TTY (CI, scripts, hooks), it always refuses and prints the same guide — refusing to silently lose data.
+- **`drop`**: skip the prompt; silently force-push your local stack. This is the pre-fix behavior, kept as an explicit opt-in for users who genuinely don't want maintainer edits incorporated.
+- **`merge`**: reserved for a follow-up that will fold maintainer commits into the matching local commit automatically (preserving the `commit-id` trailer). Until that lands, this value falls back to `ask` with a one-line notice.
+
+Detection is stateless: spr walks back from each remote head looking for the local commit's `commit-id:` trailer; any commits above it (without the trailer) are flagged as the maintainer's contribution. Push uses `git push --force-with-lease` so a race between detection and push doesn't silently overwrite.
+
+**Known limitation (tracked for a follow-up):** if a maintainer changes a PR's *base* branch (via the GitHub UI), `spr update` silently resets it to spr's expected base on the next run. This is the same flavour of bug as the head-branch wipe, but rarer in practice — it will be addressed in a separate change.
 
 ## How it compares
 

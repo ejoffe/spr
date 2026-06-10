@@ -146,13 +146,103 @@ func (m *Mock) ExpectPushCommits(commits []*git.Commit) {
 		branchName := "spr/master/" + c.CommitID
 		refNames = append(refNames, c.CommitHash+":refs/heads/"+branchName)
 	}
-	m.expect("git push --force --atomic origin " + strings.Join(refNames, " "))
+	m.expect("git push --force-with-lease --atomic origin " + strings.Join(refNames, " "))
 }
 
 func (m *Mock) ExpectRemote(remote string) {
 	response := fmt.Sprintf("origin  %s (fetch)\n", remote)
 	response += fmt.Sprintf("origin  %s (push)\n", remote)
 	m.expect("git remote -v").respond(response)
+}
+
+// ExpectFetchHeadRefs queues an expectation for a batched explicit-refspec
+// fetch of PR head branches: `git fetch <remote> <branch>:refs/remotes/<remote>/<branch> ...`.
+// Used by the maintainer-edit divergence detection so a restrictive
+// remote.origin.fetch refspec can't silently disable detection.
+func (m *Mock) ExpectFetchHeadRefs(remote string, branches []string) {
+	refspecs := make([]string, len(branches))
+	for i, b := range branches {
+		refspecs[i] = b + ":refs/remotes/" + remote + "/" + b
+	}
+	m.expect("git fetch " + remote + " " + strings.Join(refspecs, " "))
+}
+
+// remoteHeadLogLiteralCmd returns the literal git command divergence
+// detection issues for one head ref (the same string that realgit's Git()
+// would receive).
+func remoteHeadLogLiteralCmd(remote, branch string, depth int) string {
+	ref := "refs/remotes/" + remote + "/" + branch
+	return fmt.Sprintf("git log -z --no-color --format=%%H%%n%%an%%n%%s%%n%%b -n %d %s", depth, ref)
+}
+
+// ExpectRemoteHeadLog queues an expectation for the `git log -z` call used
+// by divergence detection on a single remote head ref, and responds with
+// canned output formatted the way real git would.
+func (m *Mock) ExpectRemoteHeadLog(remote, branch string, depth int, commits []RemoteCommitFixture) {
+	var parts []string
+	for _, c := range commits {
+		parts = append(parts, c.SHA+"\n"+c.Author+"\n"+c.Subject+"\n"+c.Body)
+	}
+	// expect() re-Sprintfs the cmd, so escape % → %%.
+	escaped := strings.ReplaceAll(remoteHeadLogLiteralCmd(remote, branch, depth), "%", "%%")
+	m.expect(escaped).respond(strings.Join(parts, "\x00"))
+}
+
+// ExpectRemoteHeadLogMissing queues an expectation that the log call for
+// the given branch returns an error (ref absent on remote). Detection
+// treats this as "PR not yet pushed".
+func (m *Mock) ExpectRemoteHeadLogMissing(remote, branch string, depth int) {
+	// readSingleHead passes &output even when the call may fail, so use
+	// the variant that tolerates a non-nil output pointer.
+	m.expectErrorWithEmptyOutput(remoteHeadLogLiteralCmd(remote, branch, depth),
+		errors.New("fatal: bad revision"))
+}
+
+// RemoteCommitFixture carries the minimum data needed to synthesise one
+// commit entry in the `git log -z` output for a remote head walk.
+type RemoteCommitFixture struct {
+	SHA     string
+	Author  string
+	Subject string
+	Body    string
+}
+
+// ExpectDivergenceCheckClean queues the divergence-detection command
+// sequence (one batched fetch + one log -z per commit) and responds
+// with histories that exactly match the local commits — i.e. no
+// maintainer activity, no divergence flagged. Use this in tests that
+// exercise `spr update` and don't care about the divergence layer.
+//
+// The remote is hard-coded to "origin" and the branch prefix to
+// "spr/master/" to match the mockgit assumptions used elsewhere in
+// this file.
+func (m *Mock) ExpectDivergenceCheckClean(commits []*git.Commit) {
+	if len(commits) == 0 {
+		return
+	}
+	// Callers pass commits in git-log order (newest first), matching
+	// ExpectLogAndRespond. GetLocalCommitStack/parseLocalCommitStack
+	// reverses that to oldest-first before passing to checkRemoteDivergence,
+	// so we mirror that reversal here when building branch expectations.
+	reversed := make([]*git.Commit, len(commits))
+	for i, c := range commits {
+		reversed[len(commits)-1-i] = c
+	}
+	branches := make([]string, len(reversed))
+	for i, c := range reversed {
+		branches[i] = "spr/master/" + c.CommitID
+	}
+	m.ExpectFetchHeadRefs("origin", branches)
+	for _, c := range reversed {
+		m.ExpectRemoteHeadLog("origin", "spr/master/"+c.CommitID, 20,
+			[]RemoteCommitFixture{
+				{
+					SHA:     c.CommitHash,
+					Subject: c.Subject,
+					Body:    "commit-id: " + c.CommitID,
+				},
+			})
+	}
 }
 
 func (m *Mock) ExpectFixup(commitHash string) {
@@ -174,6 +264,17 @@ func (m *Mock) expect(cmd string, args ...interface{}) *Mock {
 func (m *Mock) expectError(cmd string, err error) *Mock {
 	m.expectedCmd = append(m.expectedCmd, cmd)
 	m.response = append(m.response, &commitResponse{valid: false})
+	m.errors = append(m.errors, err)
+	return m
+}
+
+// expectErrorWithEmptyOutput is like expectError but tolerates a non-nil
+// output pointer on the caller side (the real-git path may pass a buffer
+// even for commands that can fail). The buffer is set to "" and the error
+// is returned.
+func (m *Mock) expectErrorWithEmptyOutput(cmd string, err error) *Mock {
+	m.expectedCmd = append(m.expectedCmd, cmd)
+	m.response = append(m.response, &stringResponse{valid: true, output: ""})
 	m.errors = append(m.errors, err)
 	return m
 }
