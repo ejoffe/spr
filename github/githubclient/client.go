@@ -200,6 +200,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 			c.config.Repo.GitHubRepoOwner,
 			c.config.Repo.GitHubRepoName)
 		check(err)
+		check(checkRepository(resp.Repository == nil, c.config.Repo.GitHubRepoOwner, c.config.Repo.GitHubRepoName))
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
@@ -208,6 +209,7 @@ func (c *client) GetInfo(ctx context.Context, gitcmd git.GitInterface) *github.G
 			c.config.Repo.GitHubRepoOwner,
 			c.config.Repo.GitHubRepoName)
 		check(err)
+		check(checkRepository(resp.Repository == nil, c.config.Repo.GitHubRepoOwner, c.config.Repo.GitHubRepoName))
 		pullRequestConnection = resp.Viewer.PullRequests
 		loginName = resp.Viewer.Login
 		repoID = resp.Repository.Id
@@ -840,6 +842,17 @@ func computeRequiredCheckStatus(contexts []checkContextNode, requiredChecks map[
 		return github.CheckStatusPending
 	}
 	return github.CheckStatusPass
+}
+
+// checkRepository returns an error when the GitHub GraphQL query resolved the
+// repository to null. The API returns a nil repository (sometimes without a
+// top-level error) when the token cannot access the repository or the
+// owner/name is wrong, and dereferencing it would panic.
+func checkRepository(isNil bool, owner, name string) error {
+	if isNil {
+		return fmt.Errorf("repository %s/%s not found; check the repository name and that GITHUB_TOKEN has access to it", owner, name)
+	}
+	return nil
 }
 
 func check(err error) {
