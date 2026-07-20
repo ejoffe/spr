@@ -753,3 +753,12 @@ func TestComputeRequiredCheckStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckRepository(t *testing.T) {
+	err := checkRepository(false, "ejoffe", "spr")
+	require.NoError(t, err)
+
+	err = checkRepository(true, "ejoffe", "spr")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ejoffe/spr")
+}
